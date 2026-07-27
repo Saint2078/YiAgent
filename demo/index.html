@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YiAgent · 离线冻结演示（同筛选台 UI）</title>
+    <meta
+      name="description"
+      content="与 Docker 筛选台同一套界面与七步流程；内嵌冻结 demo_pack，不发送 API。"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="root" class="loading">loading frozen demo…</div>
+    <div id="copy-editor" hidden></div>
+    <!-- Classic scripts (not type=module) so file:// open works in browsers. -->
+    <script src="./snap.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

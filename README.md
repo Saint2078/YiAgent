@@ -1,7 +1,7 @@
 # YiAgent
 
 [![status](https://img.shields.io/badge/status-experimental-orange)](#status)
-[![demo](https://img.shields.io/badge/demo-Docker·8787-blue)](#试试)
+[![demo](https://img.shields.io/badge/demo-点开即看-blue)](https://cdn.jsdelivr.net/gh/Saint2078/YiAgent@main/demo/index.html)
 [![license](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
 
 **Loop 不够稳？Graph 老出错？多 Agent 一多就乱？**  
@@ -55,13 +55,17 @@ C − A ≈ **+25.7**，且更稳——**增益来自基因，不是偷看答案
 
 ## 试试
 
+**[▶ 点开离线演示](https://cdn.jsdelivr.net/gh/Saint2078/YiAgent@main/demo/index.html)**（浏览器直接进；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
+
+源码入口：[`demo/index.html`](demo/index.html) · 本机也可双击打开。
+
+**完整筛选台（可实跑）**：
+
 ```bash
 cd factory && docker compose up --build
 ```
 
-打开 [http://localhost:8787](http://localhost:8787) → **载入冻结演示**（不调用模型，直接看上表这组数）。
-
-流水线：口述 → 题目/裁判 → A/B 基线 → G1–G5 → 初筛 → 冠军 → 终筛。  
+打开 [http://localhost:8787](http://localhost:8787) → **载入冻结演示**，或填 Key 真跑七步。  
 细则：[`factory/README.md`](factory/README.md)
 
 ---
