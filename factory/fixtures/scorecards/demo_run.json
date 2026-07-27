@@ -1,0 +1,173 @@
+{
+  "disclaimer": "主戏对照（基线 A vs 基因骨架 C）的总分序列来自 XSCT 已公布跑次。其余变体 mean/trials 为工厂仪式编排分，用于展示晋升/驳回/噪声三态，非独立实测。所有 slot_scores 均为评分维→槽映射演示，非独立槽裁判输出。",
+  "source": {
+    "bench": "XSCT Bench",
+    "model": "Kimi 3 (k3-256k)",
+    "judge": "k3-256k v2",
+    "condition": "basic ×5",
+    "A": "原题基线 system",
+    "C": "基因骨架 Host + G2/G4/G5（非全量 rubric 灌装）"
+  },
+  "incumbent": {
+    "id": "baseline.A",
+    "label": "基线 A · 原题 system",
+    "task": "l_criticalthinking_059",
+    "trials": [69.9, 35.5, 67.2, 55.5, 85.6],
+    "mean": 62.74,
+    "sd": 18.59,
+    "slots": {
+      "G1": 70,
+      "G2": 58,
+      "G3": 65,
+      "G4": 55,
+      "G5": 52
+    }
+  },
+  "cases": [
+    {
+      "id": "criticalthinking",
+      "title": "批判思维",
+      "primary": true,
+      "A": {
+        "trials": [69.9, 35.5, 67.2, 55.5, 85.6],
+        "mean": 62.74,
+        "sd": 18.59
+      },
+      "C": {
+        "trials": [94.3, 94.4, 96.3, 93.8, 95.0],
+        "mean": 94.76,
+        "sd": 0.96
+      }
+    },
+    {
+      "id": "task_decomp",
+      "title": "任务分解",
+      "primary": false,
+      "A": {
+        "trials": [97.5, 96.5, 98.4, 57.0, 93.1],
+        "mean": 88.5,
+        "sd": 17.7
+      },
+      "C": {
+        "trials": [97.2, 97.1, 97.3, 93.7, 97.3],
+        "mean": 96.52,
+        "sd": 1.58
+      }
+    },
+    {
+      "id": "work_report",
+      "title": "工作汇报",
+      "primary": false,
+      "A": {
+        "trials": [92.6, 90.0, 91.8, 92.0, 91.8],
+        "mean": 91.64,
+        "sd": 0.97
+      },
+      "C": {
+        "trials": [93.5, 91.7, 94.7, 94.4, 94.7],
+        "mean": 93.8,
+        "sd": 1.27
+      }
+    }
+  ],
+  "variant_results": [
+    {
+      "variant_id": "var.champion",
+      "label": "基因骨架 · 冠军候选",
+      "provenance": "xsct_published",
+      "mean": 94.76,
+      "sd": 0.96,
+      "trials": [94.3, 94.4, 96.3, 93.8, 95.0],
+      "slots": { "G1": 96, "G2": 95, "G3": 93, "G4": 96, "G5": 95 },
+      "vs_incumbent": "promote",
+      "reason": "均值 +32.0，且无槽严重退步；波动从 18.6 收至 0.96。"
+    },
+    {
+      "variant_id": "var.soft_champion",
+      "label": "温和边界 × 结构化",
+      "provenance": "demo_orchestrated",
+      "mean": 93.2,
+      "sd": 1.4,
+      "trials": [92.8, 93.5, 94.1, 91.9, 93.7],
+      "slots": { "G1": 95, "G2": 90, "G3": 92, "G4": 95, "G5": 94 },
+      "vs_incumbent": "promote",
+      "reason": "显著高于基线；略逊冠军（G2 温和边界在强硬拆题上略软）。"
+    },
+    {
+      "variant_id": "var.brief_ok",
+      "label": "极简结论 × 冠军经验",
+      "provenance": "demo_orchestrated",
+      "mean": 88.4,
+      "sd": 3.2,
+      "trials": [86.0, 89.5, 91.2, 85.1, 90.2],
+      "slots": { "G1": 92, "G2": 90, "G3": 88, "G4": 84, "G5": 90 },
+      "vs_incumbent": "promote",
+      "reason": "抬分成立；G4 极简导致论据展开偏薄。"
+    },
+    {
+      "variant_id": "var.soft_brief",
+      "label": "温和 × 极简",
+      "provenance": "demo_orchestrated",
+      "mean": 81.0,
+      "sd": 5.1,
+      "trials": [78.0, 84.2, 76.5, 82.1, 84.2],
+      "slots": { "G1": 88, "G2": 82, "G3": 80, "G4": 78, "G5": 80 },
+      "vs_incumbent": "promote",
+      "reason": "仍高于基线均值，但优势收窄。"
+    },
+    {
+      "variant_id": "var.mid",
+      "label": "严格 × 结构化 × 噪声经验",
+      "provenance": "demo_orchestrated",
+      "mean": 79.5,
+      "sd": 6.8,
+      "trials": [72.0, 85.0, 78.5, 76.0, 86.0],
+      "slots": { "G1": 90, "G2": 88, "G3": 82, "G4": 86, "G5": 70 },
+      "vs_incumbent": "promote",
+      "reason": "结构在、经验层噪声拖后腿。"
+    },
+    {
+      "variant_id": "var.noise",
+      "label": "噪声经验 · 近平",
+      "provenance": "demo_orchestrated",
+      "mean": 64.1,
+      "sd": 12.0,
+      "trials": [70.0, 48.0, 68.0, 58.0, 76.5],
+      "slots": { "G1": 72, "G2": 65, "G3": 66, "G4": 60, "G5": 55 },
+      "vs_incumbent": "noise",
+      "reason": "|Δmean| < 噪声带（约 +1.4），试验波动大 → 噪声不足，需加测。"
+    },
+    {
+      "variant_id": "var.reject_regress",
+      "label": "退步经验 · 驳回样",
+      "provenance": "demo_orchestrated",
+      "mean": 51.2,
+      "sd": 14.5,
+      "trials": [45.0, 38.0, 62.0, 55.0, 56.0],
+      "slots": { "G1": 68, "G2": 60, "G3": 58, "G4": 48, "G5": 40 },
+      "vs_incumbent": "reject",
+      "reason": "均值低于基线；G4/G5 槽 Δ < -δ_regress → 驳回（退步超阈）。"
+    },
+    {
+      "variant_id": "var.reject_rubric",
+      "label": "反模式 · 灌说明书",
+      "provenance": "demo_orchestrated",
+      "mean": 58.0,
+      "sd": 11.2,
+      "trials": [62.0, 44.0, 55.0, 70.0, 59.0],
+      "slots": { "G1": 70, "G2": 62, "G3": 60, "G4": 50, "G5": 52 },
+      "vs_incumbent": "reject",
+      "reason": "告知 ≠ 提升：把说明书灌进能力槽，综合分不升反不稳 → 驳回。"
+    }
+  ],
+  "gate": {
+    "delta_promote": 3.0,
+    "delta_noise": 2.5,
+    "delta_regress_slot": 8.0,
+    "labels": {
+      "promote": "晋升",
+      "reject": "驳回",
+      "noise": "噪声不足"
+    }
+  }
+}

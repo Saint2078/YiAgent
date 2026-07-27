@@ -23,3 +23,11 @@ tmp/
 .cursor/
 .idea/
 *.swp
+
+# Factory demo
+factory/tmp/
+factory/agent-logs/
+factory/save/
+factory/node_modules/
+factory/app/node_modules/
+factory/app/dist/

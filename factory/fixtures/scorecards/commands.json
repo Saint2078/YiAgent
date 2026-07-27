@@ -1,0 +1,85 @@
+{
+  "commands": [
+    {
+      "id": "cmd.critical.promote",
+      "label": "批判思维 · 冲晋升",
+      "text": "为本厂批判思维岗组装可晋升基因组：优先结构化拆解 + 严格边界，跑满鉴定后再裁决。",
+      "task": "l_criticalthinking_059",
+      "task_title": "批判思维 · 虚假二选一",
+      "select_policy": {
+        "G1": "g1.identity.v1",
+        "G2": "g2.persona.strict",
+        "G3": "g3.knowledge.core",
+        "G4": "g4.cap.structured",
+        "G5": "g5.exp.champion"
+      },
+      "queue": [
+        "var.champion",
+        "var.soft_champion",
+        "var.brief_ok",
+        "var.mid",
+        "var.noise",
+        "var.reject_regress",
+        "var.reject_rubric",
+        "var.soft_brief"
+      ]
+    },
+    {
+      "id": "cmd.critical.screen",
+      "label": "批判思维 · 筛弱基因",
+      "text": "筛掉灌说明书与退步经验：先装弱等位对照，再装冠军骨架，记录每一次模版表现。",
+      "task": "l_criticalthinking_059",
+      "task_title": "批判思维 · 虚假二选一",
+      "select_policy": {
+        "G1": "g1.identity.v1",
+        "G2": "g2.persona.strict",
+        "G3": "g3.knowledge.core",
+        "G4": "g4.cap.rubric_leak",
+        "G5": "g5.exp.regress"
+      },
+      "queue": [
+        "var.reject_rubric",
+        "var.reject_regress",
+        "var.noise",
+        "var.soft_brief",
+        "var.brief_ok",
+        "var.mid",
+        "var.soft_champion",
+        "var.champion"
+      ]
+    },
+    {
+      "id": "cmd.report.stable",
+      "label": "工作汇报 · 稳波动（附表）",
+      "text": "工作汇报岗先看稳定性：基线已高，工厂仍按基因组交叉记账，主数字用附表口径。",
+      "task": "l_write_005_v2",
+      "task_title": "工作汇报 · 月度小结",
+      "select_policy": {
+        "G1": "g1.identity.v1",
+        "G2": "g2.persona.soft",
+        "G3": "g3.knowledge.core",
+        "G4": "g4.cap.structured",
+        "G5": "g5.exp.champion"
+      },
+      "queue": [
+        "var.soft_champion",
+        "var.champion",
+        "var.brief_ok",
+        "var.mid",
+        "var.noise",
+        "var.reject_regress"
+      ],
+      "score_case": "work_report"
+    }
+  ],
+  "templates": {
+    "var.champion": "TPL-CT-C94A",
+    "var.soft_champion": "TPL-CT-S93B",
+    "var.brief_ok": "TPL-CT-B88C",
+    "var.soft_brief": "TPL-CT-SB81",
+    "var.mid": "TPL-CT-M79D",
+    "var.noise": "TPL-CT-N64E",
+    "var.reject_regress": "TPL-CT-R51F",
+    "var.reject_rubric": "TPL-CT-X58G"
+  }
+}

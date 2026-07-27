@@ -1,0 +1,9 @@
+# Factory demo · customer-facing
+node_modules/
+app/node_modules/
+app/dist/
+.DS_Store
+tmp/*
+!tmp/.gitkeep
+agent-logs/*
+!agent-logs/.gitkeep

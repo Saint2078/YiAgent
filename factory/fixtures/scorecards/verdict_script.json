@@ -1,0 +1,18 @@
+{
+  "demo_id": "factory-ritual-v1",
+  "duration_hint_sec": 90,
+  "steps": [
+    { "id": "splash", "seconds": 8, "beat": "品牌 + 钩子句" },
+    { "id": "role", "seconds": 10, "beat": "选批判思维主戏任务" },
+    { "id": "factory", "seconds": 18, "beat": "组装 8 个基因组变体" },
+    { "id": "duel", "seconds": 28, "beat": "分槽对决回放" },
+    { "id": "verdict", "seconds": 16, "beat": "晋升 / 驳回 / 噪声不足 各露一场" },
+    { "id": "compare", "seconds": 10, "beat": "A vs C 收束对照" }
+  ],
+  "spotlight_order": [
+    "var.champion",
+    "var.reject_regress",
+    "var.noise",
+    "var.reject_rubric"
+  ]
+}

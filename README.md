@@ -80,13 +80,25 @@ Agent 工程收成生物学同款流水线：取基因 → 组装 → 导入 →
 ```
 docs/           # 架构与实验
 src/yiagent/    # Assemble / 晋升门禁（搭建中）
+factory/        # 组装测试工厂 Demo（Docker · 口述→初筛→终筛）
 experiments/    # 可复现入口（搭建中）
 ```
 
+### 组装测试工厂
+
+```bash
+cd factory && docker compose up --build
+```
+
+打开 [http://localhost:8787](http://localhost:8787)。口述生成考题与 G1–G5 → 初筛 → 冠军池 → 终筛，标出 **效果最优 / 稳定最优 / 均衡最优**。详见 [`factory/README.md`](factory/README.md)。
+
+## 路线图
+
 - [x] 主张：改基因组 + 分槽鉴定晋升  
 - [x] 早期 XSCT 数据  
+- [x] 组装测试工厂 Demo（`factory/`）  
 - [ ] schema + `Assemble` 最小实现  
 - [ ] 晋升 / 驳回 / 噪声不足  
-- [ ] Demo + 公开晋升榜 · License  
+- [ ] 公开晋升榜 · License  
 
 **Experimental · License TBD** · 题源 [XSCT Bench](https://xsct.ai/gallery)

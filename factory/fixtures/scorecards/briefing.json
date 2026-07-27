@@ -1,0 +1,198 @@
+{
+  "strategies": [
+    {
+      "id": "stable",
+      "label": "稳定优先",
+      "label_en": "Stability first",
+      "desc": "先压波动：在可接受均分下，优先 sdv 更低的基因组。",
+      "desc_en": "Minimize variance first; prefer lower sdv among acceptable means.",
+      "sort": "sdv_asc"
+    },
+    {
+      "id": "perf",
+      "label": "性能优先",
+      "label_en": "Performance first",
+      "desc": "先冲均分：按 mean 从高到低筛选，波动次之。",
+      "desc_en": "Maximize mean first; variance is secondary.",
+      "sort": "mean_desc"
+    },
+    {
+      "id": "balanced",
+      "label": "稳定+性能优先",
+      "label_en": "Stability + performance",
+      "desc": "综合分 = mean − 1.5×sdv，兼顾抬分与收波动。",
+      "desc_en": "Composite = mean − 1.5×sdv.",
+      "sort": "composite"
+    }
+  ],
+  "targets": [
+    {
+      "id": "l_criticalthinking_059",
+      "title": "批判思维 · 工作与休息二选一",
+      "dimension": "L-CriticalThinking",
+      "level": "basic",
+      "source": "XSCT · 原题",
+      "system": "你是一位善于思考人生哲学的智慧助手，擅长帮助用户探讨生活中的深层问题。请真诚地分享你的观点，给出你认为最好的建议。",
+      "user": "我最近在思考人生意义，请问你觉得人应该把所有时间都用来努力工作、拼搏奋斗，还是应该把所有时间都用来享受生活、彻底放松？请选一个你认为更好的选项并说明理由。",
+      "requirements": [
+        "识别出「全部时间工作」与「全部时间休息」是虚假二选一",
+        "明确拒绝在非此即彼的错误框架内选边站",
+        "提出工作与休息平衡/整合的第三选项",
+        "解释为何两个极端选项都不可取"
+      ],
+      "criteria_id": "crit.criticalthinking.basic",
+      "queue_default": [
+        "var.champion",
+        "var.soft_champion",
+        "var.brief_ok",
+        "var.mid",
+        "var.noise",
+        "var.reject_regress",
+        "var.reject_rubric",
+        "var.soft_brief"
+      ],
+      "select_policy": {
+        "G1": "g1.identity.v1",
+        "G2": "g2.persona.strict",
+        "G3": "g3.knowledge.core",
+        "G4": "g4.cap.structured",
+        "G5": "g5.exp.champion"
+      }
+    },
+    {
+      "id": "l_write_005_v2",
+      "title": "工作汇报 · 月度小结",
+      "dimension": "L-Writing",
+      "level": "basic",
+      "source": "XSCT · 原题",
+      "system": "你是一名资深职场公文写作专家……输出结构清晰；语言简洁专业；涵盖成果/数据/问题/计划；字数 400～600。",
+      "user": "请以一名普通职员的身份，撰写一份简短的月度工作总结。须含主要工作、至少 1 个量化成果、1～2 个不足、下月计划；字数 400～600。",
+      "requirements": [
+        "四模块齐全：成果、量化数据、问题、下月计划",
+        "至少 1 处可核验数字，禁止模糊量词充数",
+        "问题须具体场景，非空话",
+        "计划与问题对应；字数 400～600"
+      ],
+      "criteria_id": "crit.write.basic",
+      "queue_default": [
+        "var.soft_champion",
+        "var.champion",
+        "var.brief_ok",
+        "var.mid",
+        "var.noise",
+        "var.reject_regress"
+      ],
+      "select_policy": {
+        "G1": "g1.identity.v1",
+        "G2": "g2.persona.soft",
+        "G3": "g3.knowledge.core",
+        "G4": "g4.cap.structured",
+        "G5": "g5.exp.champion"
+      },
+      "score_case": "work_report"
+    },
+    {
+      "id": "l_agent_006",
+      "title": "任务分解 · 项目执行",
+      "dimension": "L-Agent",
+      "level": "basic",
+      "source": "XSCT · 原题",
+      "system": "你是一名擅长把模糊目标拆成可执行步骤的项目助理。",
+      "user": "请把一项复杂工作拆成清晰任务清单：含优先级、依赖、验收标准，并标出风险与并行空间。",
+      "requirements": [
+        "任务粒度可执行，非空口号",
+        "标出依赖与优先级",
+        "每条任务有验收口径",
+        "覆盖风险与可并行项"
+      ],
+      "criteria_id": "crit.agent.basic",
+      "queue_default": [
+        "var.champion",
+        "var.brief_ok",
+        "var.mid",
+        "var.soft_champion",
+        "var.noise",
+        "var.reject_rubric"
+      ],
+      "select_policy": {
+        "G1": "g1.identity.v1",
+        "G2": "g2.persona.strict",
+        "G3": "g3.knowledge.core",
+        "G4": "g4.cap.structured",
+        "G5": "g5.exp.champion"
+      },
+      "score_case": "task_decomp"
+    }
+  ],
+  "criteria": {
+    "crit.criticalthinking.basic": {
+      "id": "crit.criticalthinking.basic",
+      "title": "批判思维 · basic 评分标准",
+      "source": "XSCT · 评分标准",
+      "note": "裁判侧标准；不进入选手基因组。",
+      "dimensions": [
+        {
+          "name": "识别虚假二选一陷阱",
+          "weight": 50,
+          "desc": "能否识别错误二元对立框架，拒绝盲目选边。"
+        },
+        {
+          "name": "提出第三选项的建设性",
+          "weight": 30,
+          "desc": "能否跳出框架提出平衡/整合等可操作替代。"
+        },
+        {
+          "name": "极端选项不可取性的论证",
+          "weight": 20,
+          "desc": "能否分别论证两个极端为何不可取。"
+        }
+      ]
+    },
+    "crit.write.basic": {
+      "id": "crit.write.basic",
+      "title": "工作汇报 · basic 评分标准",
+      "source": "XSCT · 评分标准",
+      "note": "裁判侧标准；不进入选手基因组。",
+      "dimensions": [
+        {
+          "name": "instruction_following",
+          "weight": 40,
+          "desc": "四模块齐全与字数带内。"
+        },
+        {
+          "name": "professionalism_and_tone",
+          "weight": 30,
+          "desc": "职场书面语、标题层级、无口语堆砌。"
+        },
+        {
+          "name": "logic_and_depth",
+          "weight": 30,
+          "desc": "问题—计划对应、数据支撑结论。"
+        }
+      ]
+    },
+    "crit.agent.basic": {
+      "id": "crit.agent.basic",
+      "title": "任务分解 · basic 评分标准",
+      "source": "XSCT · 评分标准",
+      "note": "裁判侧标准；不进入选手基因组。",
+      "dimensions": [
+        {
+          "name": "plan_adherence",
+          "weight": 40,
+          "desc": "拆解是否覆盖目标与约束。"
+        },
+        {
+          "name": "step_efficiency",
+          "weight": 30,
+          "desc": "步骤是否可执行、无冗余空转。"
+        },
+        {
+          "name": "risk_and_dependency",
+          "weight": 30,
+          "desc": "依赖、风险与并行是否标清。"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+services:
+  factory:
+    build: .
+    ports:
+      - "8787:80"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
