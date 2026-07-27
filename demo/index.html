@@ -8,6 +8,19 @@
       name="description"
       content="与 Docker 筛选台同一套界面与七步流程；内嵌冻结 demo_pack，不发送 API。"
     />
+    <!-- Relative assets work on GitHub Pages / local. Absolute CDN fallback if opened via raw/preview hosts. -->
+    <script>
+      (function () {
+        var h = location.hostname || "";
+        if (
+          /raw\.githubusercontent\.com|htmlpreview\.github\.io|cdn\.jsdelivr\.net/i.test(h)
+        ) {
+          document.write(
+            '<base href="https://cdn.jsdelivr.net/gh/Saint2078/YiAgent@main/demo/" />'
+          );
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

@@ -1,7 +1,7 @@
 # YiAgent
 
 [![status](https://img.shields.io/badge/status-experimental-orange)](#status)
-[![demo](https://img.shields.io/badge/demo-点开即看-blue)](https://cdn.jsdelivr.net/gh/Saint2078/YiAgent@main/demo/index.html)
+[![demo](https://img.shields.io/badge/demo-点开即看-blue)](https://saint2078.github.io/YiAgent/)
 [![license](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
 
 **Loop 不够稳？Graph 老出错？多 Agent 一多就乱？**  
@@ -55,7 +55,7 @@ C − A ≈ **+25.7**，且更稳——**增益来自基因，不是偷看答案
 
 ## 试试
 
-**[▶ 点开离线演示](https://cdn.jsdelivr.net/gh/Saint2078/YiAgent@main/demo/index.html)**（浏览器直接进；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
+**[▶ 点开离线演示](https://saint2078.github.io/YiAgent/)**（GitHub Pages；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
 
 源码入口：[`demo/index.html`](demo/index.html) · 本机也可双击打开。
 
