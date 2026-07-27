@@ -4,7 +4,7 @@
 [![demo](https://img.shields.io/badge/demo-Docker·8787-blue)](#试试)
 [![license](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
 
-## 别人调 Prompt。我们改基因组。
+## 通过基因工程方法论创建AGENT
 
 *They tune prompts. We edit the genome — and promote only with a slot-level verdict.*
 
@@ -28,7 +28,7 @@
 B − A ≈ **+26.7**（泄题买到的虚高）。  
 C − A ≈ **+25.7**，且更稳——**增益来自基因，不是偷看答案。**
 
-![A / B / C 试次 + mean±sd](docs/assets/demo_ct_abc_trials.svg)
+![A / B / C trials](docs/assets/demo_ct_abc_trials.svg)
 
 终筛三标（效果 / 稳定 / 均衡）同落在 **哲思解构者**（`var.balanced_philosopher`）。
 
