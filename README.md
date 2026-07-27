@@ -1,50 +1,60 @@
 # YiAgent
 
 [![status](https://img.shields.io/badge/status-experimental-orange)](#status)
+[![demo](https://img.shields.io/badge/demo-Docker·8787-blue)](#试试)
 [![license](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
 
-## 主张
-
-**别人调 prompt；我们改基因组，并用分槽鉴定决定晋升。**
+## 别人调 Prompt。我们改基因组。
 
 *They tune prompts. We edit the genome — and promote only with a slot-level verdict.*
 
-台上短钩（测试流水线）：**用基因工程定义 Agent**——通过变异、筛选获得最符合你心意的 Agent，再也不用调 Prompt。
+调一句提示词，分数会抖、结果会飘。  
+YiAgent 把 Agent 当成可进化的生物体：**G1–G5 分槽基因 → 组装 → 导入 → 分槽鉴定决定晋升。**
 
-Agent 工程收成生物学同款流水线：取基因 → 组装 → 导入 → **检测鉴定**。
-
-| | 生物学 | YiAgent |
-|--|--------|---------|
-| ① | 取目的基因 | **G1–G5** 等位基因（身份 / 边界 / 知识 / 能力 / 经验） |
-| ② | 组装载体 | **`Assemble`** 装载 |
-| ③ | 导入细胞 | 灌进运行时 |
-| ④ | **检测鉴定** | **分槽打分 + 晋升门禁** |
-
-第④步不做，就不叫基因工程——只是随机改配置。  
-鉴定要答清两句：**该不该晋升？强在哪一段基因？**
+> 台上短钩：**用基因工程定义 Agent**——变异、筛选，再也不用调 Prompt。
 
 仓库：[github.com/Saint2078/YiAgent](https://github.com/Saint2078/YiAgent)
 
 ---
 
-## 对照条件（A / B / C）
+## 一图看懂：地板 · 天花板 · 基因
 
-同一题、同一裁判时，常用三组对照：
+同一题、同一裁判，三组对照：
 
-| 组 | 选手看到什么 | 用途 |
-|----|----------------|------|
-| **A · 原题对照（最低标准）** | 原题 messages（原 system + user） | 无泄露地板 |
-| **B · 带入标准（理论上限）** | 原题 + **完整评分标准灌进 system** | 泄露上界 / 教考同一套（反模式） |
-| **C · 基因组** | 原题 host + **G1–G5**（**不**灌评分标准） | 基因工程主线 |
+| | 选手看到什么 | 它在证明什么 |
+|--|----------------|--------------|
+| **A · 原题** | 原题 system + user | **地板**：无标准泄露 |
+| **B · 灌标准** | 原题 + **完整评分标准**塞进 system | **天花板**：教考同一套（反模式） |
+| **C · 基因组** | 原题 host + **G1–G5**（**不**灌标准） | **主线**：相对 A 的增益与稳定性 |
 
-裁判侧始终持有 `criteria`；正式筛选时标准**不进**选手基因组。  
-基因组应对标 **相对 A 的增益与稳定性**，不以追上 B 为成功标准。
+裁判始终持有 `criteria`；正式筛选时标准**绝不进**选手基因组。  
+成功标准不是「追上 B」，而是：**不泄题，也能抬分、收波动。**
+
+### 冻结演示 · 批判思维（可点开复现）
+
+一次完整流水线快照（Kimi 3 · n=5 / 终筛 n=5）：
+
+| 条件 | mean | sd | 读法 |
+|------|-----:|---:|------|
+| **A** 原题对照 | **68.2** | 1.4 | 地板 |
+| **B** 灌入完整标准 | **94.8** | 0.9 | 泄露上界 |
+| **C** 冠军基因组（终筛） | **93.9** | **0.3** | 不泄题，逼近 B，且更稳 |
+
+B − A ≈ **+26.7**（泄题能买到的虚高）。  
+冠军基因组相对 A ≈ **+25.7**，波动更小——**增益来自基因，不是来自偷看答案。**
+
+```bash
+cd factory && docker compose up --build
+# → http://localhost:8787  →  「载入冻结演示」
+```
+
+原始包：[`factory/fixtures/demo_pack.json`](factory/fixtures/demo_pack.json) · 跑次日志见 [`factory/fixtures/runs/`](factory/fixtures/runs/)
 
 ---
 
-## 数据（XSCT · basic ×5）
+## 研究档 · 更多题（A vs C）
 
-同一题、同一裁判：原题基线 **A** vs 基因骨架 **C**（Host + G2/G4/G5，**不是**把评分标准整份塞进 prompt）。
+同一裁判下，早期 XSCT 快照（基因骨架 Host+G2/G4/G5，**不是**灌标准）：
 
 | 题 | 模型 | A mean | **C mean** | A sd | **C sd** |
 |----|------|-------:|-----------:|-----:|---------:|
@@ -54,29 +64,50 @@ Agent 工程收成生物学同款流水线：取基因 → 组装 → 导入 →
 | 批判思维 | Kimi 2.6 | 81.7 | **95.3** | 3.03 | **1.05** |
 | 任务分解 | Kimi 2.6 | 91.1 | **96.5** | 12.5 | **1.42** |
 
-基线越容易翻车，基因骨架抬分、收窄波动越明显；Kimi 3 / 2.6 方向一致。（n=5，中置信；2.6 工作汇报因思维链外泄未计入。）
+基线越容易翻车，基因骨架抬分、收窄波动越明显；Kimi 3 / 2.6 方向一致。  
+（n=5，中置信；口径见 [`docs/experiments.md`](docs/experiments.md)。）
 
-### 逐次分数
-
-**批判思维（4 条线：简单/复杂 × 基线/基因）**
+**批判思维（简单/复杂 × 基线/基因）**
 
 ![批判思维 简单复杂×基线基因](docs/assets/scores_criticalthinking_kimi3.png)
 
-实线 = 简单（basic×5）；虚线 = 复杂（hard×3）。灰虚线 = 90 分参考。
+**其余题 · Kimi 3** · **Kimi 2.6**
 
-**其余题 · Kimi 3（basic）**
-
-![Kimi 3 其余题逐次分数](docs/assets/scores_per_trial_kimi3.png)
-
-**Kimi 2.6（basic；尚无 hard 对照）**
-
-![Kimi 2.6 逐次分数](docs/assets/scores_per_trial_kimi26.png)
-
-原始数列见 [`docs/experiments.md`](docs/experiments.md)。再生图：`docker run --rm -v "$PWD:/work" -w /work python:3.12-slim sh -c "python -m ensurepip >/dev/null && python -m pip install -q matplotlib && python scripts/gen_score_charts.py"`
+![Kimi 3 其余题](docs/assets/scores_per_trial_kimi3.png)
+![Kimi 2.6](docs/assets/scores_per_trial_kimi26.png)
 
 ---
 
-## G1–G5
+## 试试（Docker only）
+
+```bash
+cd factory && docker compose up --build
+```
+
+打开 [http://localhost:8787](http://localhost:8787)：
+
+1. **载入冻结演示** → 立刻看到 A / B / 基因组终筛（不调模型）  
+2. 或填 Key → 口述生成题目 → 跑完整 **7 步筛选台**
+
+流水线：口述 → 题目/裁判 → **A/B 基线** → G1–G5 基因组 → 初筛 → 冠军池 → 终筛（效果 / 稳定 / 均衡）。
+
+细则：[`factory/README.md`](factory/README.md)
+
+---
+
+## 生物学同款流水线
+
+| | 生物学 | YiAgent |
+|--|--------|---------|
+| ① | 取目的基因 | **G1–G5** 等位基因 |
+| ② | 组装载体 | **`Assemble`** |
+| ③ | 导入细胞 | 灌进运行时 |
+| ④ | **检测鉴定** | **分槽打分 + 晋升门禁** |
+
+第④步不做，就不叫基因工程——只是随机改配置。  
+鉴定要答清两句：**该不该晋升？强在哪一段基因？**
+
+### G1–G5
 
 | 槽 | 名称 | 回答什么 | 变异 |
 |----|------|----------|------|
@@ -88,44 +119,18 @@ Agent 工程收成生物学同款流水线：取基因 → 组装 → 导入 →
 
 `base(G1+G2) + layers(G3+G4) + overlays(G5[])` · [`docs/architecture.md`](docs/architecture.md)
 
-边界→G2，规格→G4，经验→G5；裁判规则不进选手基因组。
-
 ---
 
 ## 结构
 
 ```
-docs/           # 架构与实验
+docs/           # 架构与实验口径
 src/yiagent/    # Assemble / 晋升门禁（搭建中）
-factory/        # 组装测试工厂 · 测试流水线 / 基因筛选台（Docker）
+factory/        # 可点筛选台 · 冻结演示 + 实跑（Docker :8787）
 experiments/    # 可复现入口（搭建中）
 ```
 
-工作台关系：研究实验正本在 `20260725_基因级Agent方案/`；本仓为对外开源搭建，`factory/` 为可点 Demo。
-
-### 组装测试工厂（`factory/`）
-
-可点筛选台，台面品牌为 **测试流水线 · YiAgent 基因筛选台**。
-
-```bash
-cd factory && docker compose up --build
-```
-
-打开 [http://localhost:8787](http://localhost:8787)。
-
-流水线（口述 → 题目 → 基线 → 基因组 → 初筛 → 冠军 → 终筛）：
-
-1. **口述** → 生成考题与裁判标准（可手改）
-2. **题目** → 左侧原题（选手），右侧裁判标准（不进基因组）
-3. **标准基线 A/B**（并行多线程；可跳过）  
-   - A = 原题对照（最低标准）  
-   - B = 带入标准（理论上限）
-4. **生成完整基因组**（G1–G5 候选）
-5. **初筛**（合格线 + 早停）
-6. **冠军池**勾选
-7. **终筛** → **效果最优 / 稳定最优 / 均衡最优**
-
-真测需 Kimi Coding Plan Key（只存浏览器会话，不写磁盘）。演示包可先浏览台面。细则见 [`factory/README.md`](factory/README.md)。
+研究实验正本仍在工作台 `20260725_基因级Agent方案/`；本仓为对外开源骨架，`factory/` 是可点 Demo。
 
 ---
 
@@ -133,7 +138,7 @@ cd factory && docker compose up --build
 
 - [x] 主张：改基因组 + 分槽鉴定晋升  
 - [x] 早期 XSCT 数据（A vs C）  
-- [x] 组装测试工厂（含 A/B 基线 → 基因组 → 初筛 → 终筛）  
+- [x] 组装测试工厂（A/B → 基因组 → 初筛 → 终筛 + 冻结演示）  
 - [ ] schema + `Assemble` 最小实现  
 - [ ] 晋升 / 驳回 / 噪声不足  
 - [ ] 公开晋升榜 · License  

@@ -262,8 +262,8 @@ const i18n = {
     workers: "并发线程",
     advanced: "高级选项",
     genCase: "生成题目与标准",
-    demo: "载入批判思维题",
-    demoHint: "载入批判思维原题（不自动开跑）。你逐步点基线 / 基因组 / 初筛；跑完后点「保存」或「固化演示」。无 Key 时若有冻结包则直接展示。",
+    demo: "载入冻结演示",
+    demoHint: "载入已固化的批判思维演示包（含 A/B 与终筛结果），不调用模型。要实跑请用「生成题目」或逐步点基线按钮。",
     saveRun: "保存会话",
     freezeDemo: "固化为演示",
     saveNeedSession: "请先有一个会话再保存",
@@ -363,8 +363,8 @@ const i18n = {
     workers: "Workers",
     advanced: "Advanced",
     genCase: "Generate task & rubric",
-    demo: "Load CT fixture",
-    demoHint: "Load the critical-thinking case (no auto-run). Click baseline / genomes / prefilter yourself; then Save or Freeze demo. Without a Key, loads the frozen pack if present.",
+    demo: "Load frozen demo",
+    demoHint: "Load the frozen CT demo pack (A/B + finals). No model calls. For a live run, generate a case or click baseline yourself.",
     saveRun: "Save session",
     freezeDemo: "Freeze as demo",
     saveNeedSession: "Start a session before saving",
@@ -643,19 +643,16 @@ async function onDemo() {
   state.error = null;
   render();
   try {
-    // With Key → fresh fixture for manual live run; without → frozen pack if any.
-    const fresh = !!(state.apiKey && state.apiKey.length >= 8);
+    // Always prefer frozen demo_pack (show recorded A/B + finals). Never auto-start a live run.
     const snap = await api("/api/session/demo", {
       method: "POST",
-      body: JSON.stringify({ fresh }),
+      body: JSON.stringify({ fresh: false }),
     });
     applySnap(snap);
     const hasBaseline = (snap.baseline_summaries || []).some((r) => (r.n || 0) > 0);
-    state.focusStep = hasBaseline ? 3 : 2;
-    showToast(hasBaseline ? c.toastDemoPack : c.toastDemo);
-    if (!fresh && !hasBaseline) {
-      state.error = c.keyNeed;
-    }
+    const frozen = snap.frozen_demo === true;
+    state.focusStep = hasBaseline || frozen ? 3 : 2;
+    showToast(frozen || hasBaseline ? c.toastDemoPack : c.toastDemoSeed);
   } catch (e) {
     state.error = String(e.message || e);
   } finally {
