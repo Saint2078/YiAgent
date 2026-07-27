@@ -5,11 +5,11 @@
 
 ## 主张
 
-**像改 DNA 一样改 Agent：先动基因，再做检测鉴定——不合格就不晋升。**
+**别人调 prompt；我们改基因组，并用分槽鉴定决定晋升。**
 
-*Gene-engineer the agent. Assay it. Promote only if a gene slot actually got stronger.*
+*They tune prompts. We edit the genome — and promote only with a slot-level verdict.*
 
-别人在调 prompt、堆自进化故事。我们把 Agent 工程收成生物学同款流水线：
+Agent 工程收成生物学同款流水线：取基因 → 组装 → 导入 → **检测鉴定**。
 
 | | 生物学 | YiAgent |
 |--|--------|---------|
@@ -84,7 +84,7 @@ src/yiagent/    # Assemble / 晋升门禁（搭建中）
 experiments/    # 可复现入口（搭建中）
 ```
 
-- [x] 主张：基因工程四步 + 晋升鉴定  
+- [x] 主张：改基因组 + 分槽鉴定晋升  
 - [x] 早期 XSCT 数据  
 - [ ] schema + `Assemble` 最小实现  
 - [ ] 晋升 / 驳回 / 噪声不足  
