@@ -1,0 +1,25 @@
+# Secrets & credentials
+secrets/
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local / editor
+tmp/
+.DS_Store
+.cursor/
+.idea/
+*.swp
