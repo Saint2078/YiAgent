@@ -58,10 +58,23 @@ docker compose up --build
 
 ```
 factory/
-  server/     # FastAPI + Kimi + 裁判 + run_log
+  server/     # FastAPI + 多厂商 LLM + 裁判 + run_log
   www/        # 静态 UI
   fixtures/   # 题 / 等位基因 / demo_pack.json / runs/
   save/       # 本地会话包（gitignore）
 ```
 
-Key **不要**提交进 git。
+## 支持的模型（API）
+
+| 厂商 | 模型示例 | Key |
+|------|----------|-----|
+| Kimi Coding Plan | `k3` · `kimi-k2.6` | Coding Plan Key |
+| Moonshot | `moonshot-v1-auto` 等 | Moonshot Key |
+| OpenAI | `gpt-4o` · `gpt-4.1` · `o4-mini` | `sk-…` |
+| DeepSeek | `deepseek-chat` · `deepseek-reasoner` | DeepSeek Key |
+| 通义 DashScope | `qwen-plus` · `qwen-max` | DashScope `sk-…` |
+| 智谱 | `glm-4-plus` · `glm-4-flash` | 智谱 Key |
+| Anthropic | `claude-sonnet-4-5` 等 | `sk-ant-…` |
+| OpenRouter | Claude / Gemini 等 | `sk-or-…` |
+
+界面按厂商分组；换模型会切换 Key 提示。Key **不要**提交进 git。

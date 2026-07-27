@@ -7,7 +7,7 @@ import re
 import time
 from typing import Any
 
-from kimi_client import chat_completions, extract_content
+from llm_client import chat_completions, extract_content
 
 
 def parse_json(text: str) -> dict:

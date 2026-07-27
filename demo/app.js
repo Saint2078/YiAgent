@@ -88,6 +88,44 @@ function oralExamplesList() {
   return t().oralExamples || (state.lang === "zh" ? ORAL_EXAMPLES_ZH : ORAL_EXAMPLES_EN);
 }
 
+function selectedModelMeta() {
+  return (state.models || []).find((m) => m.id === state.model) || null;
+}
+
+function apiKeyLabel() {
+  const m = selectedModelMeta();
+  if (m?.key_hint) return m.key_hint;
+  if (m?.provider_label) return `${m.provider_label} Key`;
+  return t().apiKey;
+}
+
+function modelOptionsHtml() {
+  const list =
+    state.models && state.models.length
+      ? state.models
+      : [
+          { id: "k3", label: "Kimi 3", provider_label: "Kimi Coding Plan" },
+          { id: "kimi-k2.6", label: "Kimi 2.6", provider_label: "Kimi Coding Plan" },
+        ];
+  const groups = new Map();
+  for (const m of list) {
+    const g = m.provider_label || m.provider || "Other";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(m);
+  }
+  let html = "";
+  for (const [g, items] of groups) {
+    html += `<optgroup label="${escapeHtml(g)}">`;
+    for (const m of items) {
+      html += `<option value="${escapeHtml(m.id)}" ${
+        state.model === m.id ? "selected" : ""
+      }>${escapeHtml(m.label || m.id)}</option>`;
+    }
+    html += `</optgroup>`;
+  }
+  return html;
+}
+
 function copyKeysForLang(lang) {
   const base = i18n[lang] || {};
   return Object.keys(base)
@@ -257,8 +295,8 @@ const i18n = {
     oralPh: "例如：客服在用户套取订单隐私或越权操作时，应如何拒答并引导合规路径…",
     examples: "试试这些",
     model: "模型",
-    apiKey: "kimi key",
-    apiKeyHelp: "仅保存在本机浏览器会话，不会写入服务器磁盘。",
+    apiKey: "API Key",
+    apiKeyHelp: "按所选厂商填写对应 Key；仅保存在本机浏览器会话，不会写入服务器磁盘。",
     workers: "并发线程",
     advanced: "高级选项",
     genCase: "生成题目与标准",
@@ -358,8 +396,8 @@ const i18n = {
     oralPh: "e.g. How support should refuse privacy fishing or out-of-scope asks…",
     examples: "Try these",
     model: "Model",
-    apiKey: "Kimi Coding Plan Key",
-    apiKeyHelp: "Stored in this browser session only — never written to disk.",
+    apiKey: "API Key",
+    apiKeyHelp: "Use the key for the selected provider. Stored in this browser session only — never written to disk.",
     workers: "Workers",
     advanced: "Advanced",
     genCase: "Generate task & rubric",
@@ -441,7 +479,7 @@ const i18n = {
     toastDemoPack: "Frozen demo pack loaded (with A/B)",
     toastDemoSeed: "CT fixture loaded — run A/B baseline",
     toastSaved: "Saved",
-    keyNeed: "Enter a valid Kimi Coding Plan API Key",
+    keyNeed: "Enter a valid API Key for the selected provider",
     oralNeed: "Add a brief (or tap an example)",
     footer: "YiAgent companion · Assemble Factory · session-local results",
   },
@@ -534,7 +572,6 @@ async function api(path, opts = {}) {
     if (method === "GET" && /\/api\/session\/[^/]+$/.test(path)) {
       return window.DEMO_SNAP;
     }
-    // Mutations (run / save / start / abort / …) are no-ops that surface clearly.
     throw new Error(offlineBlockedMessage());
   }
   const res = await fetch(path, {
@@ -1160,24 +1197,11 @@ function render() {
           <div class="run-field">
             <label class="field-label">${escapeHtml(c.model)}</label>
             <select id="model-select" ${running ? "disabled" : ""}>
-              ${(state.models.length
-                ? state.models
-                : [
-                    { id: "k3", label: "Kimi 3" },
-                    { id: "kimi-k2.6", label: "Kimi 2.6" },
-                  ]
-              )
-                .map(
-                  (m) =>
-                    `<option value="${m.id}" ${state.model === m.id ? "selected" : ""}>${escapeHtml(
-                      m.label || m.id
-                    )}</option>`
-                )
-                .join("")}
+              ${modelOptionsHtml()}
             </select>
           </div>
           <div class="run-field run-field-wide">
-            <label class="field-label">${escapeHtml(c.apiKey)}</label>
+            <label class="field-label">${escapeHtml(apiKeyLabel())}</label>
             <input id="api-key" type="password" autocomplete="off" placeholder="sk-..." value="${escapeHtml(
               state.apiKey
             )}" ${running ? "disabled" : ""} />
@@ -1601,6 +1625,8 @@ function wire(running, unlock) {
   });
   document.getElementById("model-select")?.addEventListener("change", (e) => {
     state.model = e.target.value;
+    // Refresh key hint label for the selected provider
+    render();
   });
   document.getElementById("pass-mean")?.addEventListener("change", (e) => {
     state.passMean = Number(e.target.value) || 70;

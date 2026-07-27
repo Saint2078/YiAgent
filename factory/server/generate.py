@@ -8,7 +8,7 @@ import uuid
 from typing import Any
 
 from judge import parse_json
-from kimi_client import chat_completions, extract_content
+from llm_client import chat_completions, extract_content
 
 SLOTS = ["G1", "G2", "G3", "G4", "G5"]
 

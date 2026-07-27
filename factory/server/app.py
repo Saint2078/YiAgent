@@ -11,23 +11,14 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from jobs import MANAGER
+from llm_client import model_ok as _model_ok, models_public
 
 ROOT = Path(__file__).resolve().parents[1]
 WWW = ROOT / "www"
 log = logging.getLogger("factory")
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="YiAgent Factory Demo", version="0.4.0")
-
-MODELS = [
-    {"id": "k3", "label": "Kimi 3", "provider": "kimi-coding", "supported": True},
-    {"id": "kimi-k2.6", "label": "Kimi 2.6", "provider": "kimi-coding", "supported": True},
-]
-
-
-def _model_ok(model: str) -> bool:
-    m = next((x for x in MODELS if x["id"] == model), None)
-    return bool(m and m["supported"])
+app = FastAPI(title="YiAgent Factory Demo", version="0.5.0")
 
 
 def _http_from_exc(e: Exception, prefix: str) -> HTTPException:
@@ -82,12 +73,12 @@ class ChampionBody(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.4.0"}
+    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.5.0"}
 
 
 @app.get("/api/models")
 def models():
-    return {"models": MODELS}
+    return {"models": models_public()}
 
 
 @app.post("/api/session/case")

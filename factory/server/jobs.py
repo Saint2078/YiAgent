@@ -29,7 +29,7 @@ from generate import (
     parse_target_text,
 )
 from judge import judge_with_retries
-from kimi_client import chat_completions, extract_content
+from llm_client import chat_completions, extract_content
 from run_log import get_or_create_log
 
 ROOT = Path(__file__).resolve().parents[1]
