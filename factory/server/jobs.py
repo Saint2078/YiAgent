@@ -30,9 +30,11 @@ from generate import (
 )
 from judge import judge_with_retries
 from kimi_client import chat_completions, extract_content
+from run_log import get_or_create_log
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "fixtures"
+SAVE = ROOT / "save"
 
 BASELINE_ARMS = (
     {"id": "A", "title": "A · 原题对照"},
@@ -112,6 +114,7 @@ class Session:
     early_stopped: bool = False
     marks: dict[str, str | None] = field(default_factory=dict)
     error: str | None = None
+    frozen_demo: bool = False
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     lock: threading.Lock = field(default_factory=threading.Lock)
@@ -160,6 +163,7 @@ class Session:
                 "marks": dict(self.marks),
                 "logs": list(self.logs)[:80],
                 "error": self.error,
+                "frozen_demo": self.frozen_demo,
                 "updated_at": self.updated_at,
             }
 
@@ -224,6 +228,18 @@ class SessionManager:
         with self._lock:
             return self._sessions.get(session_id)
 
+    def _log_case(self, sess: Session) -> None:
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        case = sess.case or {}
+        rlog.record_case(
+            oral=sess.oral,
+            case=case,
+            target_text=sess.target_text,
+            criteria_text=sess.criteria_text,
+            judge=judge_body(case) if case else None,
+        )
+        rlog.record_phase(sess.phase)
+
     def create_case(self, *, api_key: str, model: str, oral: str) -> Session:
         case = generate_case(api_key, model, oral)
         sess = Session(
@@ -238,21 +254,197 @@ class SessionManager:
         )
         with self._lock:
             self._sessions[sess.id] = sess
+        self._log_case(sess)
         return sess
 
-    def hydrate_demo(self) -> Session:
+    def hydrate_demo(self, *, fresh: bool = False) -> Session:
+        """Load frozen demo pack unless fresh=True (manual live run from fixture case)."""
+        if not fresh:
+            pack_path = FIX / "demo_pack.json"
+            if pack_path.is_file():
+                return self._session_from_pack(load_json(pack_path), frozen=True)
+        return self.seed_fixture_case(model="k3" if fresh else "demo")
+
+    def seed_fixture_case(self, *, model: str = "k3") -> Session:
         case = normalize_case(dict(self.fixture_case), oral="演示：批判思维虚假二选一")
-        bank = dict(self.fixture_bank)
         sess = Session(
             id=uuid.uuid4().hex[:12],
-            model="demo",
-            phase="genomes_ready",
+            model=model,
+            phase="case_ready",
             oral="演示：批判思维虚假二选一",
             case=case,
-            bank=bank,
+            bank=None,
             target_text=format_target_text(case),
             criteria_text=format_criteria_text(case),
             status="idle",
+            frozen_demo=False,
+        )
+        with self._lock:
+            self._sessions[sess.id] = sess
+        self._log_case(sess)
+        return sess
+
+    def start_demo_live(
+        self,
+        *,
+        api_key: str,
+        model: str = "k3",
+        baseline_reps: int = 5,
+        workers: int = 4,
+    ) -> Session:
+        """Seed critical-thinking fixture case and immediately start A/B baseline (real run)."""
+        sess = self.seed_fixture_case(model=model)
+        return self.start_baseline(
+            sess.id,
+            api_key=api_key,
+            baseline_reps=baseline_reps,
+            workers=workers,
+            model=model,
+        )
+
+    def attach_fixture_bank(self, session_id: str) -> Session:
+        sess = self._require(session_id)
+        with sess.lock:
+            if sess.status == "running":
+                raise ValueError("already running")
+            sess.bank = dict(self.fixture_bank)
+            if sess.phase in ("case_ready", "baseline_done"):
+                sess.phase = "genomes_ready"
+            sess.updated_at = time.time()
+            bank = sess.bank
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        rlog.record_genomes(bank=bank)
+        rlog.record_phase("genomes_ready", note="fixture_bank")
+        return sess
+
+    def export_pack(self, session_id: str) -> dict[str, Any]:
+        sess = self._require(session_id)
+        with sess.lock:
+            phase = sess.phase
+            if phase in ("baselining", "prefiltering", "championing"):
+                raise ValueError(f"busy: {phase}")
+            return {
+                "version": 1,
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "oral": sess.oral,
+                "phase": phase,
+                "model": "demo",
+                "source_model": sess.model,
+                "case": sess.case,
+                "target_text": sess.target_text,
+                "criteria_text": sess.criteria_text,
+                "bank": sess.bank,
+                "baseline_reps": sess.baseline_reps,
+                "baseline_scores": {k: list(v) for k, v in sess.baseline_scores.items()},
+                "pre_reps": sess.pre_reps,
+                "pre_scores": {k: list(v) for k, v in sess.pre_scores.items()},
+                "champ_reps": sess.champ_reps,
+                "champ_scores": {k: list(v) for k, v in sess.champ_scores.items()},
+                "pass_mean": sess.pass_mean,
+                "qualify_target": sess.qualify_target,
+                "qualified_count": sess.qualified_count,
+                "early_stopped": sess.early_stopped,
+                "pool": list(sess.pool),
+                "marks": dict(sess.marks),
+            }
+
+    def save_session(
+        self,
+        session_id: str,
+        *,
+        freeze_demo: bool = False,
+        label: str = "session",
+        version_tag: str = "v1.0",
+    ) -> dict[str, Any]:
+        """Write pack + run log under save/; optionally freeze fixtures/demo_pack.json."""
+        import json
+
+        pack = self.export_pack(session_id)
+        sess = self._require(session_id)
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        # Refresh summaries into log if phases already done but events missing.
+        with sess.lock:
+            if sess.baseline_scores or sess.status == "skipped":
+                rlog.record_baseline(
+                    scores=sess.baseline_scores,
+                    summaries=sess._baseline_summaries(),
+                    reps=sess.baseline_reps,
+                    skipped=sess.status == "skipped" and not sess.baseline_scores,
+                )
+            if sess.bank:
+                rlog.record_genomes(bank=sess.bank)
+            if sess.pre_scores:
+                rlog.record_prefilter(
+                    scores=sess.pre_scores,
+                    summaries=sess._summaries(sess.pre_scores, sess.pass_mean),
+                    pool=sess.pool,
+                    pass_mean=sess.pass_mean,
+                    qualify_target=sess.qualify_target,
+                    qualified_count=sess.qualified_count,
+                    early_stopped=sess.early_stopped,
+                    reps=sess.pre_reps,
+                )
+            if sess.champ_scores:
+                rlog.record_champion(
+                    scores=sess.champ_scores,
+                    summaries=sess._summaries(sess.champ_scores, sess.pass_mean),
+                    pool=sess.pool,
+                    marks=sess.marks,
+                    reps=sess.champ_reps,
+                )
+            rlog.record_phase(sess.phase, note="save")
+            rlog.model = sess.model
+            rlog.oral = sess.oral
+
+        SAVE.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        pack_path = SAVE / f"{stamp}_{label}_{session_id}_{version_tag}.json"
+        pack_path.write_text(json.dumps(pack, ensure_ascii=False, indent=2), encoding="utf-8")
+        log_path = rlog.write_local(label=f"{label}_log", version_tag=version_tag)
+        ship = rlog.ship_to_server()  # stub — no send yet
+
+        demo_path = None
+        if freeze_demo:
+            demo_path = FIX / "demo_pack.json"
+            demo_path.write_text(json.dumps(pack, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        return {
+            "ok": True,
+            "pack_path": str(pack_path.relative_to(ROOT)),
+            "log_path": str(log_path.relative_to(ROOT)),
+            "demo_pack": str(demo_path.relative_to(ROOT)) if demo_path else None,
+            "ship": ship,
+            "phase": pack.get("phase"),
+            "baseline_summaries": sess.snapshot().get("baseline_summaries"),
+        }
+
+    def _session_from_pack(self, pack: dict, *, frozen: bool) -> Session:
+        case = pack.get("case") or normalize_case(
+            dict(self.fixture_case), oral=pack.get("oral") or "演示：批判思维虚假二选一"
+        )
+        sess = Session(
+            id=uuid.uuid4().hex[:12],
+            model="demo" if frozen else (pack.get("source_model") or "k3"),
+            phase=pack.get("phase") or "case_ready",
+            oral=pack.get("oral") or "演示：批判思维虚假二选一",
+            case=case,
+            bank=pack.get("bank"),
+            target_text=pack.get("target_text") or format_target_text(case),
+            criteria_text=pack.get("criteria_text") or format_criteria_text(case),
+            status="idle",
+            baseline_reps=int(pack.get("baseline_reps") or 5),
+            baseline_scores={k: list(v) for k, v in (pack.get("baseline_scores") or {}).items()},
+            pre_reps=int(pack.get("pre_reps") or 3),
+            pre_scores={k: list(v) for k, v in (pack.get("pre_scores") or {}).items()},
+            champ_reps=int(pack.get("champ_reps") or 5),
+            champ_scores={k: list(v) for k, v in (pack.get("champ_scores") or {}).items()},
+            pass_mean=float(pack.get("pass_mean") or 70),
+            qualify_target=int(pack.get("qualify_target") or 3),
+            qualified_count=int(pack.get("qualified_count") or 0),
+            early_stopped=bool(pack.get("early_stopped")),
+            pool=list(pack.get("pool") or []),
+            marks=dict(pack.get("marks") or {}),
+            frozen_demo=frozen,
         )
         with self._lock:
             self._sessions[sess.id] = sess
@@ -263,17 +455,23 @@ class SessionManager:
     ) -> Session:
         sess = self._require(session_id)
         with sess.lock:
-            if target_text is not None:
+            changed = False
+            if target_text is not None and target_text != sess.target_text:
                 sess.target_text = target_text
                 sess.case = parse_target_text(target_text, sess.case)
-            if criteria_text is not None:
+                changed = True
+            if criteria_text is not None and criteria_text != sess.criteria_text:
                 sess.criteria_text = criteria_text
                 sess.case = parse_criteria_text(criteria_text, sess.case)
-            # Edits invalidate the A/B baseline (criteria dump / host may change).
-            sess.baseline_scores = {}
-            if sess.phase == "baseline_done" and not sess.bank:
-                sess.phase = "case_ready"
+                changed = True
+            # Only invalidate A/B when rubric/task text actually changed.
+            if changed:
+                sess.baseline_scores = {}
+                if sess.phase == "baseline_done" and not sess.bank:
+                    sess.phase = "case_ready"
             sess.updated_at = time.time()
+        if changed:
+            self._log_case(sess)
         return sess
 
     def skip_baseline(self, session_id: str) -> Session:
@@ -289,6 +487,10 @@ class SessionManager:
             sess.status = "skipped"
             sess.error = None
             sess.updated_at = time.time()
+            reps = sess.baseline_reps
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        rlog.record_baseline(scores={}, summaries=sess._baseline_summaries(), reps=reps, skipped=True)
+        rlog.record_phase("baseline_done", note="skipped")
         return sess
 
     def start_baseline(
@@ -358,6 +560,10 @@ class SessionManager:
             sess.error = None
             sess.status = "idle"
             sess.updated_at = time.time()
+            bank_snap = bank
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        rlog.record_genomes(bank=bank_snap)
+        rlog.record_phase("genomes_ready")
         return sess
 
     def start_prefilter(
@@ -621,7 +827,14 @@ class SessionManager:
                 else:
                     sess.status = "done"
                     sess.phase = "baseline_done"
+                    scores = {k: list(v) for k, v in sess.baseline_scores.items()}
+                    summaries = sess._baseline_summaries()
+                    reps_done = sess.baseline_reps
                 sess.updated_at = time.time()
+            if not sess._abort.is_set() and sess.phase == "baseline_done":
+                rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+                rlog.record_baseline(scores=scores, summaries=summaries, reps=reps_done)
+                rlog.record_phase("baseline_done")
         except Exception as e:  # noqa: BLE001
             with sess.lock:
                 sess.status = "error"
@@ -731,8 +944,24 @@ class SessionManager:
                 else:
                     sess.status = "done"
                     sess.phase = "prefilter_done"
-                    # ensure pool = passed by default (already added); keep as-is
+                    scores = {k: list(v) for k, v in sess.pre_scores.items()}
+                    summaries = sess._summaries(sess.pre_scores, sess.pass_mean)
+                    pool = list(sess.pool)
+                    payload = {
+                        "scores": scores,
+                        "summaries": summaries,
+                        "pool": pool,
+                        "pass_mean": sess.pass_mean,
+                        "qualify_target": sess.qualify_target,
+                        "qualified_count": sess.qualified_count,
+                        "early_stopped": sess.early_stopped,
+                        "reps": sess.pre_reps,
+                    }
                 sess.updated_at = time.time()
+            if not sess._abort.is_set() and sess.phase == "prefilter_done":
+                rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+                rlog.record_prefilter(**payload)
+                rlog.record_phase("prefilter_done")
         except Exception as e:  # noqa: BLE001
             with sess.lock:
                 sess.status = "error"
@@ -820,7 +1049,18 @@ class SessionManager:
                     sess.marks = pick_marks(summaries)
                     sess.status = "done"
                     sess.phase = "done"
+                    champ_payload = {
+                        "scores": {k: list(v) for k, v in sess.champ_scores.items()},
+                        "summaries": summaries,
+                        "pool": list(sess.pool),
+                        "marks": dict(sess.marks),
+                        "reps": sess.champ_reps,
+                    }
                 sess.updated_at = time.time()
+            if not sess._abort.is_set() and sess.phase == "done":
+                rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+                rlog.record_champion(**champ_payload)
+                rlog.record_phase("done")
         except Exception as e:  # noqa: BLE001
             with sess.lock:
                 sess.status = "error"

@@ -103,10 +103,58 @@ def session_case(body: CaseBody):
     return sess.snapshot()
 
 
+class DemoBody(BaseModel):
+    fresh: bool = False  # True = fixture case for manual live run; False = prefer frozen pack
+
+
 @app.post("/api/session/demo")
-def session_demo():
-    sess = MANAGER.hydrate_demo()
+def session_demo(body: DemoBody = DemoBody()):
+    """Load frozen pack (default) or fresh fixture case when fresh=True."""
+    sess = MANAGER.hydrate_demo(fresh=body.fresh)
     return sess.snapshot()
+
+
+@app.post("/api/session/{session_id}/bank/fixture")
+def session_attach_bank(session_id: str):
+    try:
+        sess = MANAGER.attach_fixture_bank(session_id)
+    except KeyError:
+        raise HTTPException(404, "session not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return sess.snapshot()
+
+
+@app.get("/api/session/{session_id}/export")
+def session_export(session_id: str):
+    try:
+        return MANAGER.export_pack(session_id)
+    except KeyError:
+        raise HTTPException(404, "session not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+class SaveBody(BaseModel):
+    freeze_demo: bool = False
+    label: str = "session"
+    version_tag: str = "v1.0"
+
+
+@app.post("/api/session/{session_id}/save")
+def session_save(session_id: str, body: SaveBody = SaveBody()):
+    """Persist pack + run log under save/; optional freeze to fixtures/demo_pack.json."""
+    try:
+        return MANAGER.save_session(
+            session_id,
+            freeze_demo=body.freeze_demo,
+            label=body.label.strip() or "session",
+            version_tag=body.version_tag.strip() or "v1.0",
+        )
+    except KeyError:
+        raise HTTPException(404, "session not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
 
 
 @app.get("/api/session/{session_id}")

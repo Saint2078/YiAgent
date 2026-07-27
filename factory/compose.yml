@@ -6,3 +6,8 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./fixtures:/app/fixtures
+      - ./save:/app/save
+      - ./www:/app/www
+      - ./server:/app/server

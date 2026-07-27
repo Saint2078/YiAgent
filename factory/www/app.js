@@ -262,8 +262,13 @@ const i18n = {
     workers: "并发线程",
     advanced: "高级选项",
     genCase: "生成题目与标准",
-    demo: "先看演示（批判思维）",
-    demoHint: "无需口述即可浏览完整台面；真测仍需 Key。",
+    demo: "载入批判思维题",
+    demoHint: "载入批判思维原题（不自动开跑）。你逐步点基线 / 基因组 / 初筛；跑完后点「保存」或「固化演示」。无 Key 时若有冻结包则直接展示。",
+    saveRun: "保存会话",
+    freezeDemo: "固化为演示",
+    saveNeedSession: "请先有一个会话再保存",
+    toastSaveOk: "已写入 save/（含运行日志）",
+    toastFreezeOk: "已写入 save/ 并固化 fixtures/demo_pack.json",
     s2: "核对题目与评分标准",
     s2help: "左侧是给选手看的原题；右侧是裁判标准，不会装进基因组。可直接改字。",
     target: "筛选目标 · 原题",
@@ -278,7 +283,7 @@ const i18n = {
     startBaseline: "开始 A/B 基线",
     skipBaseline: "跳过基线",
     baselineGap: "B − A（均分差）",
-    baselineDemoSkip: "演示包跳过基线；正式流程在此测 A/B。",
+    baselineDemoSkip: "冻结演示包含已测 A/B；要重测请新会话实跑。",
     nextGenome: "下一步：生成基因组",
     s4: "生成初始基因组",
     s4help: "按 G1 身份 · G2 边界 · G3 知识 · G4 能力 · G5 经验 生成多套候选组合。",
@@ -331,7 +336,9 @@ const i18n = {
     toastGenome: "基因组已生成，可以开始初筛",
     toastPre: "初筛完成，请确认冠军池",
     toastChamp: "终筛完成，三标已出",
-    toastDemo: "演示包已载入",
+    toastDemo: "已载入批判思维原题，请手动跑 A/B",
+    toastDemoPack: "已载入冻结演示包（含 A/B）",
+    toastDemoSeed: "已载入批判思维原题，请跑 A/B 基线",
     toastSaved: "已保存文案",
     keyNeed: "请填写有效的Key",
     oralNeed: "请先写一句口述意图（或点示例）",
@@ -356,8 +363,13 @@ const i18n = {
     workers: "Workers",
     advanced: "Advanced",
     genCase: "Generate task & rubric",
-    demo: "Load demo (critical thinking)",
-    demoHint: "Browse the full desk without a brief; live runs still need a Key.",
+    demo: "Load CT fixture",
+    demoHint: "Load the critical-thinking case (no auto-run). Click baseline / genomes / prefilter yourself; then Save or Freeze demo. Without a Key, loads the frozen pack if present.",
+    saveRun: "Save session",
+    freezeDemo: "Freeze as demo",
+    saveNeedSession: "Start a session before saving",
+    toastSaveOk: "Wrote save/ (incl. run log)",
+    toastFreezeOk: "Wrote save/ and froze fixtures/demo_pack.json",
     s2: "Review task & rubric",
     s2help: "Left = contestant task. Right = judge rubric (never loaded into the genome). Edit freely.",
     target: "Target · task",
@@ -372,7 +384,7 @@ const i18n = {
     startBaseline: "Run A/B baseline",
     skipBaseline: "Skip baseline",
     baselineGap: "B − A (mean gap)",
-    baselineDemoSkip: "Demo skips baseline; live runs measure A/B here.",
+    baselineDemoSkip: "Frozen demo includes measured A/B. Start a new session to re-run.",
     nextGenome: "Next: genomes",
     s4: "Generate genomes",
     s4help: "G1 identity · G2 boundaries · G3 knowledge · G4 capability · G5 experience.",
@@ -425,7 +437,9 @@ const i18n = {
     toastGenome: "Genomes ready — start prefilter",
     toastPre: "Prefilter done — confirm the pool",
     toastChamp: "Finals done — medals ready",
-    toastDemo: "Demo pack loaded",
+    toastDemo: "CT fixture loaded — run A/B yourself",
+    toastDemoPack: "Frozen demo pack loaded (with A/B)",
+    toastDemoSeed: "CT fixture loaded — run A/B baseline",
     toastSaved: "Saved",
     keyNeed: "Enter a valid Kimi Coding Plan API Key",
     oralNeed: "Add a brief (or tap an example)",
@@ -624,20 +638,67 @@ async function onGenCase() {
 
 async function onDemo() {
   const c = t();
+  readFormIntoState();
   state.busy = true;
   state.error = null;
   render();
   try {
-    const snap = await api("/api/session/demo", { method: "POST", body: "{}" });
+    // With Key → fresh fixture for manual live run; without → frozen pack if any.
+    const fresh = !!(state.apiKey && state.apiKey.length >= 8);
+    const snap = await api("/api/session/demo", {
+      method: "POST",
+      body: JSON.stringify({ fresh }),
+    });
     applySnap(snap);
-    state.focusStep = 4;
-    showToast(c.toastDemo);
+    const hasBaseline = (snap.baseline_summaries || []).some((r) => (r.n || 0) > 0);
+    state.focusStep = hasBaseline ? 3 : 2;
+    showToast(hasBaseline ? c.toastDemoPack : c.toastDemo);
+    if (!fresh && !hasBaseline) {
+      state.error = c.keyNeed;
+    }
+  } catch (e) {
+    state.error = String(e.message || e);
+  } finally {
+    state.busy = false;
+    state.localBusyLabel = "";
+    render();
+    scrollToStep(state.focusStep);
+  }
+}
+
+async function onSaveRun(freeze) {
+  const c = t();
+  if (!state.sessionId) {
+    state.error = c.saveNeedSession;
+    render();
+    return;
+  }
+  if (state.snap?.status === "running") {
+    state.error = c.wait;
+    render();
+    return;
+  }
+  state.busy = true;
+  state.error = null;
+  render();
+  try {
+    const res = await api(`/api/session/${state.sessionId}/save`, {
+      method: "POST",
+      body: JSON.stringify({
+        freeze_demo: !!freeze,
+        label: freeze ? "demo_capture" : "session",
+        version_tag: "v1.0",
+      }),
+    });
+    showToast(freeze ? c.toastFreezeOk : c.toastSaveOk);
+    if (res?.pack_path) {
+      console.info("[yiagent save]", res);
+    }
   } catch (e) {
     state.error = String(e.message || e);
   } finally {
     state.busy = false;
     render();
-    scrollToStep(4);
   }
 }
 
@@ -993,7 +1054,7 @@ function render() {
   const unlock = unlockedMax(rank, snap);
   const focus = Math.min(state.focusStep, unlock);
   const examples = oralExamplesList();
-  const isDemo = snap?.model === "demo";
+  const demoFrozen = snap?.frozen_demo === true;
 
   root.className = "app-shell console ux";
   root.innerHTML = `
@@ -1004,6 +1065,12 @@ function render() {
       </div>
       <div class="topbar-actions">
         <button class="lang-toggle" type="button" id="btn-lang">${c.lang}</button>
+        <button class="btn-ghost btn-compact" type="button" id="btn-save-run" ${
+          !state.sessionId || running ? "disabled" : ""
+        }>${escapeHtml(c.saveRun)}</button>
+        <button class="btn-ghost btn-compact" type="button" id="btn-freeze-demo" ${
+          !state.sessionId || running ? "disabled" : ""
+        }>${escapeHtml(c.freezeDemo)}</button>
         <button class="btn-ghost btn-compact" type="button" id="btn-reset">${c.reset}</button>
       </div>
     </header>
@@ -1153,7 +1220,7 @@ function render() {
         ${
           unlock >= 3
             ? `${
-                isDemo
+                demoFrozen
                   ? `<p class="field-hint">${escapeHtml(c.baselineDemoSkip)}</p>`
                   : ""
               }
@@ -1169,15 +1236,15 @@ function render() {
               </div>
               <div class="stage-actions">
                 <button class="btn-primary" type="button" id="btn-baseline" ${
-                  running || isDemo ? "disabled" : ""
+                  running || demoFrozen ? "disabled" : ""
                 }>${escapeHtml(c.startBaseline)}</button>
                 <button class="btn-ghost" type="button" id="btn-skip-baseline" ${
-                  running ? "disabled" : ""
+                  running || demoFrozen ? "disabled" : ""
                 }>${escapeHtml(c.skipBaseline)}</button>
                 ${
                   (snap?.baseline_summaries || []).some((r) => (r.n || 0) > 0) ||
                   phase === "baseline_done" ||
-                  isDemo
+                  demoFrozen
                     ? `<button class="btn-primary" type="button" id="btn-goto-4">${escapeHtml(c.nextGenome)}</button>`
                     : ""
                 }
@@ -1210,11 +1277,11 @@ function render() {
           unlock >= 4
             ? `<div class="stage-actions">
                 <button class="btn-primary" type="button" id="btn-gen-genome" ${
-                  running || isDemo ? "disabled" : ""
+                  running || demoFrozen ? "disabled" : ""
                 }>${escapeHtml(c.genGenome)}</button>
                 ${
-                  isDemo
-                    ? `<span class="ok-chip">${escapeHtml(c.toastDemo)}</span>
+                  demoFrozen
+                    ? `<span class="ok-chip">${escapeHtml(c.toastDemoPack)}</span>
                        <button class="btn-primary" type="button" id="btn-goto-5">${escapeHtml(c.nextPre)}</button>`
                     : snap?.variants?.length
                       ? `<button class="btn-primary" type="button" id="btn-goto-5">${escapeHtml(c.nextPre)}</button>`
@@ -1439,6 +1506,8 @@ function wire(running, unlock) {
     render();
   });
   document.getElementById("btn-reset")?.addEventListener("click", onReset);
+  document.getElementById("btn-save-run")?.addEventListener("click", () => onSaveRun(false));
+  document.getElementById("btn-freeze-demo")?.addEventListener("click", () => onSaveRun(true));
   document.getElementById("btn-gen-case")?.addEventListener("click", onGenCase);
   document.getElementById("btn-demo")?.addEventListener("click", onDemo);
   document.getElementById("btn-save-case")?.addEventListener("click", onSaveCase);
