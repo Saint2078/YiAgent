@@ -1,4 +1,4 @@
-"""Session-based factory pipeline: case → genomes → prefilter → champion."""
+"""Session-based factory pipeline: case → baseline A/B → genomes → prefilter → champion."""
 
 from __future__ import annotations
 
@@ -11,7 +11,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from assemble import assemble_system, build_messages, host_of, judge_body, variant_map
+from assemble import (
+    assemble_system,
+    build_baseline_messages,
+    build_messages,
+    host_of,
+    judge_body,
+    variant_map,
+)
 from generate import (
     format_criteria_text,
     format_target_text,
@@ -26,6 +33,11 @@ from kimi_client import chat_completions, extract_content
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "fixtures"
+
+BASELINE_ARMS = (
+    {"id": "A", "title": "A · 原题对照"},
+    {"id": "B", "title": "B · 灌入完整评分标准"},
+)
 
 
 def load_json(path: Path) -> dict:
@@ -76,7 +88,7 @@ class Session:
     id: str
     model: str = "k3"
     phase: str = "idle"
-    # idle|case_ready|genomes_ready|prefiltering|prefilter_done|championing|done|error
+    # idle|case_ready|baselining|baseline_done|genomes_ready|prefiltering|prefilter_done|championing|done|error
     oral: str = ""
     case: dict | None = None
     bank: dict | None = None
@@ -84,14 +96,16 @@ class Session:
     criteria_text: str = ""
     pass_mean: float = 70.0
     qualify_target: int = 3
+    baseline_reps: int = 5
     pre_reps: int = 3
     champ_reps: int = 5
     workers: int = 4
+    baseline_scores: dict[str, list[float]] = field(default_factory=dict)
     pre_scores: dict[str, list[float]] = field(default_factory=dict)
     champ_scores: dict[str, list[float]] = field(default_factory=dict)
     pool: list[str] = field(default_factory=list)
     logs: list[dict] = field(default_factory=list)
-    status: str = "idle"  # idle|running|done|aborted|error
+    status: str = "idle"  # idle|running|done|aborted|error|skipped
     total: int = 0
     done: int = 0
     qualified_count: int = 0
@@ -107,6 +121,7 @@ class Session:
         with self.lock:
             pre_sum = self._summaries(self.pre_scores, self.pass_mean)
             champ_sum = self._summaries(self.champ_scores, self.pass_mean)
+            baseline_sum = self._baseline_summaries()
             variants = []
             if self.bank:
                 for v in self.bank.get("variants") or []:
@@ -130,6 +145,7 @@ class Session:
                 "variants": variants,
                 "pass_mean": self.pass_mean,
                 "qualify_target": self.qualify_target,
+                "baseline_reps": self.baseline_reps,
                 "pre_reps": self.pre_reps,
                 "champ_reps": self.champ_reps,
                 "workers": self.workers,
@@ -137,6 +153,7 @@ class Session:
                 "done": self.done,
                 "qualified_count": self.qualified_count,
                 "early_stopped": self.early_stopped,
+                "baseline_summaries": baseline_sum,
                 "pre_summaries": pre_sum,
                 "champ_summaries": champ_sum,
                 "pool": list(self.pool),
@@ -145,6 +162,29 @@ class Session:
                 "error": self.error,
                 "updated_at": self.updated_at,
             }
+
+    def _baseline_summaries(self) -> list[dict]:
+        out = []
+        for arm in BASELINE_ARMS:
+            aid = arm["id"]
+            st = calc_stats(self.baseline_scores.get(aid) or [])
+            out.append(
+                {
+                    "arm": aid,
+                    "variant_id": aid,
+                    "title": arm["title"],
+                    **st,
+                    "composite": round(st["mean"] - 1.5 * (st["sdv"] or 0), 2)
+                    if st["mean"] is not None
+                    else None,
+                }
+            )
+        means = {r["arm"]: r["mean"] for r in out if r.get("mean") is not None}
+        if "A" in means and "B" in means:
+            gap = round(means["B"] - means["A"], 2)
+            for r in out:
+                r["gap_b_minus_a"] = gap
+        return out
 
     def _summaries(self, scores_by: dict[str, list[float]], pass_mean: float) -> list[dict]:
         out = []
@@ -229,7 +269,67 @@ class SessionManager:
             if criteria_text is not None:
                 sess.criteria_text = criteria_text
                 sess.case = parse_criteria_text(criteria_text, sess.case)
+            # Edits invalidate the A/B baseline (criteria dump / host may change).
+            sess.baseline_scores = {}
+            if sess.phase == "baseline_done" and not sess.bank:
+                sess.phase = "case_ready"
             sess.updated_at = time.time()
+        return sess
+
+    def skip_baseline(self, session_id: str) -> Session:
+        """Allow proceeding to genomes without running A/B baseline."""
+        sess = self._require(session_id)
+        with sess.lock:
+            if not sess.case:
+                raise ValueError("case missing")
+            if sess.status == "running":
+                raise ValueError("already running")
+            sess.baseline_scores = {}
+            sess.phase = "baseline_done"
+            sess.status = "skipped"
+            sess.error = None
+            sess.updated_at = time.time()
+        return sess
+
+    def start_baseline(
+        self,
+        session_id: str,
+        *,
+        api_key: str,
+        baseline_reps: int = 5,
+        workers: int = 4,
+        model: str | None = None,
+    ) -> Session:
+        sess = self._require(session_id)
+        if not sess.case:
+            raise ValueError("case missing")
+        with sess.lock:
+            if sess.status == "running":
+                raise ValueError("already running")
+            if model:
+                sess.model = model
+            sess.case = parse_target_text(sess.target_text, sess.case)
+            sess.case = parse_criteria_text(sess.criteria_text, sess.case)
+            sess.baseline_reps = max(1, min(int(baseline_reps), 10))
+            sess.workers = max(1, min(int(workers), 12))
+            sess.baseline_scores = {}
+            sess.done = 0
+            sess.total = len(BASELINE_ARMS) * sess.baseline_reps
+            sess.phase = "baselining"
+            sess.status = "running"
+            sess.error = None
+            sess._abort.clear()
+            # Keep non-baseline logs if any; drop old baseline rows.
+            sess.logs = [l for l in sess.logs if l.get("stage") != "baseline"]
+            case = dict(sess.case)
+            reps = sess.baseline_reps
+            workers_n = sess.workers
+            m = sess.model
+        threading.Thread(
+            target=self._run_baseline,
+            args=(sess, api_key, case, reps, workers_n, m),
+            daemon=True,
+        ).start()
         return sess
 
     def generate_genomes(self, session_id: str, *, api_key: str, model: str | None = None) -> Session:
@@ -251,7 +351,7 @@ class SessionManager:
             sess.pre_scores.clear()
             sess.champ_scores.clear()
             sess.pool = []
-            sess.logs = []
+            sess.logs = [l for l in sess.logs if l.get("stage") == "baseline"]
             sess.marks = {}
             sess.qualified_count = 0
             sess.early_stopped = False
@@ -285,7 +385,7 @@ class SessionManager:
             sess.pre_scores = {}
             sess.champ_scores = {}
             sess.pool = []
-            sess.logs = []
+            sess.logs = [l for l in sess.logs if l.get("stage") == "baseline"]
             sess.marks = {}
             sess.qualified_count = 0
             sess.early_stopped = False
@@ -407,6 +507,127 @@ class SessionManager:
             "preview": (content or "")[:280],
             "chars": len(content or ""),
         }
+
+    def _run_baseline_one(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        case: dict,
+        arm: str,
+        title: str,
+        rep: int,
+        reps: int,
+        abort: threading.Event,
+    ) -> dict[str, Any]:
+        if abort.is_set():
+            return {"aborted": True, "arm": arm, "rep": rep}
+        jbody = judge_body(case)
+        messages = build_baseline_messages(case, arm)
+        gen = chat_completions(api_key, model, messages, max_tokens=2200, reasoning_effort="low")
+        content = extract_content(gen)
+        if abort.is_set():
+            return {"aborted": True, "arm": arm, "rep": rep}
+        jr = judge_with_retries(api_key, model, jbody, content, max_attempts=3)
+        score = float(jr["score"]) if jr.get("score") is not None else None
+        return {
+            "arm": arm,
+            "variant_id": arm,
+            "rep": rep,
+            "reps": reps,
+            "title": title,
+            "score": score,
+            "ok": jr.get("ok"),
+            "preview": (content or "")[:280],
+            "chars": len(content or ""),
+        }
+
+    def _run_baseline(
+        self,
+        sess: Session,
+        api_key: str,
+        case: dict,
+        reps: int,
+        workers: int,
+        model: str,
+    ) -> None:
+        tasks = [(arm["id"], arm["title"], r) for arm in BASELINE_ARMS for r in range(1, reps + 1)]
+        try:
+            with ThreadPoolExecutor(max_workers=min(workers, len(tasks))) as pool_ex:
+                futs = {
+                    pool_ex.submit(
+                        self._run_baseline_one,
+                        api_key=api_key,
+                        model=model,
+                        case=case,
+                        arm=arm,
+                        title=title,
+                        rep=rep,
+                        reps=reps,
+                        abort=sess._abort,
+                    ): (arm, rep)
+                    for arm, title, rep in tasks
+                }
+                for fut in as_completed(futs):
+                    if sess._abort.is_set():
+                        break
+                    arm, rep = futs[fut]
+                    try:
+                        row = fut.result()
+                    except Exception as e:  # noqa: BLE001
+                        with sess.lock:
+                            sess.done += 1
+                            sess.logs.insert(
+                                0,
+                                {
+                                    "n": sess.done,
+                                    "error": str(e),
+                                    "variant_id": arm,
+                                    "title": arm,
+                                    "rep": rep,
+                                    "stage": "baseline",
+                                },
+                            )
+                            sess.updated_at = time.time()
+                        continue
+                    if row.get("aborted"):
+                        continue
+                    with sess.lock:
+                        sess.done += 1
+                        if row.get("score") is not None:
+                            sess.baseline_scores.setdefault(arm, []).append(float(row["score"]))
+                        st = calc_stats(sess.baseline_scores.get(arm) or [])
+                        sess.logs.insert(
+                            0,
+                            {
+                                "n": sess.done,
+                                "stage": "baseline",
+                                "rep": row["rep"],
+                                "reps": reps,
+                                "variant_id": arm,
+                                "title": row.get("title") or arm,
+                                "score": row.get("score"),
+                                "mean_so_far": st["mean"],
+                                "sdv_so_far": st["sdv"],
+                                "preview": row.get("preview"),
+                            },
+                        )
+                        sess.updated_at = time.time()
+            with sess.lock:
+                if sess._abort.is_set():
+                    sess.status = "aborted"
+                    if sess.phase == "baselining":
+                        sess.phase = "case_ready"
+                else:
+                    sess.status = "done"
+                    sess.phase = "baseline_done"
+                sess.updated_at = time.time()
+        except Exception as e:  # noqa: BLE001
+            with sess.lock:
+                sess.status = "error"
+                sess.phase = "error"
+                sess.error = str(e)
+                sess.updated_at = time.time()
 
     def _run_prefilter(
         self,

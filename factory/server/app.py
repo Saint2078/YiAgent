@@ -17,7 +17,7 @@ WWW = ROOT / "www"
 log = logging.getLogger("factory")
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="YiAgent Factory Demo", version="0.3.0")
+app = FastAPI(title="YiAgent Factory Demo", version="0.4.0")
 
 MODELS = [
     {"id": "k3", "label": "Kimi 3", "provider": "kimi-coding", "supported": True},
@@ -55,6 +55,13 @@ class CaseTextBody(BaseModel):
     criteria_text: str | None = None
 
 
+class BaselineBody(BaseModel):
+    api_key: str = Field(min_length=8)
+    baseline_reps: int = Field(default=5, ge=1, le=10)
+    workers: int = Field(default=4, ge=1, le=12)
+    model: str | None = None
+
+
 class PrefilterBody(BaseModel):
     api_key: str = Field(min_length=8)
     pre_reps: int = Field(default=3, ge=1, le=10)
@@ -75,7 +82,7 @@ class ChampionBody(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.3.0"}
+    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.4.0"}
 
 
 @app.get("/api/models")
@@ -118,6 +125,36 @@ def session_update_case(session_id: str, body: CaseTextBody):
         )
     except KeyError:
         raise HTTPException(404, "session not found") from None
+    return sess.snapshot()
+
+
+@app.post("/api/session/{session_id}/baseline/start")
+def session_baseline(session_id: str, body: BaselineBody):
+    if body.model and not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        sess = MANAGER.start_baseline(
+            session_id,
+            api_key=body.api_key.strip(),
+            baseline_reps=body.baseline_reps,
+            workers=body.workers,
+            model=body.model,
+        )
+    except KeyError:
+        raise HTTPException(404, "session not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"session_id": sess.id, **sess.snapshot()}
+
+
+@app.post("/api/session/{session_id}/baseline/skip")
+def session_baseline_skip(session_id: str):
+    try:
+        sess = MANAGER.skip_baseline(session_id)
+    except KeyError:
+        raise HTTPException(404, "session not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
     return sess.snapshot()
 
 

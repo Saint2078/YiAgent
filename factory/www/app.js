@@ -1,4 +1,5 @@
 const WORKER_OPTIONS = [2, 4, 6, 8];
+const BASELINE_REP_OPTIONS = [3, 5, 8];
 const PRE_REP_OPTIONS = [1, 3, 5];
 const CHAMP_REP_OPTIONS = [3, 5, 8, 10];
 const QUALIFY_OPTIONS = [1, 2, 3, 5];
@@ -27,6 +28,7 @@ const state = {
   criteriaText: "",
   passMean: 70,
   qualifyTarget: 3,
+  baselineReps: 5,
   preReps: 3,
   champReps: 5,
   pool: new Set(),
@@ -39,24 +41,223 @@ const state = {
   showAdvanced: false,
   showLogs: false,
   focusStep: 1,
+  copyEditOpen: false,
+  copyOverrides: { zh: {}, en: {} },
 };
+
+const COPY_STORAGE_KEY = "yiagent_factory_copy_v1";
+
+function loadCopyOverrides() {
+  try {
+    const raw = localStorage.getItem(COPY_STORAGE_KEY);
+    if (!raw) return { zh: {}, en: {} };
+    const parsed = JSON.parse(raw);
+    return {
+      zh: parsed.zh && typeof parsed.zh === "object" ? parsed.zh : {},
+      en: parsed.en && typeof parsed.en === "object" ? parsed.en : {},
+    };
+  } catch {
+    return { zh: {}, en: {} };
+  }
+}
+
+state.copyOverrides = loadCopyOverrides();
+
+function persistCopyOverrides() {
+  localStorage.setItem(COPY_STORAGE_KEY, JSON.stringify(state.copyOverrides));
+}
+
+function effectiveBundle(lang) {
+  const base = i18n[lang] || {};
+  const ov = state.copyOverrides[lang] || {};
+  const merged = { ...base, ...ov };
+  if (Array.isArray(ov.steps)) merged.steps = ov.steps.slice();
+  else merged.steps = (base.steps || []).slice();
+  if (Array.isArray(ov.oralExamples)) merged.oralExamples = ov.oralExamples.slice();
+  else {
+    merged.oralExamples = (lang === "zh" ? ORAL_EXAMPLES_ZH : ORAL_EXAMPLES_EN).slice();
+  }
+  return merged;
+}
+
+function t() {
+  return effectiveBundle(state.lang);
+}
+
+function oralExamplesList() {
+  return t().oralExamples || (state.lang === "zh" ? ORAL_EXAMPLES_ZH : ORAL_EXAMPLES_EN);
+}
+
+function copyKeysForLang(lang) {
+  const base = i18n[lang] || {};
+  return Object.keys(base)
+    .filter((k) => k !== "steps" && typeof base[k] === "string")
+    .sort();
+}
+
+function exportCopyPayload() {
+  return {
+    zh: effectiveBundle("zh"),
+    en: effectiveBundle("en"),
+  };
+}
+
+function setCopyField(lang, key, value) {
+  if (!state.copyOverrides[lang]) state.copyOverrides[lang] = {};
+  const base = i18n[lang] || {};
+  if (key === "steps" || key === "oralExamples") {
+    state.copyOverrides[lang][key] = value;
+  } else if (value === (base[key] ?? "")) {
+    delete state.copyOverrides[lang][key];
+  } else {
+    state.copyOverrides[lang][key] = value;
+  }
+  persistCopyOverrides();
+}
+
+function syncCopyEditor(forceRebuild = false) {
+  const host = document.getElementById("copy-editor");
+  if (!host) return;
+  if (!state.copyEditOpen) {
+    host.hidden = true;
+    host.innerHTML = "";
+    host.dataset.built = "";
+    document.body.classList.remove("copy-edit-open");
+    return;
+  }
+  document.body.classList.add("copy-edit-open");
+  host.hidden = false;
+  const lang = state.lang;
+  if (!forceRebuild && host.dataset.built === lang && host.querySelector(".copy-editor-panel")) {
+    return;
+  }
+  const bundle = effectiveBundle(lang);
+  const keys = copyKeysForLang(lang);
+  host.innerHTML = `
+    <aside class="copy-editor-panel" aria-label="copy editor">
+      <header class="copy-editor-head">
+        <div>
+          <strong>编辑文案</strong>
+          <p class="dim tiny">左侧改字会立刻反映到页面。改完点「导出 JSON」或「复制」发给我固化。当前：${
+            lang === "zh" ? "中文" : "English"
+          }</p>
+        </div>
+        <div class="copy-editor-actions">
+          <button type="button" class="btn-ghost btn-compact" id="btn-copy-export">导出 JSON</button>
+          <button type="button" class="btn-ghost btn-compact" id="btn-copy-clipboard">复制</button>
+          <button type="button" class="btn-ghost btn-compact" id="btn-copy-reset">恢复默认</button>
+          <button type="button" class="btn-primary btn-compact" id="btn-copy-close">完成</button>
+        </div>
+      </header>
+      <div class="copy-editor-body">
+        <section class="copy-editor-section">
+          <h3>步骤条 steps</h3>
+          ${(bundle.steps || [])
+            .map(
+              (s, i) => `<label class="copy-field">
+                <span class="mono tiny">steps[${i}]</span>
+                <input type="text" data-copy-key="steps" data-copy-idx="${i}" value="${escapeHtml(s)}" />
+              </label>`
+            )
+            .join("")}
+        </section>
+        <section class="copy-editor-section">
+          <h3>口述示例 oralExamples</h3>
+          ${(bundle.oralExamples || [])
+            .map(
+              (s, i) => `<label class="copy-field">
+                <span class="mono tiny">oralExamples[${i}]</span>
+                <input type="text" data-copy-key="oralExamples" data-copy-idx="${i}" value="${escapeHtml(s)}" />
+              </label>`
+            )
+            .join("")}
+        </section>
+        <section class="copy-editor-section">
+          <h3>界面文案</h3>
+          ${keys
+            .map((k) => {
+              const val = bundle[k] ?? "";
+              const rows = String(val).length > 60 ? 3 : 2;
+              return `<label class="copy-field">
+                <span class="mono tiny">${escapeHtml(k)}</span>
+                <textarea data-copy-key="${escapeHtml(k)}" rows="${rows}">${escapeHtml(val)}</textarea>
+              </label>`;
+            })
+            .join("")}
+        </section>
+      </div>
+    </aside>`;
+  host.dataset.built = lang;
+
+  host.querySelector("#btn-copy-close")?.addEventListener("click", () => {
+    state.copyEditOpen = false;
+    render();
+  });
+  host.querySelector("#btn-copy-reset")?.addEventListener("click", () => {
+    if (!window.confirm("清除本机已改文案，恢复代码默认？")) return;
+    state.copyOverrides = { zh: {}, en: {} };
+    persistCopyOverrides();
+    host.dataset.built = "";
+    render();
+    syncCopyEditor(true);
+  });
+  const doExport = async (toClipboard) => {
+    const payload = JSON.stringify(exportCopyPayload(), null, 2);
+    const blob = new Blob([payload], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `yiagent-factory-copy-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    if (toClipboard && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(payload);
+        showToast("已导出并复制到剪贴板");
+      } catch {
+        showToast("已下载 JSON");
+      }
+    } else {
+      showToast("已下载 JSON，发给我即可固化");
+    }
+    render();
+  };
+  host.querySelector("#btn-copy-export")?.addEventListener("click", () => doExport(false));
+  host.querySelector("#btn-copy-clipboard")?.addEventListener("click", () => doExport(true));
+
+  const onEdit = (el) => {
+    const key = el.dataset.copyKey;
+    if (!key) return;
+    if (key === "steps" || key === "oralExamples") {
+      const idx = Number(el.dataset.copyIdx);
+      const arr = (effectiveBundle(lang)[key] || []).slice();
+      arr[idx] = el.value;
+      setCopyField(lang, key, arr);
+    } else {
+      setCopyField(lang, key, el.value);
+    }
+    render();
+  };
+  host.querySelectorAll("[data-copy-key]").forEach((el) => {
+    el.addEventListener("input", () => onEdit(el));
+  });
+}
 
 const i18n = {
   zh: {
-    brandSub: "组装测试工厂",
-    companion: "YiAgent 配套筛选台",
+    brandSub: "测试流水线",
+    companion: "YiAgent 基因筛选台",
     lang: "EN",
-    title: "用基因组筛选 Agent，而不是调一句 prompt",
-    lead: "口述你的场景 → 自动生成考题与评分标准 → 组装 G1–G5 候选基因组 → 初筛达标后进入冠军终筛，标出效果 / 稳定 / 均衡最优。",
-    hook: "别人调 prompt；我们改基因组。",
-    steps: ["口述", "题目", "基因组", "初筛", "冠军", "终筛"],
+    title: "通过基因组定义Agent，并通过变异、筛选等基因工程手段获得最符合你心意的Agent（再也不用调 Prompt）",
+    lead: "口述场景 → 生成考题与裁判 → 建立 A/B 标准基线 → 组装 G1–G5 候选 → 初筛 → 冠军终筛（效果 / 稳定 / 均衡）。",
+    hook: "用基因工程定义Agent",
+    steps: ["口述", "题目", "基线", "基因组", "初筛", "冠军", "终筛"],
     s1: "口述你的筛选意图",
     s1help: "用一两句话说明要测什么能力。也可点下方示例一键填入。",
     oral: "场景口述",
     oralPh: "例如：客服在用户套取订单隐私或越权操作时，应如何拒答并引导合规路径…",
     examples: "试试这些",
     model: "模型",
-    apiKey: "Kimi Coding Plan Key",
+    apiKey: "kimi key",
     apiKeyHelp: "仅保存在本机浏览器会话，不会写入服务器磁盘。",
     workers: "并发线程",
     advanced: "高级选项",
@@ -68,15 +269,25 @@ const i18n = {
     target: "筛选目标 · 原题",
     criteria: "筛选标准 · 裁判",
     saveCase: "保存修改",
+    nextBaseline: "下一步：建立标准基线",
+    s3: "建立标准基线（A / B）",
+    s3help: "A 组只用原题 system；B 组在 system 中灌入完整评分标准（对照上界）。各测若干次，按并发线程并行打分，作为后续基因组筛选的参照。",
+    baselineArmA: "A · 原题对照（最低标准）",
+    baselineArmB: "B · 带入标准（理论上限）",
+    baselineReps: "每组测几次",
+    startBaseline: "开始 A/B 基线",
+    skipBaseline: "跳过基线",
+    baselineGap: "B − A（均分差）",
+    baselineDemoSkip: "演示包跳过基线；正式流程在此测 A/B。",
     nextGenome: "下一步：生成基因组",
-    s3: "生成初始基因组",
-    s3help: "按 G1 身份 · G2 边界 · G3 知识 · G4 能力 · G5 经验 生成多套候选组合。",
-    genGenome: "生成 G1–G5 基因组",
+    s4: "生成初始基因组",
+    s4help: "按 G1 身份 · G2 边界 · G3 知识 · G4 能力 · G5 经验 生成多套候选组合。",
+    genGenome: "生成完整基因组",
     genomes: "候选基因组",
     genomeCount: "套候选",
     nextPre: "下一步：初筛",
-    s4: "初筛",
-    s4help: "每套基因组测若干次；均分达到合格线即记为合格。凑够合格数就提前结束，省时间。",
+    s5: "初筛",
+    s5help: "每套基因组测若干次；均分达到合格线即记为合格。凑够合格数就提前结束，省时间。",
     qualify: "要凑齐几个合格",
     preReps: "每套测几次",
     passMean: "合格线（均分）",
@@ -85,16 +296,16 @@ const i18n = {
     early: "已提前结束",
     passed: "合格",
     failed: "未过",
-    s5: "挑选冠军池",
-    s5help: "初筛合格的默认勾选。你也可以把有潜力的未过项加进来，或去掉不想比的。",
+    s6: "挑选冠军池",
+    s6help: "初筛合格的默认勾选。你也可以把有潜力的未过项加进来，或去掉不想比的。",
     poolSelected: "已选入池",
     selectPassed: "一键只留合格",
     selectAll: "全选",
     clearPool: "清空",
-    champReps: "终筛每套测几次",
+    champReps: "终筛测试次数",
     startChamp: "开始终筛",
-    s6: "终筛结果",
-    s6help: "三块金牌可以落在不同基因组上——效果看均分，稳定看波动，均衡看均分减波动。",
+    s7: "终筛结果",
+    s7help: "三块金牌可以落在不同基因组上——效果看均分，稳定看波动，均衡看均分减波动。",
     markPerf: "效果最优",
     markStable: "稳定最优",
     markBalanced: "均衡最优",
@@ -115,23 +326,25 @@ const i18n = {
     locked: "完成上一步后解锁",
     emptyPool: "还没有可入池的基因组",
     toastCase: "题目与标准已生成，请核对后继续",
+    toastBaseline: "标准基线已建立，可以生成基因组",
+    toastBaselineSkip: "已跳过基线",
     toastGenome: "基因组已生成，可以开始初筛",
     toastPre: "初筛完成，请确认冠军池",
     toastChamp: "终筛完成，三标已出",
     toastDemo: "演示包已载入",
     toastSaved: "已保存文案",
-    keyNeed: "请填写有效的 Kimi Coding Plan API Key",
+    keyNeed: "请填写有效的Key",
     oralNeed: "请先写一句口述意图（或点示例）",
-    footer: "YiAgent 配套 · 组装测试工厂 · 结果仅供本会话筛选参考",
+    footer: "YiAgent 基因组工作台",
   },
   en: {
     brandSub: "Assemble Factory",
     companion: "Companion desk for YiAgent",
     lang: "中文",
     title: "Screen agents by genome — not by one prompt",
-    lead: "Describe a scenario → generate task & rubric → assemble G1–G5 candidates → prefilter → champion finals with performance / stability / balance marks.",
+    lead: "Brief → task & rubric → A/B baseline → G1–G5 genomes → prefilter → champion finals (performance / stability / balance).",
     hook: "They tune prompts. We edit the genome.",
-    steps: ["Brief", "Task", "Genome", "Pre", "Pool", "Final"],
+    steps: ["Brief", "Task", "Baseline", "Genome", "Pre", "Pool", "Final"],
     s1: "Describe what to screen",
     s1help: "One or two sentences. Or tap an example below.",
     oral: "Scenario brief",
@@ -150,15 +363,25 @@ const i18n = {
     target: "Target · task",
     criteria: "Criteria · judge",
     saveCase: "Save edits",
+    nextBaseline: "Next: A/B baseline",
+    s3: "Standard baseline (A / B)",
+    s3help: "A = original system only. B = host + full scoring criteria dump (upper bound). Run a few reps each in parallel workers as the reference before genomes.",
+    baselineArmA: "A · original task",
+    baselineArmB: "B · criteria dump",
+    baselineReps: "Reps per arm",
+    startBaseline: "Run A/B baseline",
+    skipBaseline: "Skip baseline",
+    baselineGap: "B − A (mean gap)",
+    baselineDemoSkip: "Demo skips baseline; live runs measure A/B here.",
     nextGenome: "Next: genomes",
-    s3: "Generate genomes",
-    s3help: "G1 identity · G2 boundaries · G3 knowledge · G4 capability · G5 experience.",
+    s4: "Generate genomes",
+    s4help: "G1 identity · G2 boundaries · G3 knowledge · G4 capability · G5 experience.",
     genGenome: "Generate G1–G5 genomes",
     genomes: "Candidates",
     genomeCount: "candidates",
     nextPre: "Next: prefilter",
-    s4: "Prefilter",
-    s4help: "Test each genome a few times. Pass when mean ≥ threshold. Stop early once enough pass.",
+    s5: "Prefilter",
+    s5help: "Test each genome a few times. Pass when mean ≥ threshold. Stop early once enough pass.",
     qualify: "Pass count to stop",
     preReps: "Reps per genome",
     passMean: "Pass line (mean)",
@@ -167,16 +390,16 @@ const i18n = {
     early: "Early stop",
     passed: "Pass",
     failed: "Fail",
-    s5: "Champion pool",
-    s5help: "Passed genomes are checked by default. Add or remove freely.",
+    s6: "Champion pool",
+    s6help: "Passed genomes are checked by default. Add or remove freely.",
     poolSelected: "In pool",
     selectPassed: "Passed only",
     selectAll: "Select all",
     clearPool: "Clear",
     champReps: "Final reps",
     startChamp: "Start finals",
-    s6: "Final marks",
-    s6help: "Three medals may land on different genomes.",
+    s7: "Final marks",
+    s7help: "Three medals may land on different genomes.",
     markPerf: "Best performance",
     markStable: "Best stability",
     markBalanced: "Best balanced",
@@ -197,6 +420,8 @@ const i18n = {
     locked: "Unlocks after the previous step",
     emptyPool: "No genomes to pool yet",
     toastCase: "Task ready — review then continue",
+    toastBaseline: "Baseline ready — generate genomes",
+    toastBaselineSkip: "Baseline skipped",
     toastGenome: "Genomes ready — start prefilter",
     toastPre: "Prefilter done — confirm the pool",
     toastChamp: "Finals done — medals ready",
@@ -207,10 +432,6 @@ const i18n = {
     footer: "YiAgent companion · Assemble Factory · session-local results",
   },
 };
-
-function t() {
-  return i18n[state.lang];
-}
 
 function escapeHtml(s) {
   return String(s ?? "")
@@ -224,6 +445,8 @@ function phaseRank(phase) {
   const order = [
     "idle",
     "case_ready",
+    "baselining",
+    "baseline_done",
     "genomes_ready",
     "prefiltering",
     "prefilter_done",
@@ -235,16 +458,18 @@ function phaseRank(phase) {
   return i < 0 ? 0 : i;
 }
 
-/** Map phase → UX step 1..6 */
+/** Map phase → UX step 1..7 */
 function currentStep(phase) {
   const r = phaseRank(phase);
   if (r <= 0) return 1;
-  if (r === 1) return 3; // case ready → focus genomes (step 2 still editable)
-  if (r === 2) return 4;
-  if (r === 3) return 4;
-  if (r === 4) return 5;
-  if (r === 5) return 6;
-  if (r >= 6) return 6;
+  if (r === 1) return 3; // case_ready → baseline
+  if (r === 2) return 3; // baselining
+  if (r === 3) return 4; // baseline_done → genomes
+  if (r === 4) return 5; // genomes_ready → pre
+  if (r === 5) return 5; // prefiltering
+  if (r === 6) return 6; // prefilter_done → pool
+  if (r === 7) return 7; // championing
+  if (r >= 8) return 7;
   return 1;
 }
 
@@ -267,6 +492,7 @@ function applySnap(snap) {
   if (Array.isArray(snap.pool)) state.pool = new Set(snap.pool);
   if (snap.pass_mean != null) state.passMean = snap.pass_mean;
   if (snap.qualify_target != null) state.qualifyTarget = snap.qualify_target;
+  if (snap.baseline_reps != null) state.baselineReps = snap.baseline_reps;
   if (snap.pre_reps != null) state.preReps = snap.pre_reps;
   if (snap.champ_reps != null) state.champReps = snap.champ_reps;
   if (snap.workers != null) state.workers = snap.workers;
@@ -318,6 +544,7 @@ function startPoll() {
         state.busy = false;
         state.localBusyLabel = "";
         const c = t();
+        if (snap.phase === "baseline_done") showToast(c.toastBaseline);
         if (snap.phase === "prefilter_done") showToast(c.toastPre);
         if (snap.phase === "done") showToast(c.toastChamp);
         render();
@@ -403,14 +630,14 @@ async function onDemo() {
   try {
     const snap = await api("/api/session/demo", { method: "POST", body: "{}" });
     applySnap(snap);
-    state.focusStep = 3;
+    state.focusStep = 4;
     showToast(c.toastDemo);
   } catch (e) {
     state.error = String(e.message || e);
   } finally {
     state.busy = false;
     render();
-    scrollToStep(3);
+    scrollToStep(4);
   }
 }
 
@@ -436,6 +663,69 @@ async function onSaveCase() {
   } finally {
     state.busy = false;
     render();
+  }
+}
+
+async function onBaseline() {
+  if (!state.sessionId) return;
+  const c = t();
+  readFormIntoState();
+  if (!state.apiKey || state.apiKey.length < 8) {
+    state.error = c.keyNeed;
+    render();
+    return;
+  }
+  state.busy = true;
+  state.localBusyLabel = c.startBaseline;
+  state.error = null;
+  render();
+  try {
+    await api(`/api/session/${state.sessionId}/case`, {
+      method: "PUT",
+      body: JSON.stringify({
+        target_text: state.targetText,
+        criteria_text: state.criteriaText,
+      }),
+    });
+    const snap = await api(`/api/session/${state.sessionId}/baseline/start`, {
+      method: "POST",
+      body: JSON.stringify({
+        api_key: state.apiKey,
+        baseline_reps: state.baselineReps,
+        workers: state.workers,
+        model: state.model,
+      }),
+    });
+    applySnap(snap);
+    startPoll();
+  } catch (e) {
+    state.error = String(e.message || e);
+    state.busy = false;
+    state.localBusyLabel = "";
+  }
+  render();
+}
+
+async function onSkipBaseline() {
+  if (!state.sessionId) return;
+  const c = t();
+  state.busy = true;
+  state.error = null;
+  render();
+  try {
+    const snap = await api(`/api/session/${state.sessionId}/baseline/skip`, {
+      method: "POST",
+      body: "{}",
+    });
+    applySnap(snap);
+    state.focusStep = 4;
+    showToast(c.toastBaselineSkip);
+  } catch (e) {
+    state.error = String(e.message || e);
+  } finally {
+    state.busy = false;
+    render();
+    scrollToStep(4);
   }
 }
 
@@ -465,7 +755,7 @@ async function onGenGenomes() {
       body: JSON.stringify({ api_key: state.apiKey, model: state.model }),
     });
     applySnap(snap);
-    state.focusStep = 4;
+    state.focusStep = 5;
     showToast(c.toastGenome);
   } catch (e) {
     state.error = String(e.message || e);
@@ -473,7 +763,7 @@ async function onGenGenomes() {
     state.busy = false;
     state.localBusyLabel = "";
     render();
-    scrollToStep(4);
+    scrollToStep(5);
   }
 }
 
@@ -663,14 +953,15 @@ function stepperHtml(c, focus, unlockedMax) {
         const done = n < focus && n <= unlockedMax;
         const active = n === focus;
         const locked = n > unlockedMax;
-        return `<button type="button" class="stepper-item ${active ? "active" : ""} ${done ? "done" : ""} ${
+        return `${i > 0 ? '<span class="stepper-gap" aria-hidden="true"></span>' : ""}
+        <button type="button" class="stepper-item ${active ? "active" : ""} ${done ? "done" : ""} ${
           locked ? "locked" : ""
         }" data-goto="${n}" ${locked ? "disabled" : ""}>
-          <span class="stepper-num">${done ? "✓" : n}</span>
+          <span class="stepper-num">${done ? "✓" : String(n).padStart(2, "0")}</span>
           <span class="stepper-label">${escapeHtml(label)}</span>
         </button>`;
       })
-      .join('<span class="stepper-gap" aria-hidden="true"></span>')}
+      .join("")}
   </nav>`;
 }
 
@@ -683,10 +974,11 @@ function progressBar(done, total) {
 }
 
 function unlockedMax(rank, snap) {
-  if (rank >= 6) return 6;
-  if (rank >= 4) return 6;
-  if (rank >= 2) return 4;
-  if (rank >= 1) return 3;
+  if (rank >= 7) return 7; // championing / done
+  if (rank >= 6) return 7; // prefilter_done
+  if (rank >= 4) return 5; // genomes_ready / prefiltering
+  if (rank >= 3) return 4; // baseline_done
+  if (rank >= 1) return 3; // case_ready / baselining
   if (snap) return 2;
   return 1;
 }
@@ -700,7 +992,7 @@ function render() {
   const running = snap?.status === "running" || state.busy;
   const unlock = unlockedMax(rank, snap);
   const focus = Math.min(state.focusStep, unlock);
-  const examples = state.lang === "zh" ? ORAL_EXAMPLES_ZH : ORAL_EXAMPLES_EN;
+  const examples = oralExamplesList();
   const isDemo = snap?.model === "demo";
 
   root.className = "app-shell console ux";
@@ -708,7 +1000,7 @@ function render() {
     <header class="topbar">
       <div class="brand-block">
         <div class="brand-mark">Yi<span>Agent</span></div>
-        <div class="brand-sub">${escapeHtml(c.brandSub)} · ${escapeHtml(c.companion)}</div>
+        <div class="brand-sub">${escapeHtml(c.brandSub)}</div>
       </div>
       <div class="topbar-actions">
         <button class="lang-toggle" type="button" id="btn-lang">${c.lang}</button>
@@ -737,10 +1029,15 @@ function render() {
 
     <main class="desk">
       <section class="hero-lite">
-        <p class="hook-line">${escapeHtml(c.hook)}</p>
-        <h1 class="console-title">${escapeHtml(c.title)}</h1>
-        <p class="section-lead">${escapeHtml(c.lead)}</p>
-        ${stepperHtml(c, focus, unlock)}
+        <div class="hero-copy">
+          <p class="hero-kicker">${escapeHtml(c.companion)}</p>
+          <h1 class="console-title">${escapeHtml(c.title)}</h1>
+          <p class="hook-line">${escapeHtml(c.hook)}</p>
+          <p class="section-lead">${escapeHtml(c.lead)}</p>
+        </div>
+        <div class="hero-rail">
+          ${stepperHtml(c, focus, unlock)}
+        </div>
         ${state.error ? `<div class="error-banner" role="alert"><strong>提示</strong> ${escapeHtml(state.error)}</div>` : ""}
       </section>
 
@@ -840,7 +1137,7 @@ function render() {
                   c.saveCase
                 )}</button>
                 <button class="btn-primary" type="button" id="btn-goto-3" ${running ? "disabled" : ""}>${escapeHtml(
-                  c.nextGenome
+                  c.nextBaseline
                 )}</button>
               </div>`
             : ""
@@ -855,6 +1152,62 @@ function render() {
         </div>
         ${
           unlock >= 3
+            ? `${
+                isDemo
+                  ? `<p class="field-hint">${escapeHtml(c.baselineDemoSkip)}</p>`
+                  : ""
+              }
+              <div class="param-grid">
+                <div class="run-field">
+                  <label class="field-label">${escapeHtml(c.baselineReps)}</label>
+                  <div class="rep-pills">${pills(BASELINE_REP_OPTIONS, state.baselineReps, "baselinereps", running)}</div>
+                </div>
+                <div class="run-field">
+                  <label class="field-label">${escapeHtml(c.workers)}</label>
+                  <div class="rep-pills">${pills(WORKER_OPTIONS, state.workers, "workers", running)}</div>
+                </div>
+              </div>
+              <div class="stage-actions">
+                <button class="btn-primary" type="button" id="btn-baseline" ${
+                  running || isDemo ? "disabled" : ""
+                }>${escapeHtml(c.startBaseline)}</button>
+                <button class="btn-ghost" type="button" id="btn-skip-baseline" ${
+                  running ? "disabled" : ""
+                }>${escapeHtml(c.skipBaseline)}</button>
+                ${
+                  (snap?.baseline_summaries || []).some((r) => (r.n || 0) > 0) ||
+                  phase === "baseline_done" ||
+                  isDemo
+                    ? `<button class="btn-primary" type="button" id="btn-goto-4">${escapeHtml(c.nextGenome)}</button>`
+                    : ""
+                }
+              </div>
+              ${
+                (snap?.baseline_summaries || []).some((r) => (r.n || 0) > 0)
+                  ? `${
+                      snap.baseline_summaries[0]?.gap_b_minus_a != null
+                        ? `<p class="ok-chip">${escapeHtml(c.baselineGap)} · <span class="mono">${
+                            snap.baseline_summaries[0].gap_b_minus_a
+                          }</span></p>`
+                        : ""
+                    }
+                    ${summaryTable(snap.baseline_summaries, c, null)}`
+                  : phase === "baselining" || (running && state.localBusyLabel === c.startBaseline)
+                    ? progressBar(snap?.done || 0, snap?.total || 0)
+                    : ""
+              }`
+            : ""
+        }
+      </section>
+
+      <section class="panel stage-panel ${focus === 4 ? "is-focus" : ""} ${unlock < 4 ? "stage-locked" : ""}" id="step-panel-4">
+        <div class="stage-head">
+          <p class="section-kicker">04</p>
+          <h2 class="stage-title">${escapeHtml(c.s4)}</h2>
+          <p class="stage-help">${unlock < 4 ? escapeHtml(c.locked) : escapeHtml(c.s4help)}</p>
+        </div>
+        ${
+          unlock >= 4
             ? `<div class="stage-actions">
                 <button class="btn-primary" type="button" id="btn-gen-genome" ${
                   running || isDemo ? "disabled" : ""
@@ -862,9 +1215,9 @@ function render() {
                 ${
                   isDemo
                     ? `<span class="ok-chip">${escapeHtml(c.toastDemo)}</span>
-                       <button class="btn-primary" type="button" id="btn-goto-4">${escapeHtml(c.nextPre)}</button>`
+                       <button class="btn-primary" type="button" id="btn-goto-5">${escapeHtml(c.nextPre)}</button>`
                     : snap?.variants?.length
-                      ? `<button class="btn-primary" type="button" id="btn-goto-4">${escapeHtml(c.nextPre)}</button>`
+                      ? `<button class="btn-primary" type="button" id="btn-goto-5">${escapeHtml(c.nextPre)}</button>`
                       : ""
                 }
               </div>
@@ -892,14 +1245,14 @@ function render() {
         }
       </section>
 
-      <section class="panel stage-panel ${focus === 4 ? "is-focus" : ""} ${unlock < 4 ? "stage-locked" : ""}" id="step-panel-4">
+      <section class="panel stage-panel ${focus === 5 ? "is-focus" : ""} ${unlock < 5 ? "stage-locked" : ""}" id="step-panel-5">
         <div class="stage-head">
-          <p class="section-kicker">04</p>
-          <h2 class="stage-title">${escapeHtml(c.s4)}</h2>
-          <p class="stage-help">${unlock < 4 ? escapeHtml(c.locked) : escapeHtml(c.s4help)}</p>
+          <p class="section-kicker">05</p>
+          <h2 class="stage-title">${escapeHtml(c.s5)}</h2>
+          <p class="stage-help">${unlock < 5 ? escapeHtml(c.locked) : escapeHtml(c.s5help)}</p>
         </div>
         ${
-          unlock >= 4
+          unlock >= 5
             ? `<div class="param-grid">
                 <div class="run-field">
                   <label class="field-label">${escapeHtml(c.qualify)}</label>
@@ -937,14 +1290,14 @@ function render() {
         }
       </section>
 
-      <section class="panel stage-panel ${focus === 5 ? "is-focus" : ""} ${unlock < 5 ? "stage-locked" : ""}" id="step-panel-5">
+      <section class="panel stage-panel ${focus === 6 ? "is-focus" : ""} ${unlock < 6 ? "stage-locked" : ""}" id="step-panel-6">
         <div class="stage-head">
-          <p class="section-kicker">05</p>
-          <h2 class="stage-title">${escapeHtml(c.s5)}</h2>
-          <p class="stage-help">${unlock < 5 ? escapeHtml(c.locked) : escapeHtml(c.s5help)}</p>
+          <p class="section-kicker">06</p>
+          <h2 class="stage-title">${escapeHtml(c.s6)}</h2>
+          <p class="stage-help">${unlock < 6 ? escapeHtml(c.locked) : escapeHtml(c.s6help)}</p>
         </div>
         ${
-          unlock >= 5
+          unlock >= 6
             ? `<div class="pool-toolbar">
                 <span class="ok-chip">${escapeHtml(c.poolSelected)} ${state.pool.size}</span>
                 <button type="button" class="chip" id="btn-pool-passed" ${running ? "disabled" : ""}>${escapeHtml(
@@ -996,14 +1349,14 @@ function render() {
         }
       </section>
 
-      <section class="panel stage-panel ${focus === 6 ? "is-focus" : ""} ${unlock < 6 ? "stage-locked" : ""}" id="step-panel-6">
+      <section class="panel stage-panel ${focus === 7 ? "is-focus" : ""} ${unlock < 7 ? "stage-locked" : ""}" id="step-panel-7">
         <div class="stage-head">
-          <p class="section-kicker">06</p>
-          <h2 class="stage-title">${escapeHtml(c.s6)}</h2>
-          <p class="stage-help">${unlock < 6 ? escapeHtml(c.locked) : escapeHtml(c.s6help)}</p>
+          <p class="section-kicker">07</p>
+          <h2 class="stage-title">${escapeHtml(c.s7)}</h2>
+          <p class="stage-help">${unlock < 7 ? escapeHtml(c.locked) : escapeHtml(c.s7help)}</p>
         </div>
         ${
-          unlock >= 6
+          unlock >= 7
             ? `${
                 snap?.marks && (snap.marks.perf || snap.marks.stable || snap.marks.balanced)
                   ? `<div class="marks-row">
@@ -1045,16 +1398,22 @@ function render() {
                       <tbody>
                         ${(snap.logs || [])
                           .slice(0, 30)
-                          .map(
-                            (l) => `<tr>
+                          .map((l) => {
+                            const stageLabel =
+                              l.stage === "champ"
+                                ? c.s7
+                                : l.stage === "baseline"
+                                  ? c.s3
+                                  : c.s5;
+                            return `<tr>
                               <td class="mono">${l.n ?? ""}</td>
-                              <td>${escapeHtml(l.stage === "champ" ? c.s6 : c.s4)}</td>
+                              <td>${escapeHtml(stageLabel)}</td>
                               <td>${escapeHtml(l.title || l.variant_id || "")}</td>
                               <td class="mono">${l.rep ?? ""}/${l.reps ?? ""}</td>
                               <td class="mono">${l.score ?? l.error ?? ""}</td>
                               <td class="mono">${l.mean_so_far ?? ""}</td>
-                            </tr>`
-                          )
+                            </tr>`;
+                          })
                           .join("")}
                       </tbody>
                     </table></div>`
@@ -1069,17 +1428,22 @@ function render() {
   `;
 
   wire(running, unlock);
+  syncCopyEditor();
 }
 
 function wire(running, unlock) {
   document.getElementById("btn-lang")?.addEventListener("click", () => {
     state.lang = state.lang === "zh" ? "en" : "zh";
+    const host = document.getElementById("copy-editor");
+    if (host) host.dataset.built = "";
     render();
   });
   document.getElementById("btn-reset")?.addEventListener("click", onReset);
   document.getElementById("btn-gen-case")?.addEventListener("click", onGenCase);
   document.getElementById("btn-demo")?.addEventListener("click", onDemo);
   document.getElementById("btn-save-case")?.addEventListener("click", onSaveCase);
+  document.getElementById("btn-baseline")?.addEventListener("click", onBaseline);
+  document.getElementById("btn-skip-baseline")?.addEventListener("click", onSkipBaseline);
   document.getElementById("btn-gen-genome")?.addEventListener("click", onGenGenomes);
   document.getElementById("btn-pre")?.addEventListener("click", onPrefilter);
   document.getElementById("btn-abort")?.addEventListener("click", onAbort);
@@ -1093,6 +1457,11 @@ function wire(running, unlock) {
     state.focusStep = 4;
     render();
     scrollToStep(4);
+  });
+  document.getElementById("btn-goto-5")?.addEventListener("click", () => {
+    state.focusStep = 5;
+    render();
+    scrollToStep(5);
   });
   document.getElementById("btn-logs")?.addEventListener("click", () => {
     state.showLogs = !state.showLogs;
@@ -1116,7 +1485,7 @@ function wire(running, unlock) {
   document.querySelectorAll("[data-example]").forEach((btn) =>
     btn.addEventListener("click", () => {
       if (running) return;
-      const list = state.lang === "zh" ? ORAL_EXAMPLES_ZH : ORAL_EXAMPLES_EN;
+      const list = oralExamplesList();
       state.oral = list[Number(btn.dataset.example)] || "";
       render();
       document.getElementById("oral-text")?.focus();
@@ -1174,6 +1543,13 @@ function wire(running, unlock) {
       render();
     })
   );
+  document.querySelectorAll("[data-baselinereps]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      if (running) return;
+      state.baselineReps = Number(btn.dataset.baselinereps);
+      render();
+    })
+  );
   document.querySelectorAll("[data-qualify]").forEach((btn) =>
     btn.addEventListener("click", () => {
       if (running) return;
@@ -1211,6 +1587,13 @@ function wire(running, unlock) {
   );
 }
 
+function toggleCopyEditor(force) {
+  state.copyEditOpen = typeof force === "boolean" ? force : !state.copyEditOpen;
+  const host = document.getElementById("copy-editor");
+  if (host) host.dataset.built = "";
+  render();
+}
+
 async function boot() {
   try {
     const modelsResp = await fetch("/api/models").then((r) => r.json());
@@ -1220,6 +1603,20 @@ async function boot() {
       { id: "k3", label: "Kimi 3" },
       { id: "kimi-k2.6", label: "Kimi 2.6" },
     ];
+  }
+  // Hidden copy editor: Ctrl/⌘+Shift+E, or ?copyEdit=1
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "E" || e.key === "e")) {
+      e.preventDefault();
+      toggleCopyEditor();
+    }
+  });
+  try {
+    if (new URLSearchParams(location.search).get("copyEdit") === "1") {
+      state.copyEditOpen = true;
+    }
+  } catch {
+    /* ignore */
   }
   render();
 }

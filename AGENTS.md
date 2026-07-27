@@ -4,8 +4,8 @@
 |----|-----|
 | 文件夹 | `20260726_YiAgent` |
 | GitHub | https://github.com/Saint2078/YiAgent |
-| status | 进行中 · 含组装测试工厂 Demo（`factory/`） |
-| 关系 | 研究实验正本仍在 `20260725_基因级Agent方案/`；客户 Demo 已并入本仓 `factory/`（工作台原 `20260726_Agent组装测试工厂Demo` 改为指针） |
+| status | 进行中 · factory 含 A/B 基线 + 基因组筛选台（已部署 Docker `:8787`） |
+| 关系 | 研究正本：`20260725_基因级Agent方案/`；本仓为对外开源；客户 Demo 在 `factory/` |
 
 ## 约定
 
