@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+<rect width="100%" height="100%" fill="white"/>
+<text x="360.0" y="28" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" font-weight="700" fill="#333333">批判思维 · 逐次分数（Kimi 3）</text>
+<text x="360.0" y="46" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#777">简单=basic×5 · 复杂=hard×3 · 基线=原题 · 基因=加载基因骨架</text>
+<line x1="52" y1="348.0" x2="696" y2="348.0" stroke="#e8e8e8" stroke-width="1"/>
+<text x="44" y="352.0" text-anchor="end" font-family="system-ui,sans-serif" font-size="10" fill="#888">0</text>
+<line x1="52" y1="292.3809523809524" x2="696" y2="292.3809523809524" stroke="#e8e8e8" stroke-width="1"/>
+<text x="44" y="296.3809523809524" text-anchor="end" font-family="system-ui,sans-serif" font-size="10" fill="#888">20</text>
+<line x1="52" y1="236.76190476190476" x2="696" y2="236.76190476190476" stroke="#e8e8e8" stroke-width="1"/>
+<text x="44" y="240.76190476190476" text-anchor="end" font-family="system-ui,sans-serif" font-size="10" fill="#888">40</text>
+<line x1="52" y1="181.14285714285717" x2="696" y2="181.14285714285717" stroke="#e8e8e8" stroke-width="1"/>
+<text x="44" y="185.14285714285717" text-anchor="end" font-family="system-ui,sans-serif" font-size="10" fill="#888">60</text>
+<line x1="52" y1="125.52380952380953" x2="696" y2="125.52380952380953" stroke="#e8e8e8" stroke-width="1"/>
+<text x="44" y="129.52380952380952" text-anchor="end" font-family="system-ui,sans-serif" font-size="10" fill="#888">80</text>
+<line x1="52" y1="69.90476190476193" x2="696" y2="69.90476190476193" stroke="#e8e8e8" stroke-width="1"/>
+<text x="44" y="73.90476190476193" text-anchor="end" font-family="system-ui,sans-serif" font-size="10" fill="#888">100</text>
+<line x1="52" y1="97.71428571428572" x2="696" y2="97.71428571428572" stroke="#ccc" stroke-width="1" stroke-dasharray="4 3"/>
+<line x1="52" y1="56" x2="52" y2="348" stroke="#bbb"/>
+<line x1="52" y1="348" x2="696" y2="348" stroke="#bbb"/>
+<text x="52.0" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">1</text>
+<text x="213.0" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">2</text>
+<text x="374.0" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">3</text>
+<text x="535.0" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">4</text>
+<text x="696.0" y="366" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#666">5</text>
+<text x="374.0" y="392" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#666">第几次</text>
+<text x="18" y="202.0" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#666" transform="rotate(-90 18 202.0)">分数</text>
+<polyline points="52.0,153.6 213.0,249.3 374.0,161.1 535.0,193.7 696.0,110.0" fill="none" stroke="#8a9aab" stroke-width="2.6"/>
+<circle cx="52.0" cy="153.6" r="4.5" fill="#8a9aab" stroke="white" stroke-width="1.5"/>
+<circle cx="213.0" cy="249.3" r="4.5" fill="#8a9aab" stroke="white" stroke-width="1.5"/>
+<circle cx="374.0" cy="161.1" r="4.5" fill="#8a9aab" stroke="white" stroke-width="1.5"/>
+<circle cx="535.0" cy="193.7" r="4.5" fill="#8a9aab" stroke="white" stroke-width="1.5"/>
+<circle cx="696.0" cy="110.0" r="4.5" fill="#8a9aab" stroke="white" stroke-width="1.5"/>
+<polyline points="52.0,85.8 213.0,85.5 374.0,80.2 535.0,87.1 696.0,83.8" fill="none" stroke="#0f7a5a" stroke-width="2.6"/>
+<rect x="48.0" y="81.8" width="8" height="8" fill="#0f7a5a" stroke="white" stroke-width="1.5"/>
+<rect x="209.0" y="81.5" width="8" height="8" fill="#0f7a5a" stroke="white" stroke-width="1.5"/>
+<rect x="370.0" y="76.2" width="8" height="8" fill="#0f7a5a" stroke="white" stroke-width="1.5"/>
+<rect x="531.0" y="83.1" width="8" height="8" fill="#0f7a5a" stroke="white" stroke-width="1.5"/>
+<rect x="692.0" y="79.8" width="8" height="8" fill="#0f7a5a" stroke="white" stroke-width="1.5"/>
+<polyline points="52.0,172.7 213.0,126.1 374.0,144.2" fill="none" stroke="#c45c26" stroke-width="2.6" stroke-dasharray="6 4"/>
+<circle cx="52.0" cy="172.7" r="4.5" fill="#c45c26" stroke="white" stroke-width="1.5"/>
+<circle cx="213.0" cy="126.1" r="4.5" fill="#c45c26" stroke="white" stroke-width="1.5"/>
+<circle cx="374.0" cy="144.2" r="4.5" fill="#c45c26" stroke="white" stroke-width="1.5"/>
+<polyline points="52.0,102.4 213.0,141.1 374.0,116.3" fill="none" stroke="#1a5f9e" stroke-width="2.6" stroke-dasharray="6 4"/>
+<rect x="48.0" y="98.4" width="8" height="8" fill="#1a5f9e" stroke="white" stroke-width="1.5"/>
+<rect x="209.0" y="137.1" width="8" height="8" fill="#1a5f9e" stroke="white" stroke-width="1.5"/>
+<rect x="370.0" y="112.3" width="8" height="8" fill="#1a5f9e" stroke="white" stroke-width="1.5"/>
+<circle cx="64" cy="70" r="4" fill="#8a9aab"/>
+<line x1="74" y1="70" x2="92" y2="70" stroke="#8a9aab" stroke-width="2.2"/>
+<text x="98" y="74" font-family="system-ui,sans-serif" font-size="12" fill="#333333">简单·基线</text>
+<rect x="220" y="66" width="8" height="8" fill="#0f7a5a"/>
+<line x1="234" y1="70" x2="252" y2="70" stroke="#0f7a5a" stroke-width="2.2"/>
+<text x="258" y="74" font-family="system-ui,sans-serif" font-size="12" fill="#333333">简单·基因</text>
+<circle cx="64" cy="88" r="4" fill="#c45c26"/>
+<line x1="74" y1="88" x2="92" y2="88" stroke="#c45c26" stroke-width="2.2" stroke-dasharray="6 4"/>
+<text x="98" y="92" font-family="system-ui,sans-serif" font-size="12" fill="#333333">复杂·基线</text>
+<rect x="220" y="84" width="8" height="8" fill="#1a5f9e"/>
+<line x1="234" y1="88" x2="252" y2="88" stroke="#1a5f9e" stroke-width="2.2" stroke-dasharray="6 4"/>
+<text x="258" y="92" font-family="system-ui,sans-serif" font-size="12" fill="#333333">复杂·基因</text>
+</svg>
