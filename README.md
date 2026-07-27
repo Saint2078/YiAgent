@@ -1,7 +1,7 @@
 # YiAgent
 
 [![status](https://img.shields.io/badge/status-experimental-orange)](#status)
-[![demo](https://img.shields.io/badge/demo-点开即看-blue)](https://saint2078.github.io/YiAgent/)
+[![demo](https://img.shields.io/badge/demo-点开即看-blue)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Saint2078/YiAgent/main/demo/yiagent-offline-demo.html)
 [![license](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
 
 **Loop 不够稳？Graph 老出错？多 Agent 一多就乱？**  
@@ -55,9 +55,11 @@ C − A ≈ **+25.7**，且更稳——**增益来自基因，不是偷看答案
 
 ## 试试
 
-**[▶ 点开离线演示](https://saint2078.github.io/YiAgent/)**（GitHub Pages；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
+**[▶ 点开离线演示](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Saint2078/YiAgent/main/demo/yiagent-offline-demo.html)**  
+（浏览器直接渲染；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
 
-源码入口：[`demo/index.html`](demo/index.html) · 本机也可双击打开。
+源码：[`demo/`](demo/) · 本机可双击 [`demo/index.html`](demo/index.html)。  
+更稳的域名（需仓库 Settings → Pages → Source 选 **GitHub Actions** 后生效）：[saint2078.github.io/YiAgent](https://saint2078.github.io/YiAgent/)
 
 **完整筛选台（可实跑）**：
 

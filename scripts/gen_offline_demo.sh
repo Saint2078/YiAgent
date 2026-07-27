@@ -52,4 +52,21 @@ Path("factory/save/_offline_snap.json").unlink(missing_ok=True)
 print("wrote demo/snap.js + demo/snap.json")
 PY
 
+python3 - <<'PY2'
+import re
+from pathlib import Path
+root = Path("demo")
+html = (root / "index.html").read_text(encoding="utf-8")
+css = (root / "styles.css").read_text(encoding="utf-8")
+snap = (root / "snap.js").read_text(encoding="utf-8")
+app = (root / "app.js").read_text(encoding="utf-8")
+html = re.sub(r"<script>\s*\(function \(\) \{.*?</script>\s*", "", html, count=1, flags=re.S)
+html = html.replace('<link rel="stylesheet" href="./styles.css" />', "<style>\n" + css + "\n</style>")
+html = html.replace('<script src="./snap.js"></script>', "<script>\n" + snap + "\n</script>")
+html = html.replace('<script src="./app.js"></script>', "<script>\n" + app + "\n</script>")
+(root / "yiagent-offline-demo.html").write_text(html, encoding="utf-8")
+print("wrote demo/yiagent-offline-demo.html")
+PY2
+
 echo "OK: open demo/index.html (file://) — same UI as :8787, no API."
+echo "Preview: https://htmlpreview.github.io/?https://raw.githubusercontent.com/Saint2078/YiAgent/main/demo/yiagent-offline-demo.html"
