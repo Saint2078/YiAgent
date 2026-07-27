@@ -29,7 +29,7 @@
 | 基线 A | 复杂 hard×3 | `63.05, 79.8, 73.3` |
 | 基因 C | 复杂 hard×3 | `88.3, 74.4, 83.3` |
 
-图示：[`assets/scores_criticalthinking_kimi3.svg`](assets/scores_criticalthinking_kimi3.svg)
+图示：[`assets/scores_criticalthinking_kimi3.png`](assets/scores_criticalthinking_kimi3.png)
 
 ### 其余题 · Kimi 3 basic
 
@@ -45,7 +45,7 @@
 | 批判思维 | `85.6, 80.4, 78.1, 80.4, 84.0` | `95.5, 96.2, 96.2, 94.6, 93.8` |
 | 任务分解 | `92.9, 100, 96.7, 96.7, 69.1` | `97.2, 96.7, 94.2, 96.5, 98.0` |
 
-图示：[`assets/scores_per_trial_kimi3.svg`](assets/scores_per_trial_kimi3.svg) · [`assets/scores_per_trial_kimi26.svg`](assets/scores_per_trial_kimi26.svg)
+图示：[`assets/scores_per_trial_kimi3.png`](assets/scores_per_trial_kimi3.png) · [`assets/scores_per_trial_kimi26.png`](assets/scores_per_trial_kimi26.png)
 
 ## 反模式对照
 

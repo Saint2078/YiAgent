@@ -43,19 +43,19 @@ Agent 工程收成生物学同款流水线：取基因 → 组装 → 导入 →
 
 **批判思维（4 条线：简单/复杂 × 基线/基因）**
 
-![批判思维 简单复杂×基线基因](docs/assets/scores_criticalthinking_kimi3.svg)
+![批判思维 简单复杂×基线基因](docs/assets/scores_criticalthinking_kimi3.png)
 
 实线 = 简单（basic×5）；虚线 = 复杂（hard×3）。灰虚线 = 90 分参考。
 
 **其余题 · Kimi 3（basic）**
 
-![Kimi 3 其余题逐次分数](docs/assets/scores_per_trial_kimi3.svg)
+![Kimi 3 其余题逐次分数](docs/assets/scores_per_trial_kimi3.png)
 
 **Kimi 2.6（basic；尚无 hard 对照）**
 
-![Kimi 2.6 逐次分数](docs/assets/scores_per_trial_kimi26.svg)
+![Kimi 2.6 逐次分数](docs/assets/scores_per_trial_kimi26.png)
 
-原始数列见 [`docs/experiments.md`](docs/experiments.md)。
+原始数列见 [`docs/experiments.md`](docs/experiments.md)。再生图：`docker run --rm -v "$PWD:/work" -w /work python:3.12-slim sh -c "python -m ensurepip >/dev/null && python -m pip install -q matplotlib && python scripts/gen_score_charts.py"`
 
 ---
 
