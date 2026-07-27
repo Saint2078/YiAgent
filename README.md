@@ -94,6 +94,7 @@ cd factory && docker compose up --build
 1. [ ] 实现最小化的 Agent 实体  
 2. [ ] 实现全自动组装流程  
 3. [ ] 提供各种 CLI 的支持（方便你们烧掉快过期的 Token Plan）  
-4. [ ] 扩充基因槽定义和晋升机制  
+4. [ ] 测试更多的困难与综合问题（初步测试困难问题提升更多）  
+5. [ ] 扩充基因槽定义和晋升机制  
 
 **实验性 · 许可证待定** · 题源 [XSCT Bench](https://xsct.ai/gallery)
