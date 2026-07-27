@@ -4,7 +4,10 @@
 [![demo](https://img.shields.io/badge/demo-Docker·8787-blue)](#试试)
 [![license](https://img.shields.io/badge/license-TBD-lightgrey)](#license)
 
-## 通过基因工程方法论创建 Agent
+**Loop 不够稳？Graph 老出错？多 Agent 一多就乱？**  
+你需要的是 **YiAgent**——用基因组定义 Agent，用筛选决定谁留下，保证稳定+效果。
+
+## YiAgent：通过基因工程方法论创建 Agent
 
 别人调提示词；我们改基因组，并用分槽鉴定决定晋升。
 
@@ -90,6 +93,7 @@ cd factory && docker compose up --build
 
 1. [ ] 实现最小化的 Agent 实体  
 2. [ ] 实现全自动组装流程  
-3. [ ] 扩充基因槽定义和晋升机制  
+3. [ ] 提供各种 CLI 的支持（方便你们烧掉快过期的 Token Plan）  
+4. [ ] 扩充基因槽定义和晋升机制  
 
 **实验性 · 许可证待定** · 题源 [XSCT Bench](https://xsct.ai/gallery)
