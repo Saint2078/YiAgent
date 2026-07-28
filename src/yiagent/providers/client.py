@@ -34,43 +34,54 @@ def _read_http_error(err: urllib.error.HTTPError) -> tuple[int, str]:
     return err.code, raw[:800]
 
 
-def _split_system(messages: list[dict[str, str]]) -> tuple[str, list[dict[str, str]]]:
+def _split_system(messages: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
     system_parts: list[str] = []
-    rest: list[dict[str, str]] = []
+    rest: list[dict[str, Any]] = []
     for m in messages:
         role = (m.get("role") or "").strip()
         content = m.get("content") or ""
         if role == "system":
             if content:
-                system_parts.append(content)
+                system_parts.append(str(content))
         else:
+            # Anthropic text path: only user/assistant with string content
             if role not in ("user", "assistant"):
                 role = "user"
-            rest.append({"role": role, "content": content})
+            rest.append({"role": role, "content": str(content)})
     return "\n\n".join(system_parts).strip(), rest
 
 
 def _openai_body(
     model: str,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     *,
     max_tokens: int,
     meta: dict[str, Any],
     reasoning_effort: str,
     stream: bool = False,
+    tools: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     wire = meta.get("wire_model") or model
-    body: dict[str, Any] = {"model": wire, "messages": messages}
+    # Strip None content for cleaner payloads
+    clean_msgs: list[dict[str, Any]] = []
+    for m in messages:
+        item = dict(m)
+        if item.get("content") is None and item.get("tool_calls"):
+            item.pop("content", None)
+        clean_msgs.append(item)
+    body: dict[str, Any] = {"model": wire, "messages": clean_msgs}
     if meta.get("max_completion_tokens"):
         body["max_completion_tokens"] = max_tokens
     else:
         body["max_tokens"] = max_tokens
-    if model in ("k3", "k3-256k") or (
-        model.startswith("k3") and meta.get("provider") == "kimi-coding"
+    if meta.get("reasoning_effort") or model in ("k3", "plan/k3") or (
+        model.startswith("k3") and meta.get("provider") in ("kimi-plan", "kimi-coding")
     ):
         body["reasoning_effort"] = reasoning_effort
     if stream:
         body["stream"] = True
+    if tools:
+        body["tools"] = tools
     return body
 
 
@@ -160,7 +171,7 @@ def _normalize_anthropic(raw: dict[str, Any], model: str, provider_id: str) -> d
 def chat_completions(
     api_key: str,
     model: str,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     *,
     max_tokens: int = 2200,
     base_url: str | None = None,
@@ -168,12 +179,14 @@ def chat_completions(
     timeout: int = 300,
     retries: int = 4,
     purpose: str = "llm",
+    tools: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     Provider-aware chat call.
     OpenAI-compatible → POST {base}/chat/completions
     Anthropic → POST {base}/v1/messages (normalized to OpenAI-like response)
     When a TokenMeter is active, records usage under ``purpose``.
+    ``tools`` is OpenAI function-calling format (openai protocol only for now).
     """
     try:
         key = normalize_key(api_key)
@@ -188,6 +201,7 @@ def chat_completions(
     err_prefix = route["err_prefix"]
 
     if protocol == "anthropic":
+        # Tool calling via Anthropic format not wired yet; text-only path.
         system, rest = _split_system(messages)
         if not rest:
             rest = [{"role": "user", "content": "(empty)"}]
@@ -216,6 +230,7 @@ def chat_completions(
         max_tokens=max_tokens,
         meta=meta,
         reasoning_effort=reasoning_effort,
+        tools=tools,
     )
     resp = _post_json(
         f"{resolved_base}/chat/completions",

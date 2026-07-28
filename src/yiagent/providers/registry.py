@@ -5,19 +5,21 @@ from __future__ import annotations
 from typing import Any
 
 PROVIDERS: dict[str, dict[str, Any]] = {
-    "kimi-coding": {
-        "label": "Kimi Coding Plan",
-        "base_url": "https://api.kimi.com/coding/v1",
-        "protocol": "openai",
-        "key_hint": "Kimi Coding Plan Key",
-        "env_keys": ("KIMI_API_KEY", "KIMI_CODING_API_KEY"),
-    },
-    "moonshot": {
-        "label": "Moonshot",
+    # Official pay-as-you-go Open Platform (CN). Intl twin: api.moonshot.ai/v1
+    "kimi": {
+        "label": "Kimi 开放平台",
         "base_url": "https://api.moonshot.cn/v1",
         "protocol": "openai",
-        "key_hint": "Moonshot API Key",
-        "env_keys": ("MOONSHOT_API_KEY",),
+        "key_hint": "Kimi 开放平台 Key (platform.kimi.com)",
+        "env_keys": ("MOONSHOT_API_KEY", "KIMI_API_KEY"),
+    },
+    # Subscription Plan endpoint (separate keys; not interchangeable with 开放平台)
+    "kimi-plan": {
+        "label": "Kimi Plan",
+        "base_url": "https://api.kimi.com/coding/v1",
+        "protocol": "openai",
+        "key_hint": "Kimi Plan Key",
+        "env_keys": ("KIMI_PLAN_API_KEY", "KIMI_CODING_API_KEY"),
     },
     "openai": {
         "label": "OpenAI",
@@ -63,20 +65,83 @@ PROVIDERS: dict[str, dict[str, Any]] = {
     },
 }
 
+# Backward-compatible aliases (old ids → same endpoint as kimi / kimi-plan)
+PROVIDERS["moonshot"] = {
+    **PROVIDERS["kimi"],
+    "label": "Kimi 开放平台 (moonshot)",
+}
+PROVIDERS["kimi-coding"] = {
+    **PROVIDERS["kimi-plan"],
+    "label": "Kimi Plan (legacy id)",
+}
+
 MODELS: list[dict[str, Any]] = [
-    {"id": "k3", "label": "Kimi 3", "provider": "kimi-coding", "supported": True},
-    {"id": "kimi-k2.6", "label": "Kimi 2.6", "provider": "kimi-coding", "supported": True},
+    # —— Kimi 开放平台（官方按量）——
+    {
+        "id": "kimi-k2.5",
+        "label": "Kimi K2.5",
+        "provider": "kimi",
+        "supported": True,
+    },
+    {
+        "id": "kimi-k2.6",
+        "label": "Kimi K2.6",
+        "provider": "kimi",
+        "supported": True,
+    },
+    {
+        "id": "kimi-latest",
+        "label": "Kimi Latest",
+        "provider": "kimi",
+        "supported": True,
+    },
     {
         "id": "moonshot-v1-auto",
         "label": "Moonshot Auto",
-        "provider": "moonshot",
+        "provider": "kimi",
         "supported": True,
     },
     {
         "id": "moonshot-v1-128k",
         "label": "Moonshot 128k",
-        "provider": "moonshot",
+        "provider": "kimi",
         "supported": True,
+    },
+    {
+        "id": "moonshot-v1-32k",
+        "label": "Moonshot 32k",
+        "provider": "kimi",
+        "supported": True,
+    },
+    {
+        "id": "moonshot-v1-8k",
+        "label": "Moonshot 8k",
+        "provider": "kimi",
+        "supported": True,
+    },
+    # —— Kimi Plan（订阅端点；Key/URL 与开放平台不互通）——
+    {
+        "id": "plan/kimi-k2.6",
+        "label": "Kimi K2.6",
+        "provider": "kimi-plan",
+        "wire_model": "kimi-k2.6",
+        "supported": True,
+    },
+    {
+        "id": "plan/k3",
+        "label": "Kimi 3",
+        "provider": "kimi-plan",
+        "wire_model": "k3",
+        "supported": True,
+        "reasoning_effort": True,
+    },
+    # Legacy catalog ids (still resolve; prefer plan/* or 开放平台 models above)
+    {
+        "id": "k3",
+        "label": "Kimi 3 (Plan)",
+        "provider": "kimi-plan",
+        "supported": True,
+        "reasoning_effort": True,
     },
     {"id": "gpt-4o", "label": "GPT-4o", "provider": "openai", "supported": True},
     {"id": "gpt-4.1", "label": "GPT-4.1", "provider": "openai", "supported": True},
@@ -143,15 +208,28 @@ def model_ok(model_id: str) -> bool:
 
 def models_public() -> list[dict[str, Any]]:
     """Payload for GET /api/models (UI-friendly)."""
+    # Hide raw legacy id `k3` in UI (still accepted by model_ok / chat); use plan/k3.
+    hide_ids = {"k3"}
     out = []
     for m in MODELS:
-        p = PROVIDERS.get(m["provider"], {})
+        if m["id"] in hide_ids:
+            continue
+        provider_id = m["provider"]
+        p = PROVIDERS.get(provider_id, {})
+        label = p.get("label") or provider_id
+        # Don't surface legacy alias provider names in UI
+        if provider_id == "kimi-coding":
+            label = PROVIDERS["kimi-plan"]["label"]
+        if provider_id == "moonshot":
+            label = PROVIDERS["kimi"]["label"]
         out.append(
             {
                 "id": m["id"],
                 "label": m["label"],
-                "provider": m["provider"],
-                "provider_label": p.get("label") or m["provider"],
+                "provider": "kimi-plan" if provider_id == "kimi-coding" else (
+                    "kimi" if provider_id == "moonshot" else provider_id
+                ),
+                "provider_label": label,
                 "key_hint": p.get("key_hint") or "API Key",
                 "supported": bool(m.get("supported")),
             }
@@ -160,6 +238,6 @@ def models_public() -> list[dict[str, Any]]:
 
 
 def provider_of(model_id: str) -> dict[str, Any]:
-    meta = model_entry(model_id) or {"id": model_id, "provider": "openai", "supported": True}
-    provider_id = meta.get("provider") or "openai"
-    return PROVIDERS.get(provider_id) or PROVIDERS["openai"]
+    meta = model_entry(model_id) or {"id": model_id, "provider": "kimi", "supported": True}
+    provider_id = meta.get("provider") or "kimi"
+    return PROVIDERS.get(provider_id) or PROVIDERS["kimi"]

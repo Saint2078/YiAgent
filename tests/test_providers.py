@@ -44,12 +44,15 @@ class UsageTests(unittest.TestCase):
 
 class RegistryTests(unittest.TestCase):
     def test_catalog(self):
-        self.assertIn("kimi-coding", PROVIDERS)
+        self.assertIn("kimi", PROVIDERS)
+        self.assertIn("kimi-plan", PROVIDERS)
+        self.assertTrue(model_ok("kimi-k2.5"))
         self.assertTrue(model_ok("k3"))
         self.assertFalse(model_ok("no-such-model"))
         pub = models_public()
-        self.assertTrue(any(x["id"] == "k3" for x in pub))
-        self.assertEqual(len(MODELS), len(pub))
+        self.assertTrue(any(x["id"] == "kimi-k2.5" for x in pub))
+        self.assertFalse(any(x["id"] == "k3" for x in pub))
+        self.assertTrue(any(x["id"] == "plan/k3" for x in pub))
 
 
 class ClientTests(unittest.TestCase):

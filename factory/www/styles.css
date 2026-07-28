@@ -1989,3 +1989,94 @@ body.copy-edit-open #root {
   }
 }
 
+/* —— Settings —— */
+.settings-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(12, 28, 24, 0.55);
+}
+
+.settings-summary-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.settings-pill {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.45rem;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+}
+
+.settings-pill.is-ready {
+  color: var(--teal-bright);
+  border-color: rgba(46, 184, 146, 0.45);
+  background: rgba(46, 184, 146, 0.1);
+}
+
+.settings-pill.is-warn {
+  color: #e8c07a;
+  border-color: rgba(232, 192, 122, 0.4);
+  background: rgba(232, 192, 122, 0.08);
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(4, 10, 9, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.settings-modal {
+  width: min(560px, 100%);
+  max-height: min(88vh, 720px);
+  overflow: auto;
+  padding: 1.25rem 1.35rem 1.5rem;
+  border: 1px solid rgba(46, 184, 146, 0.28);
+  border-radius: 6px;
+  background: linear-gradient(165deg, #0d1c18 0%, #091410 100%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.settings-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+}
+
+.provider-form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.85rem;
+}
+
+.provider-form .run-field select,
+.provider-form .run-field input {
+  width: 100%;
+}
+

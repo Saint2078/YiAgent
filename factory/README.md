@@ -65,6 +65,8 @@ docker compose up --build
 
 文案隐藏编辑：`Ctrl/⌘+Shift+E`，或 `?copyEdit=1`。
 
+**设置**：顶栏「设置」配置模型 / API Key / 并发 / 全自动金牌偏好（存浏览器 sessionStorage）；步骤区只显示配置摘要。
+
 ## 布局
 
 ```
@@ -81,8 +83,8 @@ factory/
 
 | 厂商 | 模型示例 | Key |
 |------|----------|-----|
-| Kimi Coding Plan | `k3` · `kimi-k2.6` | Coding Plan Key |
-| Moonshot | `moonshot-v1-auto` 等 | Moonshot Key |
+| **Kimi 开放平台** | `kimi-k2.5` · `kimi-k2.6` · `moonshot-v1-*` | platform.kimi.com（按量，`api.moonshot.cn/v1`） |
+| **Kimi Plan** | `plan/kimi-k2.6` · `plan/k3` | Kimi Plan Key（订阅端点；与开放平台 **不互通**） |
 | OpenAI | `gpt-4o` · `gpt-4.1` · `o4-mini` | `sk-…` |
 | DeepSeek | `deepseek-chat` · `deepseek-reasoner` | DeepSeek Key |
 | 通义 DashScope | `qwen-plus` · `qwen-max` | DashScope `sk-…` |

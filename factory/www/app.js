@@ -18,9 +18,12 @@ const ORAL_EXAMPLES_EN = [
 const state = {
   lang: "zh",
   models: [],
-  apiKey: sessionStorage.getItem("yiagent_api_key") || "",
-  model: "k3",
-  workers: 4,
+  provider: sessionStorage.getItem("yiagent_provider") || "",
+  apiKeys: loadApiKeys(),
+  apiKey: "", // active provider key (synced from apiKeys)
+  model: sessionStorage.getItem("yiagent_model") || "kimi-k2.5",
+  workers: Number(sessionStorage.getItem("yiagent_workers")) || 4,
+  championMark: sessionStorage.getItem("yiagent_champion_mark") || "balanced",
   oral: "",
   sessionId: null,
   snap: null,
@@ -39,6 +42,7 @@ const state = {
   toastTimer: null,
   localBusyLabel: "",
   showAdvanced: false,
+  settingsOpen: false,
   showLogs: false,
   focusStep: 1,
   caseSource: "library", // library | oral
@@ -55,6 +59,20 @@ const state = {
   copyEditOpen: false,
   copyOverrides: { zh: {}, en: {} },
 };
+
+function loadApiKeys() {
+  try {
+    const raw = sessionStorage.getItem("yiagent_api_keys");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  const legacy = sessionStorage.getItem("yiagent_api_key") || "";
+  return legacy ? { _legacy: legacy } : {};
+}
 
 const COPY_STORAGE_KEY = "yiagent_factory_copy_v1";
 
@@ -103,38 +121,235 @@ function selectedModelMeta() {
   return (state.models || []).find((m) => m.id === state.model) || null;
 }
 
+function modelCatalog() {
+  return state.models && state.models.length
+    ? state.models
+    : [
+        {
+          id: "kimi-k2.5",
+          label: "Kimi K2.5",
+          provider: "kimi",
+          provider_label: "Kimi 开放平台",
+          key_hint: "Kimi 开放平台 Key (platform.kimi.com)",
+        },
+        {
+          id: "kimi-k2.6",
+          label: "Kimi K2.6",
+          provider: "kimi",
+          provider_label: "Kimi 开放平台",
+          key_hint: "Kimi 开放平台 Key (platform.kimi.com)",
+        },
+        {
+          id: "plan/k3",
+          label: "Kimi 3",
+          provider: "kimi-plan",
+          provider_label: "Kimi Plan",
+          key_hint: "Kimi Plan Key",
+        },
+      ];
+}
+
+function providersList() {
+  const map = new Map();
+  for (const m of modelCatalog()) {
+    let id = m.provider || "other";
+    // Migrate legacy provider ids in saved sessions
+    if (id === "moonshot") id = "kimi";
+    if (id === "kimi-coding") id = "kimi-plan";
+    if (!map.has(id)) {
+      map.set(id, {
+        id,
+        label: m.provider_label || id,
+        key_hint: m.key_hint || "API Key",
+      });
+    }
+  }
+  return [...map.values()];
+}
+
+function ensureProviderModel() {
+  const catalog = modelCatalog();
+  // Migrate legacy saved provider/model
+  if (state.provider === "moonshot") state.provider = "kimi";
+  if (state.provider === "kimi-coding") state.provider = "kimi-plan";
+  if (state.apiKeys?.moonshot && !state.apiKeys.kimi) {
+    state.apiKeys.kimi = state.apiKeys.moonshot;
+  }
+  if (state.apiKeys?.["kimi-coding"] && !state.apiKeys["kimi-plan"]) {
+    state.apiKeys["kimi-plan"] = state.apiKeys["kimi-coding"];
+  }
+  let meta = catalog.find((m) => m.id === state.model);
+  if (!state.provider) {
+    state.provider = meta?.provider || catalog[0]?.provider || "kimi";
+  }
+  if (state.provider === "moonshot") state.provider = "kimi";
+  if (state.provider === "kimi-coding") state.provider = "kimi-plan";
+  const inProvider = catalog.filter((m) => {
+    const p = m.provider === "moonshot" ? "kimi" : m.provider === "kimi-coding" ? "kimi-plan" : m.provider;
+    return p === state.provider;
+  });
+  if (!meta || (meta.provider !== state.provider && !(meta.provider === "moonshot" && state.provider === "kimi") && !(meta.provider === "kimi-coding" && state.provider === "kimi-plan"))) {
+    state.model = inProvider[0]?.id || catalog[0]?.id || "kimi-k2.5";
+    meta = catalog.find((m) => m.id === state.model);
+  }
+  if (meta?.provider) {
+    let p = meta.provider;
+    if (p === "moonshot") p = "kimi";
+    if (p === "kimi-coding") p = "kimi-plan";
+    state.provider = p;
+  }
+  syncActiveApiKey();
+}
+
+function syncActiveApiKey() {
+  const pid = state.provider || selectedModelMeta()?.provider || "";
+  const fromMap = (state.apiKeys && state.apiKeys[pid]) || "";
+  const legacy = state.apiKeys?._legacy || "";
+  state.apiKey = fromMap || legacy || "";
+}
+
 function apiKeyLabel() {
+  const p = providersList().find((x) => x.id === state.provider);
+  if (p?.key_hint) return p.key_hint;
   const m = selectedModelMeta();
   if (m?.key_hint) return m.key_hint;
-  if (m?.provider_label) return `${m.provider_label} Key`;
+  if (p?.label) return `${p.label} API Key`;
   return t().apiKey;
 }
 
+function persistSettings() {
+  ensureProviderModel();
+  const pid = state.provider || "";
+  if (!state.apiKeys || typeof state.apiKeys !== "object") state.apiKeys = {};
+  if (pid) {
+    if (state.apiKey) state.apiKeys[pid] = state.apiKey;
+    else delete state.apiKeys[pid];
+  }
+  sessionStorage.setItem("yiagent_api_keys", JSON.stringify(state.apiKeys));
+  if (state.apiKey) sessionStorage.setItem("yiagent_api_key", state.apiKey);
+  else sessionStorage.removeItem("yiagent_api_key");
+  sessionStorage.setItem("yiagent_provider", state.provider || "");
+  sessionStorage.setItem("yiagent_model", state.model || "k3");
+  sessionStorage.setItem("yiagent_workers", String(state.workers || 4));
+  sessionStorage.setItem("yiagent_champion_mark", state.championMark || "balanced");
+}
+
+function settingsConfigured() {
+  ensureProviderModel();
+  return !!(state.apiKey && state.apiKey.length >= 8 && state.model && state.provider);
+}
+
+function settingsSummaryHtml(c) {
+  ensureProviderModel();
+  const m = selectedModelMeta();
+  const p = providersList().find((x) => x.id === state.provider);
+  const providerLabel = p?.label || m?.provider_label || state.provider || "—";
+  const modelLabel = m?.label || state.model || "—";
+  const keyOk = state.apiKey && state.apiKey.length >= 8;
+  const status = keyOk ? c.settingsReady : c.settingsNeedKey;
+  return `<div class="settings-summary">
+    <div class="settings-summary-main">
+      <span class="settings-pill ${keyOk ? "is-ready" : "is-warn"}">${escapeHtml(status)}</span>
+      <span class="mono">${escapeHtml(providerLabel)}</span>
+      <span class="dim">/</span>
+      <span class="mono">${escapeHtml(modelLabel)}</span>
+      <span class="dim tiny">· workers ${state.workers}</span>
+    </div>
+    <button type="button" class="btn-ghost btn-compact" id="btn-open-settings">${escapeHtml(c.settings)}</button>
+  </div>`;
+}
+
+function providerOptionsHtml() {
+  return providersList()
+    .map(
+      (p) =>
+        `<option value="${escapeHtml(p.id)}" ${
+          state.provider === p.id ? "selected" : ""
+        }>${escapeHtml(p.label)}</option>`
+    )
+    .join("");
+}
+
+function modelOptionsForProviderHtml() {
+  const list = modelCatalog().filter((m) => m.provider === state.provider);
+  if (!list.length) {
+    return `<option value="">${escapeHtml(t().modelEmpty || "—")}</option>`;
+  }
+  return list
+    .map(
+      (m) =>
+        `<option value="${escapeHtml(m.id)}" ${state.model === m.id ? "selected" : ""}>${escapeHtml(
+          m.label || m.id
+        )}</option>`
+    )
+    .join("");
+}
+
+function settingsModalHtml(c, running) {
+  if (!state.settingsOpen) return "";
+  ensureProviderModel();
+  const marks = [
+    { id: "balanced", label: c.markBalanced },
+    { id: "perf", label: c.markPerf },
+    { id: "stable", label: c.markStable },
+  ];
+  const p = providersList().find((x) => x.id === state.provider);
+  return `<div class="settings-backdrop" id="settings-backdrop" role="presentation">
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="settings-head">
+        <h2 id="settings-title">${escapeHtml(c.settingsTitle)}</h2>
+        <button type="button" class="btn-ghost btn-compact" id="btn-close-settings">${escapeHtml(c.settingsClose)}</button>
+      </div>
+      <p class="field-hint">${escapeHtml(c.settingsHelp)}</p>
+      <div class="provider-form">
+        <div class="run-field">
+          <label class="field-label" for="provider-select">${escapeHtml(c.provider)}</label>
+          <select id="provider-select" ${running ? "disabled" : ""}>${providerOptionsHtml()}</select>
+        </div>
+        <div class="run-field">
+          <label class="field-label" for="model-select">${escapeHtml(c.model)}</label>
+          <select id="model-select" ${running ? "disabled" : ""}>${modelOptionsForProviderHtml()}</select>
+          <p class="field-hint">${escapeHtml(c.modelHelp)}</p>
+        </div>
+        <div class="run-field">
+          <label class="field-label" for="api-key">${escapeHtml(apiKeyLabel())}</label>
+          <input id="api-key" type="password" autocomplete="off" placeholder="sk-..." value="${escapeHtml(
+            state.apiKey
+          )}" ${running ? "disabled" : ""} />
+          <p class="field-hint">${escapeHtml(
+            (c.apiKeyHelpProvider || c.apiKeyHelp).replace("{provider}", p?.label || state.provider || "")
+          )}</p>
+        </div>
+      </div>
+      <div class="run-field" style="margin-top:1rem">
+        <label class="field-label">${escapeHtml(c.workers)}</label>
+        <div class="rep-pills">${pills(WORKER_OPTIONS, state.workers, "workers", running)}</div>
+      </div>
+      <div class="run-field" style="margin-top:1rem">
+        <label class="field-label">${escapeHtml(c.championMark)}</label>
+        <div class="rep-pills">
+          ${marks
+            .map(
+              (m) =>
+                `<button type="button" class="rep-pill ${
+                  state.championMark === m.id ? "active" : ""
+                }" data-champion-mark="${m.id}" ${running ? "disabled" : ""}>${escapeHtml(m.label)}</button>`
+            )
+            .join("")}
+        </div>
+        <p class="field-hint">${escapeHtml(c.championMarkHelp)}</p>
+      </div>
+      <div class="stage-actions">
+        <button type="button" class="btn-primary" id="btn-save-settings" ${running ? "disabled" : ""}>${escapeHtml(
+          c.settingsSave
+        )}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function modelOptionsHtml() {
-  const list =
-    state.models && state.models.length
-      ? state.models
-      : [
-          { id: "k3", label: "Kimi 3", provider_label: "Kimi Coding Plan" },
-          { id: "kimi-k2.6", label: "Kimi 2.6", provider_label: "Kimi Coding Plan" },
-        ];
-  const groups = new Map();
-  for (const m of list) {
-    const g = m.provider_label || m.provider || "Other";
-    if (!groups.has(g)) groups.set(g, []);
-    groups.get(g).push(m);
-  }
-  let html = "";
-  for (const [g, items] of groups) {
-    html += `<optgroup label="${escapeHtml(g)}">`;
-    for (const m of items) {
-      html += `<option value="${escapeHtml(m.id)}" ${
-        state.model === m.id ? "selected" : ""
-      }>${escapeHtml(m.label || m.id)}</option>`;
-    }
-    html += `</optgroup>`;
-  }
-  return html;
+  return modelOptionsForProviderHtml();
 }
 
 function copyKeysForLang(lang) {
@@ -320,8 +535,21 @@ const i18n = {
     oralPh: "例如：客服在用户套取订单隐私或越权操作时，应如何拒答并引导合规路径…",
     examples: "试试这些",
     model: "模型",
+    provider: "Provider",
+    modelHelp: "仅显示当前 Provider 下的可用模型。",
+    modelEmpty: "该 Provider 暂无模型",
     apiKey: "API Key",
     apiKeyHelp: "按所选厂商填写对应 Key；仅保存在本机浏览器会话，不会写入服务器磁盘。",
+    apiKeyHelpProvider: "用于 {provider}；切换 Provider 会换用各自已存的 Key。",
+    settings: "设置",
+    settingsTitle: "运行设置",
+    settingsHelp: "先选 Provider，再选模型并填写该厂商 Key。",
+    settingsClose: "关闭",
+    settingsSave: "保存设置",
+    settingsReady: "已配置",
+    settingsNeedKey: "未配置 Key",
+    championMark: "全自动最优标记",
+    championMarkHelp: "全自动终筛后默认取哪块金牌写入最优基因。",
     workers: "并发线程",
     advanced: "高级选项",
     genCase: "生成题目与标准",
@@ -453,8 +681,21 @@ const i18n = {
     oralPh: "e.g. How support should refuse privacy fishing or out-of-scope asks…",
     examples: "Try these",
     model: "Model",
+    provider: "Provider",
+    modelHelp: "Only models for the selected provider.",
+    modelEmpty: "No models for this provider",
     apiKey: "API Key",
     apiKeyHelp: "Use the key for the selected provider. Stored in this browser session only — never written to disk.",
+    apiKeyHelpProvider: "For {provider}. Switching provider uses that provider’s saved key.",
+    settings: "Settings",
+    settingsTitle: "Run settings",
+    settingsHelp: "Pick a provider first, then its model and API key.",
+    settingsClose: "Close",
+    settingsSave: "Save settings",
+    settingsReady: "Ready",
+    settingsNeedKey: "Key missing",
+    championMark: "Auto champion mark",
+    championMarkHelp: "Which finals medal to save as the best genome after auto runs.",
     workers: "Workers",
     advanced: "Advanced",
     genCase: "Generate task & rubric",
@@ -727,17 +968,23 @@ function startPoll() {
 
 function readFormIntoState() {
   const oral = document.getElementById("oral-text");
+  const provider = document.getElementById("provider-select");
   const key = document.getElementById("api-key");
   const model = document.getElementById("model-select");
   const target = document.getElementById("target-text");
   const criteria = document.getElementById("criteria-text");
   const passMean = document.getElementById("pass-mean");
   if (oral) state.oral = oral.value;
+  if (provider) {
+    state.provider = provider.value;
+  }
   if (key) {
     state.apiKey = key.value.trim();
-    if (state.apiKey) sessionStorage.setItem("yiagent_api_key", state.apiKey);
   }
-  if (model) state.model = model.value;
+  if (model) {
+    state.model = model.value;
+  }
+  persistSettings();
   if (target) state.targetText = target.value;
   if (criteria) state.criteriaText = criteria.value;
   if (passMean) state.passMean = Number(passMean.value) || 70;
@@ -754,6 +1001,7 @@ async function onGenCase() {
   readFormIntoState();
   if (!state.apiKey || state.apiKey.length < 8) {
     state.error = c.keyNeed;
+    state.settingsOpen = true;
     render();
     return;
   }
@@ -999,6 +1247,7 @@ async function onBaseline() {
   readFormIntoState();
   if (!state.apiKey || state.apiKey.length < 8) {
     state.error = c.keyNeed;
+    state.settingsOpen = true;
     render();
     return;
   }
@@ -1062,6 +1311,7 @@ async function onGenGenomes() {
   readFormIntoState();
   if (!state.apiKey || state.apiKey.length < 8) {
     state.error = c.keyNeed;
+    state.settingsOpen = true;
     render();
     return;
   }
@@ -1100,6 +1350,7 @@ async function onPrefilter() {
   readFormIntoState();
   if (!state.apiKey || state.apiKey.length < 8) {
     state.error = c.keyNeed;
+    state.settingsOpen = true;
     render();
     return;
   }
@@ -1157,6 +1408,7 @@ async function onAutoRun() {
   readFormIntoState();
   if (!state.apiKey || state.apiKey.length < 8) {
     state.error = c.keyNeed;
+    state.settingsOpen = true;
     render();
     return;
   }
@@ -1187,7 +1439,7 @@ async function onAutoRun() {
       qualify_target: state.qualifyTarget,
       pass_mean: state.passMean,
       workers: state.workers,
-      champion_mark: "balanced",
+      champion_mark: state.championMark || "balanced",
       save: true,
     };
     if (source === "library") {
@@ -1228,6 +1480,7 @@ async function onChampion() {
   readFormIntoState();
   if (!state.apiKey || state.apiKey.length < 8) {
     state.error = c.keyNeed;
+    state.settingsOpen = true;
     render();
     return;
   }
@@ -1458,6 +1711,7 @@ function render() {
         <div class="brand-sub">${escapeHtml(c.brandSub)}</div>
       </div>
       <div class="topbar-actions">
+        <button class="btn-ghost btn-compact" type="button" id="btn-settings">${escapeHtml(c.settings)}</button>
         <button class="lang-toggle" type="button" id="btn-lang">${c.lang}</button>
         <button class="btn-ghost btn-compact" type="button" id="btn-save-run" ${
           !state.sessionId || running ? "disabled" : ""
@@ -1468,6 +1722,8 @@ function render() {
         <button class="btn-ghost btn-compact" type="button" id="btn-reset">${c.reset}</button>
       </div>
     </header>
+
+    ${settingsModalHtml(c, running)}
 
     ${
       running
@@ -1611,28 +1867,7 @@ function render() {
                     ? `<p class="empty-hint">${escapeHtml(c.caseEmpty)}</p>`
                     : selectedCaseHintHtml()
                 }
-                <div class="cred-grid" style="margin-top:0.75rem">
-                  <div class="run-field">
-                    <label class="field-label">${escapeHtml(c.model)}</label>
-                    <select id="model-select" ${running ? "disabled" : ""}>
-                      ${modelOptionsHtml()}
-                    </select>
-                  </div>
-                  <div class="run-field run-field-wide">
-                    <label class="field-label">${escapeHtml(apiKeyLabel())}</label>
-                    <input id="api-key" type="password" autocomplete="off" placeholder="sk-..." value="${escapeHtml(
-                      state.apiKey
-                    )}" ${running ? "disabled" : ""} />
-                    <p class="field-hint">${escapeHtml(c.apiKeyHelp)}</p>
-                  </div>
-                </div>
-                <details class="advanced" ${state.showAdvanced ? "open" : ""}>
-                  <summary>${escapeHtml(c.advanced)}</summary>
-                  <div class="run-field" style="margin-top:0.75rem">
-                    <label class="field-label">${escapeHtml(c.workers)}</label>
-                    <div class="rep-pills">${pills(WORKER_OPTIONS, state.workers, "workers", running)}</div>
-                  </div>
-                </details>
+                ${settingsSummaryHtml(c)}
                 <div class="stage-actions">
                   <button class="btn-primary" type="button" id="btn-load-case" ${
                     running || state.caseLoading ? "disabled" : ""
@@ -1664,28 +1899,7 @@ function render() {
               .join("")}
           </div>
         </div>
-        <div class="cred-grid">
-          <div class="run-field">
-            <label class="field-label">${escapeHtml(c.model)}</label>
-            <select id="model-select" ${running ? "disabled" : ""}>
-              ${modelOptionsHtml()}
-            </select>
-          </div>
-          <div class="run-field run-field-wide">
-            <label class="field-label">${escapeHtml(apiKeyLabel())}</label>
-            <input id="api-key" type="password" autocomplete="off" placeholder="sk-..." value="${escapeHtml(
-              state.apiKey
-            )}" ${running ? "disabled" : ""} />
-            <p class="field-hint">${escapeHtml(c.apiKeyHelp)}</p>
-          </div>
-        </div>
-        <details class="advanced" ${state.showAdvanced ? "open" : ""}>
-          <summary>${escapeHtml(c.advanced)}</summary>
-          <div class="run-field" style="margin-top:0.75rem">
-            <label class="field-label">${escapeHtml(c.workers)}</label>
-            <div class="rep-pills">${pills(WORKER_OPTIONS, state.workers, "workers", running)}</div>
-          </div>
-        </details>
+        ${settingsSummaryHtml(c)}
         <div class="stage-actions">
           <button class="btn-primary" type="button" id="btn-gen-case" ${running ? "disabled" : ""}>${escapeHtml(
             c.genCase
@@ -2074,6 +2288,37 @@ function wire(running, unlock) {
     if (host) host.dataset.built = "";
     render();
   });
+  const openSettings = () => {
+    state.settingsOpen = true;
+    render();
+  };
+  const closeSettings = () => {
+    readFormIntoState();
+    persistSettings();
+    state.settingsOpen = false;
+    render();
+  };
+  document.getElementById("btn-settings")?.addEventListener("click", openSettings);
+  document.getElementById("btn-open-settings")?.addEventListener("click", openSettings);
+  document.getElementById("btn-close-settings")?.addEventListener("click", closeSettings);
+  document.getElementById("btn-save-settings")?.addEventListener("click", () => {
+    readFormIntoState();
+    persistSettings();
+    state.settingsOpen = false;
+    showToast(t().toastSaved);
+    render();
+  });
+  document.getElementById("settings-backdrop")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeSettings();
+  });
+  document.querySelectorAll("[data-champion-mark]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (running) return;
+      state.championMark = btn.getAttribute("data-champion-mark") || "balanced";
+      persistSettings();
+      render();
+    });
+  });
   document.getElementById("btn-reset")?.addEventListener("click", onReset);
   document.getElementById("btn-save-run")?.addEventListener("click", () => onSaveRun(false));
   document.getElementById("btn-freeze-demo")?.addEventListener("click", () => onSaveRun(true));
@@ -2151,11 +2396,26 @@ function wire(running, unlock) {
   });
   document.getElementById("api-key")?.addEventListener("input", (e) => {
     state.apiKey = e.target.value.trim();
-    sessionStorage.setItem("yiagent_api_key", state.apiKey);
+    persistSettings();
+  });
+  document.getElementById("provider-select")?.addEventListener("change", (e) => {
+    // Save current key under old provider before switching
+    const prev = state.provider;
+    if (prev && state.apiKey) {
+      state.apiKeys[prev] = state.apiKey;
+    }
+    state.provider = e.target.value;
+    const models = modelCatalog().filter((m) => m.provider === state.provider);
+    state.model = models[0]?.id || state.model;
+    syncActiveApiKey();
+    persistSettings();
+    render();
   });
   document.getElementById("model-select")?.addEventListener("change", (e) => {
     state.model = e.target.value;
-    // Refresh key hint label for the selected provider
+    const meta = selectedModelMeta();
+    if (meta?.provider) state.provider = meta.provider;
+    persistSettings();
     render();
   });
   document.querySelectorAll("[data-case-source]").forEach((btn) => {
@@ -2220,6 +2480,7 @@ function wire(running, unlock) {
     btn.addEventListener("click", () => {
       if (running) return;
       state.workers = Number(btn.dataset.workers);
+      persistSettings();
       render();
     })
   );
@@ -2280,10 +2541,31 @@ async function boot() {
     state.models = modelsResp.models || [];
   } catch {
     state.models = [
-      { id: "k3", label: "Kimi 3" },
-      { id: "kimi-k2.6", label: "Kimi 2.6" },
+      {
+        id: "kimi-k2.5",
+        label: "Kimi K2.5",
+        provider: "kimi",
+        provider_label: "Kimi 开放平台",
+        key_hint: "Kimi 开放平台 Key (platform.kimi.com)",
+      },
+      {
+        id: "kimi-k2.6",
+        label: "Kimi K2.6",
+        provider: "kimi",
+        provider_label: "Kimi 开放平台",
+        key_hint: "Kimi 开放平台 Key (platform.kimi.com)",
+      },
+      {
+        id: "plan/k3",
+        label: "Kimi 3",
+        provider: "kimi-plan",
+        provider_label: "Kimi Plan",
+        key_hint: "Kimi Plan Key",
+      },
     ];
   }
+  ensureProviderModel();
+  persistSettings();
   // Hidden copy editor: Ctrl/⌘+Shift+E, or ?copyEdit=1
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "E" || e.key === "e")) {

@@ -1,10 +1,13 @@
 [project]
 name = "yiagent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Gene engineering for agent engineering — G1–G5 slots, scoring & promotion gates."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "LicenseRef-TBD" }
+
+[project.scripts]
+yiagent = "yiagent.cli.main:main"
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -15,3 +18,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+yiagent = ["genome/data/*.json"]
