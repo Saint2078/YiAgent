@@ -1,29 +1,75 @@
-"""Pi-style agent session: genome system + tool loop."""
+"""Pi-style agent session: genome system + core tools + Skill cassettes."""
 
 from __future__ import annotations
 
-import json
 import uuid
 from pathlib import Path
 from typing import Any, Callable
 
-from yiagent.genome import assemble_from_ids, assemble_system, load_bank
+from yiagent.genome import (
+    assemble_from_ids,
+    assemble_system,
+    load_bank,
+    load_skills,
+    skill_openai_tools,
+)
 from yiagent.providers import (
     TokenMeter,
     chat_completions,
     extract_content,
     resolve_api_key,
 )
-from yiagent.tools import OPENAI_TOOL_SPECS, dispatch, make_tools
+from yiagent.tools import OPENAI_TOOL_SPECS, ToolError, _safe_path, dispatch, make_tools
+
 
 DEFAULT_HOST = (
-    "你是 YiAgent 实体运行时：按已装载的 G1–G5 基因组行事。"
+    "你是 YiAgent 实体运行时：按已装载的 G1–G5 基因组与 Skills（外部基因盒）行事。"
     "需要读文件、改文件或跑命令时，使用提供的工具；完成后用自然语言回答用户。"
 )
 
 
+def _attach_skill_handlers(tools: dict, cwd: Path, skills: list[dict[str, Any]]) -> None:
+    """Register skill tool callables into the dispatch map."""
+    root = cwd.resolve()
+
+    def notes_summary(path: str) -> str:
+        p = _safe_path(root, path)
+        if not p.is_file():
+            raise ToolError(f"not a file: {path}")
+        text = p.read_text(encoding="utf-8", errors="replace")
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        preview = "\n".join(lines[:40])
+        return f"notes_summary {p.name}: {len(lines)} non-empty lines\n{preview}"
+
+    builtins = {"notes_summary": notes_summary}
+    for sk in skills:
+        for t in sk.get("tools") or []:
+            name = t.get("name")
+            if not name or name in tools:
+                continue
+            handler = t.get("handler") or ""
+            if handler.startswith("builtin:"):
+                key = handler.split(":", 1)[1]
+                if key in builtins:
+                    tools[name] = builtins[key]
+                else:
+                    missing = name
+
+                    def _missing(**_kw: Any) -> str:
+                        return f"error: builtin handler missing for {missing}"
+
+                    tools[name] = _missing
+            else:
+                stub = name
+
+                def _stub(**_kwargs: Any) -> str:
+                    return f"error: skill tool {stub} has no handler wired"
+
+                tools[name] = _stub
+
+
 class AgentSession:
-    """Minimal Pi-like harness: messages + tools + genome-assembled system."""
+    """Minimal Pi-like harness: messages + tools + genome/Skills assemble."""
 
     def __init__(
         self,
@@ -37,6 +83,7 @@ class AgentSession:
         cwd: str | Path | None = None,
         max_turns: int = 16,
         enable_tools: bool = True,
+        skill_ids: list[str] | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.model = model
@@ -49,24 +96,39 @@ class AgentSession:
         self.tools = make_tools(self.cwd) if enable_tools else {}
         self.bank: dict[str, Any] | None = None
         self.variant: dict[str, Any] | None = None
+        self.skills: list[dict[str, Any]] = []
+        self._openai_tools: list[dict[str, Any]] = list(OPENAI_TOOL_SPECS) if enable_tools else []
 
         if system:
             sys_text = system
         elif variant_id:
-            sys_text, self.bank, self.variant = assemble_from_ids(
+            sys_text, self.bank, self.variant, self.skills = assemble_from_ids(
                 host=host or DEFAULT_HOST,
                 bank=bank,
                 variant_id=variant_id,
+                skill_ids=skill_ids,
             )
         else:
-            # Default demo genome
             b = load_bank(bank)
             self.bank = b
             variants = b.get("variants") or []
             if not variants:
                 raise ValueError("bank has no variants")
             self.variant = variants[0]
-            sys_text = assemble_system(host or DEFAULT_HOST, b, self.variant)
+            self.skills = load_skills(b, self.variant, skill_ids=skill_ids)
+            sys_text = assemble_system(
+                host or DEFAULT_HOST, b, self.variant, skills=self.skills
+            )
+
+        if enable_tools and self.skills:
+            _attach_skill_handlers(self.tools, self.cwd, self.skills)
+            for t in skill_openai_tools(self.skills):
+                # strip internal keys before sending to API
+                clean = {
+                    "type": t["type"],
+                    "function": t["function"],
+                }
+                self._openai_tools.append(clean)
 
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": sys_text}]
 
@@ -81,7 +143,7 @@ class AgentSession:
         return self._loop(stream_text=stream_text)
 
     def _loop(self, *, stream_text: bool = False) -> str:
-        tools_param = OPENAI_TOOL_SPECS if self.enable_tools else None
+        tools_param = self._openai_tools if self.enable_tools else None
         final = ""
         with self.meter.activate():
             for _ in range(self.max_turns):
@@ -100,7 +162,6 @@ class AgentSession:
                 tool_calls = msg.get("tool_calls") or []
 
                 if tool_calls and self.enable_tools:
-                    # Persist assistant message with tool_calls
                     assistant_msg: dict[str, Any] = {
                         "role": "assistant",
                         "content": content or None,
@@ -125,7 +186,6 @@ class AgentSession:
                         )
                     continue
 
-                # No tools — final answer
                 final = content
                 self.messages.append({"role": "assistant", "content": final})
                 self._emit("assistant", text=final)

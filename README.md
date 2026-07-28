@@ -55,18 +55,18 @@ C − A ≈ **+25.7**，且更稳——**增益来自基因，不是偷看答案
 
 ## 试试
 
-**实体 Agent（Pi 式工具循环 + G1–G5 基因组）**：
+**实体 Agent（Pi 式工具循环 + G1–G5 + Skills 基因盒）**：
 
 ```bash
 pip install -e .
 export MOONSHOT_API_KEY=sk-…   # 或对应厂商 Key
 yiagent variants                 # 列出默认基因组变体
 yiagent run "识别这道题里的虚假二选一" --variant var.champion -m kimi-k2.5
-yiagent chat --variant var.champion -m kimi-k2.5
+yiagent chat --variant var.champion -m kimi-k2.5 --skill skill.workspace_notes
 ```
 
-工具：`read` / `write` / `edit` / `bash`（限制在 `--cwd` 工作区内）。  
-装载：`Assemble(host + G1–G5)`，默认 bank 见 `src/yiagent/genome/data/default_bank.json`。
+工具：核心 `read` / `write` / `edit` / `bash` + Skill 外带工具（限制在 `--cwd`）。  
+装载：`Assemble(host + G1–G5 + Skills)`；Skills = **外部带基因的工具**（只注入 G3–G5），见 [docs/architecture.md](docs/architecture.md)。
 
 **[▶ 点开离线演示](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Saint2078/YiAgent/main/demo/yiagent-offline-demo.html)**  
 （浏览器直接渲染；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
@@ -97,6 +97,7 @@ cd factory && docker compose up --build
 | G3 | 知识 | 挂哪些材料 |
 | G4 | 能力 | 手脚与规划 |
 | G5 | 经验 | 短「该做 / 避免」条目 |
+| Skill | 基因盒 | 外部工具 + G3–G5 片段（非第六染色体） |
 
 更多：[docs/architecture.md](docs/architecture.md)
 
@@ -110,12 +111,13 @@ cd factory && docker compose up --build
 - [x] 多模型 Provider 底座（`yiagent.providers` · chat / stream / usage）  
 - [x] 工厂全自动流水线（`POST /api/session/auto`）  
 - [x] 最小化实体 Agent（`yiagent` CLI · G1–G5 装载 · read/write/edit/bash）  
+- [x] Skills 基因盒（外部带基因的工具 · 注入 G3–G5）  
 
 接下来：
 
 1. [ ] 角色级题集鉴定 / 组装工厂规模化搜索  
 2. [ ] 测试基因是否具有充足的适配性  
-3. [ ] Anthropic 原生 tool calling / Skills 基因盒  
+3. [ ] Anthropic 原生 tool calling  
 4. [ ] 测试更多的困难与综合问题（初步测试困难问题提升更多）  
 5. [ ] 扩充基因槽定义和晋升机制  
 

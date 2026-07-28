@@ -14,7 +14,7 @@ from yiagent.providers import resolve_api_key
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="yiagent",
-        description="YiAgent entity: genome-assembled agent (Pi-style tools + G1–G5).",
+        description="YiAgent entity: genome + Skills (gene cassettes) + Pi-style tools.",
     )
     p.add_argument("--model", "-m", default="kimi-k2.5", help="model id from yiagent.providers")
     p.add_argument("--api-key", default=None, help="API key (else env for provider)")
@@ -23,6 +23,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--host", default=None, help="optional host system overlay")
     p.add_argument("--cwd", type=Path, default=None, help="workspace for tools")
     p.add_argument("--no-tools", action="store_true", help="disable read/write/edit/bash")
+    p.add_argument(
+        "--skill",
+        action="append",
+        default=[],
+        dest="skills",
+        help="extra Skill id (repeatable); merges with variant.skills",
+    )
     p.add_argument("--max-turns", type=int, default=16)
 
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -63,6 +70,7 @@ def _session_from_args(args: argparse.Namespace) -> AgentSession:
         cwd=args.cwd or Path.cwd(),
         max_turns=args.max_turns,
         enable_tools=not args.no_tools,
+        skill_ids=list(args.skills or []) or None,
         on_event=_print_event if args.cmd == "chat" else None,
     )
 

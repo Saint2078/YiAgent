@@ -1,0 +1,37 @@
+{
+  "id": "skill.workspace_notes",
+  "label": "工作区笔记盒",
+  "kind": "gene_cassette",
+  "description": "外部技能示例：带 G4/G5 片段的笔记工具盒（演示 Skills=外部带基因的工具）。",
+  "genes": {
+    "G4": [
+      {
+        "id": "g4.skill.notes.plan",
+        "label": "笔记工具规划",
+        "text": "当需要记录或核对事实时：先 read 工作区内笔记，再结论；禁止编造未读到的文件内容。"
+      }
+    ],
+    "G5": [
+      {
+        "id": "g5.skill.notes.do",
+        "label": "笔记经验",
+        "text": "DO: 引用文件路径与可见原文短句。\nAVOID: 把工具失败说成「文件不存在」而不展示错误原文。"
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "notes_summary",
+      "description": "Summarize a workspace text note file (path relative to cwd).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "note file path under cwd" }
+        },
+        "required": ["path"]
+      },
+      "gene_hint": "调用 notes_summary 前确认 path 在工作区内；输出只基于工具返回。",
+      "handler": "builtin:notes_summary"
+    }
+  ]
+}

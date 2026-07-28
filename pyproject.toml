@@ -20,4 +20,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-yiagent = ["genome/data/*.json"]
+yiagent = ["genome/data/*.json", "genome/data/skills/*.json"]

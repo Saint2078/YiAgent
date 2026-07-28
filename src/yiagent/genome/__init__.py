@@ -1,4 +1,4 @@
-"""Genome bank load + G1–G5 assemble (Host + alleles → system)."""
+"""Genome bank load + G1–G5 assemble + Skills (gene cassettes)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,35 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .skills import (
+    SKILL_SLOTS,
+    load_skill,
+    load_skills,
+    resolve_skill_ids,
+    skill_gene_sections,
+    skill_openai_tools,
+)
+
 SLOTS = ("G1", "G2", "G3", "G4", "G5")
 
 DEFAULT_BANK = Path(__file__).resolve().parent / "data" / "default_bank.json"
+
+__all__ = [
+    "DEFAULT_BANK",
+    "SKILL_SLOTS",
+    "SLOTS",
+    "allele_text",
+    "assemble_from_ids",
+    "assemble_system",
+    "get_variant",
+    "load_bank",
+    "load_skill",
+    "load_skills",
+    "resolve_skill_ids",
+    "skill_gene_sections",
+    "skill_openai_tools",
+    "variant_map",
+]
 
 
 def load_bank(source: str | Path | dict[str, Any] | None = None) -> dict[str, Any]:
@@ -49,19 +75,31 @@ def assemble_system(
     variant: dict[str, Any],
     *,
     discipline: str | None = None,
+    skills: list[dict[str, Any]] | None = None,
+    skill_ids: list[str] | None = None,
 ) -> str:
-    """Assemble contestant system: host + G1–G5 allele texts + load discipline."""
+    """Assemble contestant system: host + G1–G5 + Skill cassettes + load discipline."""
     slots = variant.get("slots") or {}
     parts = [(host or "").strip() or "你是一个有用的助手。"]
     for s in SLOTS:
         aid = slots.get(s)
         if aid:
             parts.append(allele_text(bank, aid))
+
+    loaded = skills
+    if loaded is None:
+        try:
+            loaded = load_skills(bank, variant, skill_ids=skill_ids)
+        except FileNotFoundError:
+            loaded = []
+    parts.extend(skill_gene_sections(loaded or []))
+
     parts.append(
         discipline
         or (
             "## 装载纪律\n"
             "- 先满足边界与自检，再追求文采。\n"
+            "- Skills 是外部基因盒：可带来工具与 G3/G4/G5 片段，不改写 G1/G2。\n"
             "- 输出正文本身，不要输出基因元数据。"
         )
     )
@@ -73,8 +111,10 @@ def assemble_from_ids(
     host: str,
     bank: dict[str, Any] | str | Path | None = None,
     variant_id: str,
-) -> tuple[str, dict[str, Any], dict[str, Any]]:
-    """Return (system, bank, variant)."""
+    skill_ids: list[str] | None = None,
+) -> tuple[str, dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+    """Return (system, bank, variant, skills)."""
     b = load_bank(bank)
     v = get_variant(b, variant_id)
-    return assemble_system(host, b, v), b, v
+    skills = load_skills(b, v, skill_ids=skill_ids)
+    return assemble_system(host, b, v, skills=skills), b, v, skills

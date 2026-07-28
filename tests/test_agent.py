@@ -8,7 +8,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from yiagent.agent import AgentSession
-from yiagent.genome import assemble_system, get_variant, load_bank
+from yiagent.genome import (
+    assemble_from_ids,
+    assemble_system,
+    get_variant,
+    load_bank,
+    load_skill,
+    skill_openai_tools,
+)
 from yiagent.tools import dispatch, make_tools
 
 
@@ -20,6 +27,25 @@ class GenomeTests(unittest.TestCase):
         self.assertIn("HOST", system)
         self.assertIn("g1.identity.v1", system)
         self.assertIn("装载纪律", system)
+        self.assertIn("skill.workspace_notes", system)
+        self.assertIn("g4.skill.notes.plan", system)
+
+    def test_skill_cassette_definition(self):
+        sk = load_skill("skill.workspace_notes")
+        self.assertEqual(sk["kind"], "gene_cassette")
+        self.assertTrue(sk["genes"]["G4"])
+        self.assertTrue(sk["genes"]["G5"])
+        tools = skill_openai_tools([sk])
+        self.assertEqual(tools[0]["function"]["name"], "notes_summary")
+
+    def test_assemble_from_ids_returns_skills(self):
+        system, bank, variant, skills = assemble_from_ids(
+            host="H", variant_id="var.champion"
+        )
+        self.assertIn("Skill · skill.workspace_notes", system)
+        self.assertEqual(skills[0]["id"], "skill.workspace_notes")
+        self.assertEqual(variant["id"], "var.champion")
+        self.assertTrue(bank.get("variants"))
 
 
 class ToolTests(unittest.TestCase):
@@ -97,9 +123,10 @@ class AgentLoopTests(unittest.TestCase):
                 out = sess.prompt("What is in note.txt?")
             self.assertIn("secret-42", out)
             self.assertEqual(calls["n"], 2)
-            # tool result landed in history
             roles = [m["role"] for m in sess.messages]
             self.assertIn("tool", roles)
+            self.assertTrue(any(s["id"] == "skill.workspace_notes" for s in sess.skills))
+            self.assertIn("notes_summary", sess.tools)
 
 
 if __name__ == "__main__":

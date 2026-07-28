@@ -80,6 +80,7 @@
         "G4": "g4.cap.structured",
         "G5": "g5.exp.champion"
       },
+      "skills": ["skill.workspace_notes"],
       "role_in_demo": "promote"
     },
     {
