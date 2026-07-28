@@ -41,6 +41,17 @@ const state = {
   showAdvanced: false,
   showLogs: false,
   focusStep: 1,
+  caseSource: "library", // library | oral
+  caseMeta: null,
+  caseItems: [],
+  caseTotal: 0,
+  caseSuite: "xsct-l",
+  caseDimension: "",
+  caseQuery: "",
+  caseLevel: "basic",
+  caseSelectedId: "",
+  caseLoading: false,
+  baselineCache: null,
   copyEditOpen: false,
   copyOverrides: { zh: {}, en: {} },
 };
@@ -289,8 +300,22 @@ const i18n = {
     lead: "口述场景 → 生成考题与裁判 → 建立 A/B 标准基线 → 组装 G1–G5 候选 → 初筛 → 冠军终筛（效果 / 稳定 / 均衡）。",
     hook: "用基因工程定义Agent",
     steps: ["口述", "题目", "基线", "基因组", "初筛", "冠军", "终筛"],
-    s1: "口述你的筛选意图",
-    s1help: "用一两句话说明要测什么能力。也可点下方示例一键填入。",
+    s1: "选题或口述筛选意图",
+    s1help: "优先从 XSCT 用例库选现成题（含评分标准）；也可口述让模型从 0 生成。",
+    caseSourceLibrary: "用例库",
+    caseSourceOral: "口述生成",
+    caseSuite: "套件",
+    caseDimension: "维度",
+    caseLevel: "难度",
+    caseSearch: "搜索",
+    caseSearchPh: "标题 / id / 描述…",
+    casePick: "选择用例",
+    caseLoad: "载入本题",
+    caseAllDims: "全部维度",
+    caseEmpty: "没有匹配用例",
+    caseNeedPick: "请先从用例库选择一道题",
+    caseLoaded: "已从用例库载入",
+    caseCount: "共 {n} 题",
     oral: "场景口述",
     oralPh: "例如：客服在用户套取订单隐私或越权操作时，应如何拒答并引导合规路径…",
     examples: "试试这些",
@@ -322,6 +347,8 @@ const i18n = {
     skipBaseline: "跳过基线",
     baselineGap: "B − A（均分差）",
     baselineDemoSkip: "冻结演示包含已测 A/B；要重测请新会话实跑。",
+    baselineStale: "题目/标准已改，下列为上次基线结果（未自动清空）",
+    baselineKeep: "A/B 基线（保留）",
     nextGenome: "下一步：生成基因组",
     s4: "生成初始基因组",
     s4help: "按 G1 身份 · G2 边界 · G3 知识 · G4 能力 · G5 经验 生成多套候选组合。",
@@ -356,6 +383,8 @@ const i18n = {
     markStableDesc: "波动最小",
     markBalancedDesc: "均分 − 1.5×波动",
     progress: "进度",
+    tokens: "Token",
+    tokensLine: "Token · 入 {in} · 出 {out} · 合计 {total} · {calls} 次调用",
     logs: "试次明细",
     hideLogs: "收起明细",
     showLogs: "展开试次明细",
@@ -390,8 +419,22 @@ const i18n = {
     lead: "Brief → task & rubric → A/B baseline → G1–G5 genomes → prefilter → champion finals (performance / stability / balance).",
     hook: "They tune prompts. We edit the genome.",
     steps: ["Brief", "Task", "Baseline", "Genome", "Pre", "Pool", "Final"],
-    s1: "Describe what to screen",
-    s1help: "One or two sentences. Or tap an example below.",
+    s1: "Pick a case or describe intent",
+    s1help: "Prefer a ready XSCT case (with rubric). Or brief the model to generate from scratch.",
+    caseSourceLibrary: "Case library",
+    caseSourceOral: "Generate from brief",
+    caseSuite: "Suite",
+    caseDimension: "Dimension",
+    caseLevel: "Level",
+    caseSearch: "Search",
+    caseSearchPh: "title / id / description…",
+    casePick: "Select case",
+    caseLoad: "Load case",
+    caseAllDims: "All dimensions",
+    caseEmpty: "No matching cases",
+    caseNeedPick: "Pick a case from the library first",
+    caseLoaded: "Loaded from case library",
+    caseCount: "{n} cases",
     oral: "Scenario brief",
     oralPh: "e.g. How support should refuse privacy fishing or out-of-scope asks…",
     examples: "Try these",
@@ -423,6 +466,8 @@ const i18n = {
     skipBaseline: "Skip baseline",
     baselineGap: "B − A (mean gap)",
     baselineDemoSkip: "Frozen demo includes measured A/B. Start a new session to re-run.",
+    baselineStale: "Task/rubric changed — showing last A/B results (kept)",
+    baselineKeep: "A/B baseline (kept)",
     nextGenome: "Next: genomes",
     s4: "Generate genomes",
     s4help: "G1 identity · G2 boundaries · G3 knowledge · G4 capability · G5 experience.",
@@ -457,6 +502,8 @@ const i18n = {
     markStableDesc: "Lowest variance",
     markBalancedDesc: "mean − 1.5×sdv",
     progress: "Progress",
+    tokens: "Tokens",
+    tokensLine: "Tokens · in {in} · out {out} · total {total} · {calls} calls",
     logs: "Trial log",
     hideLogs: "Hide trials",
     showLogs: "Show trials",
@@ -536,7 +583,7 @@ function showToast(msg) {
   }, 4200);
 }
 
-function applySnap(snap) {
+function applySnap(snap, { syncFocus = false } = {}) {
   state.snap = snap;
   state.sessionId = snap.id;
   if (snap.target_text != null) state.targetText = snap.target_text;
@@ -549,7 +596,19 @@ function applySnap(snap) {
   if (snap.champ_reps != null) state.champReps = snap.champ_reps;
   if (snap.workers != null) state.workers = snap.workers;
   if (snap.model && snap.model !== "demo") state.model = snap.model;
-  state.focusStep = currentStep(snap.phase);
+  const liveBaseline = snap.baseline_summaries || [];
+  if (liveBaseline.some((r) => (r.n || 0) > 0)) {
+    state.baselineCache = liveBaseline.map((r) => ({ ...r }));
+  }
+  if (syncFocus) {
+    state.focusStep = currentStep(snap.phase);
+  }
+}
+
+function baselineSummariesOf(snap) {
+  const live = snap?.baseline_summaries || [];
+  if (live.some((r) => (r.n || 0) > 0)) return live;
+  return state.baselineCache || [];
 }
 
 async function api(path, opts = {}) {
@@ -664,6 +723,123 @@ async function onGenCase() {
     applySnap(snap);
     state.focusStep = 2;
     showToast(c.toastCase);
+  } catch (e) {
+    state.error = String(e.message || e);
+  } finally {
+    state.busy = false;
+    state.localBusyLabel = "";
+    render();
+    scrollToStep(2);
+  }
+}
+
+function suiteOptionsHtml() {
+  const suites = state.caseMeta?.suites || { "xsct-l": 0, "xsct-vg": 0, "xsct-w": 0 };
+  return Object.keys(suites)
+    .sort()
+    .map(
+      (s) =>
+        `<option value="${escapeHtml(s)}" ${state.caseSuite === s ? "selected" : ""}>${escapeHtml(
+          s
+        )} (${suites[s]})</option>`
+    )
+    .join("");
+}
+
+function dimensionOptionsForSuite() {
+  const dims = state.caseMeta?.dimensions || [];
+  const suite = state.caseSuite || "";
+  if (suite === "xsct-l") return dims.filter((d) => d.startsWith("L-"));
+  if (suite === "xsct-vg") return dims.filter((d) => d.startsWith("VG-") || d.startsWith("P-"));
+  if (suite === "xsct-w") return dims.filter((d) => d.startsWith("W-"));
+  return dims;
+}
+
+function selectedCaseHintHtml() {
+  const it = (state.caseItems || []).find((x) => x.id === state.caseSelectedId);
+  if (!it) return "";
+  const desc = (it.description || "").slice(0, 180);
+  return `<p class="field-hint mono">${escapeHtml(it.id)} · ${escapeHtml(it.title)}${
+    desc ? "<br/>" + escapeHtml(desc) : ""
+  }</p>`;
+}
+
+let _caseQueryTimer = null;
+
+async function ensureCaseMeta() {
+  if (state.caseMeta) return;
+  try {
+    state.caseMeta = await api("/api/cases/meta");
+    const suites = state.caseMeta?.suites || {};
+    if (!state.caseSuite || !(state.caseSuite in suites)) {
+      state.caseSuite = Object.keys(suites).sort()[0] || "xsct-l";
+    }
+  } catch (e) {
+    state.caseMeta = { ok: false, suites: {}, dimensions: [], count: 0 };
+    state.error = String(e.message || e);
+  }
+}
+
+async function refreshCaseLibrary() {
+  state.caseLoading = true;
+  render();
+  try {
+    await ensureCaseMeta();
+    const params = new URLSearchParams();
+    if (state.caseSuite) params.set("suite", state.caseSuite);
+    if (state.caseDimension) params.set("dimension", state.caseDimension);
+    if (state.caseQuery.trim()) params.set("q", state.caseQuery.trim());
+    params.set("limit", "120");
+    const data = await api(`/api/cases?${params.toString()}`);
+    state.caseItems = data.items || [];
+    state.caseTotal = data.total || 0;
+    if (
+      state.caseSelectedId &&
+      !state.caseItems.some((it) => it.id === state.caseSelectedId)
+    ) {
+      state.caseSelectedId = state.caseItems[0]?.id || "";
+    } else if (!state.caseSelectedId && state.caseItems[0]) {
+      state.caseSelectedId = state.caseItems[0].id;
+    }
+  } catch (e) {
+    state.caseItems = [];
+    state.caseTotal = 0;
+    state.error = String(e.message || e);
+  } finally {
+    state.caseLoading = false;
+    render();
+  }
+}
+
+async function onLoadLibraryCase() {
+  const c = t();
+  readFormIntoState();
+  const pick = document.getElementById("case-pick");
+  if (pick) state.caseSelectedId = pick.value || state.caseSelectedId;
+  const levelEl = document.getElementById("case-level");
+  if (levelEl) state.caseLevel = levelEl.value || state.caseLevel;
+  if (!state.caseSelectedId) {
+    state.error = c.caseNeedPick;
+    render();
+    return;
+  }
+  state.busy = true;
+  state.localBusyLabel = c.caseLoad;
+  state.error = null;
+  render();
+  try {
+    const snap = await api("/api/session/case/library", {
+      method: "POST",
+      body: JSON.stringify({
+        suite: state.caseSuite,
+        id: state.caseSelectedId,
+        level: state.caseLevel || "basic",
+        model: state.model,
+      }),
+    });
+    applySnap(snap);
+    state.focusStep = 2;
+    showToast(c.caseLoaded);
   } catch (e) {
     state.error = String(e.message || e);
   } finally {
@@ -981,6 +1157,7 @@ function onReset() {
   state.localBusyLabel = "";
   state.focusStep = 1;
   state.showLogs = false;
+  state.baselineCache = null;
   render();
   scrollToStep(1);
 }
@@ -1069,6 +1246,51 @@ function progressBar(done, total) {
   </div>`;
 }
 
+/** Inline run progress inside a stage panel (in addition to top sticky). */
+function stageProgressHtml({ active, label, snap, c, withAbort = false }) {
+  if (!active) return "";
+  const serverRunning = snap?.status === "running";
+  const done = snap?.done || 0;
+  const total = snap?.total || 0;
+  return `<div class="stage-progress" role="status">
+    <div class="stage-progress-head">
+      <strong>${escapeHtml(label || c.wait)}</strong>
+      <span class="dim"> · ${escapeHtml(c.progress)}</span>
+    </div>
+    ${
+      serverRunning && total > 0
+        ? progressBar(done, total)
+        : `<div class="spinner" aria-hidden="true"></div>`
+    }
+    ${tokenUsageHtml(snap?.token_usage, c)}
+    ${
+      withAbort && serverRunning
+        ? `<button class="btn-ghost btn-abort btn-compact" type="button" data-abort-inline="1">${escapeHtml(
+            c.abort
+          )}</button>`
+        : ""
+    }
+  </div>`;
+}
+
+function formatTokenCount(n) {
+  const v = Number(n) || 0;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 10_000) return `${(v / 1000).toFixed(1)}k`;
+  if (v >= 1000) return `${(v / 1000).toFixed(2)}k`;
+  return String(v);
+}
+
+function tokenUsageHtml(usage, c) {
+  if (!usage || !(usage.calls > 0 || usage.total_tokens > 0)) return "";
+  const line = (c.tokensLine || "")
+    .replace("{in}", formatTokenCount(usage.prompt_tokens))
+    .replace("{out}", formatTokenCount(usage.completion_tokens))
+    .replace("{total}", formatTokenCount(usage.total_tokens))
+    .replace("{calls}", String(usage.calls || 0));
+  return `<div class="token-usage mono" title="${escapeHtml(c.tokens || "Token")}">${escapeHtml(line)}</div>`;
+}
+
 function unlockedMax(rank, snap) {
   if (rank >= 7) return 7; // championing / done
   if (rank >= 6) return 7; // prefilter_done
@@ -1090,6 +1312,20 @@ function render() {
   const focus = Math.min(state.focusStep, unlock);
   const examples = oralExamplesList();
   const demoFrozen = snap?.frozen_demo === true;
+  const baselineRows = baselineSummariesOf(snap);
+  const hasBaseline = baselineRows.some((r) => (r.n || 0) > 0);
+  const isBaselining =
+    phase === "baselining" || (running && state.localBusyLabel === c.startBaseline);
+  const isGenomesBusy = running && state.localBusyLabel === c.genGenome;
+  const isPrefiltering =
+    phase === "prefiltering" || (running && state.localBusyLabel === c.startPre);
+  const isChampioning =
+    phase === "championing" || (running && state.localBusyLabel === c.startChamp);
+  const isCaseBusy =
+    running &&
+    (state.localBusyLabel === c.genCase ||
+      state.localBusyLabel === c.caseLoad ||
+      state.localBusyLabel === c.wait);
 
   root.className = "app-shell console ux";
   root.innerHTML = `
@@ -1120,14 +1356,40 @@ function render() {
             ${
               snap?.status === "running"
                 ? `${progressBar(snap.done || 0, snap.total || 0)}
+                   ${tokenUsageHtml(snap.token_usage, c)}
                    <button class="btn-ghost btn-abort btn-compact" type="button" id="btn-abort">${c.abort}</button>`
-                : `<div class="spinner" aria-hidden="true"></div>`
+                : `<div class="spinner" aria-hidden="true"></div>
+                   ${tokenUsageHtml(snap?.token_usage, c)}`
             }
           </div>`
         : ""
     }
 
     ${state.toast ? `<div class="toast" id="toast" role="status">${escapeHtml(state.toast)}</div>` : ""}
+    ${
+      !running && snap?.token_usage && (snap.token_usage.calls > 0 || snap.token_usage.total_tokens > 0)
+        ? `<div class="token-bar">${tokenUsageHtml(snap.token_usage, c)}</div>`
+        : ""
+    }
+    ${
+      hasBaseline && focus !== 3
+        ? `<div class="baseline-keep">
+            <button type="button" class="baseline-keep-btn" id="btn-jump-baseline">${escapeHtml(c.baselineKeep)}</button>
+            <span class="mono dim">${baselineRows
+              .map((r) => `${r.arm || r.variant_id}: ${r.mean ?? "—"}`)
+              .join(" · ")}${
+              baselineRows[0]?.gap_b_minus_a != null
+                ? ` · Δ ${baselineRows[0].gap_b_minus_a}`
+                : ""
+            }</span>
+            ${
+              snap?.baseline_stale
+                ? `<span class="dim tiny">${escapeHtml(c.baselineStale)}</span>`
+                : ""
+            }
+          </div>`
+        : ""
+    }
 
     <main class="desk">
       <section class="hero-lite">
@@ -1149,7 +1411,116 @@ function render() {
           <h2 class="stage-title">${escapeHtml(c.s1)}</h2>
           <p class="stage-help">${escapeHtml(c.s1help)}</p>
         </div>
-        <label class="field-label">${escapeHtml(c.oral)}</label>
+        ${stageProgressHtml({
+          active: isCaseBusy,
+          label: state.localBusyLabel || c.wait,
+          snap,
+          c,
+        })}
+        <div class="source-pills" role="tablist">
+          <button type="button" class="chip ${state.caseSource === "library" ? "chip-active" : ""}" data-case-source="library" ${
+            running ? "disabled" : ""
+          }>${escapeHtml(c.caseSourceLibrary)}</button>
+          <button type="button" class="chip ${state.caseSource === "oral" ? "chip-active" : ""}" data-case-source="oral" ${
+            running ? "disabled" : ""
+          }>${escapeHtml(c.caseSourceOral)}</button>
+        </div>
+        ${
+          state.caseSource === "library"
+            ? `<div class="case-lib">
+                <div class="cred-grid">
+                  <div class="run-field">
+                    <label class="field-label">${escapeHtml(c.caseSuite)}</label>
+                    <select id="case-suite" ${running || state.caseLoading ? "disabled" : ""}>
+                      ${suiteOptionsHtml()}
+                    </select>
+                  </div>
+                  <div class="run-field">
+                    <label class="field-label">${escapeHtml(c.caseLevel)}</label>
+                    <select id="case-level" ${running ? "disabled" : ""}>
+                      ${["basic", "medium", "hard"]
+                        .map(
+                          (lv) =>
+                            `<option value="${lv}" ${state.caseLevel === lv ? "selected" : ""}>${lv}</option>`
+                        )
+                        .join("")}
+                    </select>
+                  </div>
+                  <div class="run-field run-field-wide">
+                    <label class="field-label">${escapeHtml(c.caseDimension)}</label>
+                    <select id="case-dimension" ${running || state.caseLoading ? "disabled" : ""}>
+                      <option value="">${escapeHtml(c.caseAllDims)}</option>
+                      ${dimensionOptionsForSuite()
+                        .map(
+                          (d) =>
+                            `<option value="${escapeHtml(d)}" ${
+                              state.caseDimension === d ? "selected" : ""
+                            }>${escapeHtml(d)}</option>`
+                        )
+                        .join("")}
+                    </select>
+                  </div>
+                </div>
+                <div class="run-field" style="margin-top:0.75rem">
+                  <label class="field-label">${escapeHtml(c.caseSearch)}</label>
+                  <input id="case-query" type="search" class="brief-input brief-input-sm" placeholder="${escapeHtml(
+                    c.caseSearchPh
+                  )}" value="${escapeHtml(state.caseQuery)}" ${running || state.caseLoading ? "disabled" : ""} />
+                </div>
+                <p class="field-hint">${escapeHtml(
+                  (c.caseCount || "").replace("{n}", String(state.caseTotal || 0))
+                )}${state.caseMeta?.ok === false ? " · library offline" : ""}</p>
+                <label class="field-label">${escapeHtml(c.casePick)}</label>
+                <select id="case-pick" size="8" class="case-pick" ${
+                  running || state.caseLoading ? "disabled" : ""
+                }>
+                  ${(state.caseItems || [])
+                    .map((it) => {
+                      const label = `${it.id} · ${it.title}${it.dimension ? " · " + it.dimension : ""}`;
+                      return `<option value="${escapeHtml(it.id)}" ${
+                        state.caseSelectedId === it.id ? "selected" : ""
+                      }>${escapeHtml(label)}</option>`;
+                    })
+                    .join("")}
+                </select>
+                ${
+                  !(state.caseItems || []).length
+                    ? `<p class="empty-hint">${escapeHtml(c.caseEmpty)}</p>`
+                    : selectedCaseHintHtml()
+                }
+                <div class="cred-grid" style="margin-top:0.75rem">
+                  <div class="run-field">
+                    <label class="field-label">${escapeHtml(c.model)}</label>
+                    <select id="model-select" ${running ? "disabled" : ""}>
+                      ${modelOptionsHtml()}
+                    </select>
+                  </div>
+                  <div class="run-field run-field-wide">
+                    <label class="field-label">${escapeHtml(apiKeyLabel())}</label>
+                    <input id="api-key" type="password" autocomplete="off" placeholder="sk-..." value="${escapeHtml(
+                      state.apiKey
+                    )}" ${running ? "disabled" : ""} />
+                    <p class="field-hint">${escapeHtml(c.apiKeyHelp)}</p>
+                  </div>
+                </div>
+                <details class="advanced" ${state.showAdvanced ? "open" : ""}>
+                  <summary>${escapeHtml(c.advanced)}</summary>
+                  <div class="run-field" style="margin-top:0.75rem">
+                    <label class="field-label">${escapeHtml(c.workers)}</label>
+                    <div class="rep-pills">${pills(WORKER_OPTIONS, state.workers, "workers", running)}</div>
+                  </div>
+                </details>
+                <div class="stage-actions">
+                  <button class="btn-primary" type="button" id="btn-load-case" ${
+                    running || state.caseLoading ? "disabled" : ""
+                  }>${escapeHtml(c.caseLoad)}</button>
+                  <button class="btn-ghost" type="button" id="btn-demo" ${running ? "disabled" : ""}>${escapeHtml(
+                    c.demo
+                  )}</button>
+                </div>
+                <p class="field-hint">${escapeHtml(c.demoHint)}</p>
+              </div>`
+            : `<label class="field-label">${escapeHtml(c.oral)}</label>
         <textarea id="oral-text" class="brief-input brief-input-sm" rows="4" placeholder="${escapeHtml(c.oralPh)}" ${
           running ? "disabled" : ""
         }>${escapeHtml(state.oral)}</textarea>
@@ -1196,7 +1567,8 @@ function render() {
             c.demo
           )}</button>
         </div>
-        <p class="field-hint">${escapeHtml(c.demoHint)}</p>
+        <p class="field-hint">${escapeHtml(c.demoHint)}</p>`
+        }
       </section>
 
       <section class="panel stage-panel ${focus === 2 ? "is-focus" : ""} ${unlock < 2 ? "stage-locked" : ""}" id="step-panel-2">
@@ -1264,26 +1636,36 @@ function render() {
                   running || demoFrozen ? "disabled" : ""
                 }>${escapeHtml(c.skipBaseline)}</button>
                 ${
-                  (snap?.baseline_summaries || []).some((r) => (r.n || 0) > 0) ||
+                  hasBaseline ||
                   phase === "baseline_done" ||
                   demoFrozen
                     ? `<button class="btn-primary" type="button" id="btn-goto-4">${escapeHtml(c.nextGenome)}</button>`
                     : ""
                 }
               </div>
+              ${stageProgressHtml({
+                active: isBaselining,
+                label: c.startBaseline,
+                snap,
+                c,
+                withAbort: true,
+              })}
               ${
-                (snap?.baseline_summaries || []).some((r) => (r.n || 0) > 0)
+                hasBaseline
                   ? `${
-                      snap.baseline_summaries[0]?.gap_b_minus_a != null
+                      snap?.baseline_stale
+                        ? `<p class="field-hint">${escapeHtml(c.baselineStale)}</p>`
+                        : ""
+                    }
+                    ${
+                      baselineRows[0]?.gap_b_minus_a != null
                         ? `<p class="ok-chip">${escapeHtml(c.baselineGap)} · <span class="mono">${
-                            snap.baseline_summaries[0].gap_b_minus_a
+                            baselineRows[0].gap_b_minus_a
                           }</span></p>`
                         : ""
                     }
-                    ${summaryTable(snap.baseline_summaries, c, null)}`
-                  : phase === "baselining" || (running && state.localBusyLabel === c.startBaseline)
-                    ? progressBar(snap?.done || 0, snap?.total || 0)
-                    : ""
+                    ${summaryTable(baselineRows, c, null)}`
+                  : ""
               }`
             : ""
         }
@@ -1297,7 +1679,7 @@ function render() {
         </div>
         ${
           unlock >= 4
-            ? `<div class="stage-actions">
+            ? `              <div class="stage-actions">
                 <button class="btn-primary" type="button" id="btn-gen-genome" ${
                   running || demoFrozen ? "disabled" : ""
                 }>${escapeHtml(c.genGenome)}</button>
@@ -1310,6 +1692,12 @@ function render() {
                       : ""
                 }
               </div>
+              ${stageProgressHtml({
+                active: isGenomesBusy,
+                label: c.genGenome,
+                snap,
+                c,
+              })}
               ${
                 snap?.variants?.length
                   ? `<p class="field-label">${escapeHtml(c.genomes)} · ${snap.variants.length} ${escapeHtml(
@@ -1368,12 +1756,17 @@ function render() {
                     : ""
                 }
               </div>
+              ${stageProgressHtml({
+                active: isPrefiltering,
+                label: c.startPre,
+                snap,
+                c,
+                withAbort: true,
+              })}
               ${
                 (snap?.pre_summaries || []).length
                   ? summaryTable(snap.pre_summaries, c, null)
-                  : running
-                    ? progressBar(snap?.done || 0, snap?.total || 0)
-                    : ""
+                  : ""
               }`
             : ""
         }
@@ -1446,7 +1839,14 @@ function render() {
         </div>
         ${
           unlock >= 7
-            ? `${
+            ? `${stageProgressHtml({
+                active: isChampioning,
+                label: c.startChamp,
+                snap,
+                c,
+                withAbort: true,
+              })}
+              ${
                 snap?.marks && (snap.marks.perf || snap.marks.stable || snap.marks.balanced)
                   ? `<div class="marks-row">
                       <div class="mark-card mark-perf">
@@ -1465,9 +1865,7 @@ function render() {
                         <span class="dim tiny">${escapeHtml(c.markBalancedDesc)}</span>
                       </div>
                     </div>`
-                  : phase === "championing" || running
-                    ? progressBar(snap?.done || 0, snap?.total || 0)
-                    : `<p class="empty-hint">—</p>`
+                  : ""
               }
               ${summaryTable(snap?.champ_summaries, c, snap?.marks)}`
             : ""
@@ -1477,6 +1875,7 @@ function render() {
       ${
         (snap?.logs || []).length
           ? `<section class="panel logs-panel">
+              ${tokenUsageHtml(snap?.token_usage, c)}
               <button type="button" class="logs-toggle" id="btn-logs">${
                 state.showLogs ? escapeHtml(c.hideLogs) : escapeHtml(c.showLogs)
               }</button>
@@ -1531,6 +1930,7 @@ function wire(running, unlock) {
   document.getElementById("btn-save-run")?.addEventListener("click", () => onSaveRun(false));
   document.getElementById("btn-freeze-demo")?.addEventListener("click", () => onSaveRun(true));
   document.getElementById("btn-gen-case")?.addEventListener("click", onGenCase);
+  document.getElementById("btn-load-case")?.addEventListener("click", onLoadLibraryCase);
   document.getElementById("btn-demo")?.addEventListener("click", onDemo);
   document.getElementById("btn-save-case")?.addEventListener("click", onSaveCase);
   document.getElementById("btn-baseline")?.addEventListener("click", onBaseline);
@@ -1538,6 +1938,9 @@ function wire(running, unlock) {
   document.getElementById("btn-gen-genome")?.addEventListener("click", onGenGenomes);
   document.getElementById("btn-pre")?.addEventListener("click", onPrefilter);
   document.getElementById("btn-abort")?.addEventListener("click", onAbort);
+  document.querySelectorAll("[data-abort-inline]").forEach((btn) => {
+    btn.addEventListener("click", onAbort);
+  });
   document.getElementById("btn-champ")?.addEventListener("click", onChampion);
   document.getElementById("btn-goto-3")?.addEventListener("click", () => {
     state.focusStep = 3;
@@ -1548,6 +1951,11 @@ function wire(running, unlock) {
     state.focusStep = 4;
     render();
     scrollToStep(4);
+  });
+  document.getElementById("btn-jump-baseline")?.addEventListener("click", () => {
+    state.focusStep = 3;
+    render();
+    scrollToStep(3);
   });
   document.getElementById("btn-goto-5")?.addEventListener("click", () => {
     state.focusStep = 5;
@@ -1600,6 +2008,36 @@ function wire(running, unlock) {
     state.model = e.target.value;
     // Refresh key hint label for the selected provider
     render();
+  });
+  document.querySelectorAll("[data-case-source]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      state.caseSource = btn.getAttribute("data-case-source") || "library";
+      state.error = null;
+      render();
+      if (state.caseSource === "library") await refreshCaseLibrary();
+    });
+  });
+  document.getElementById("case-suite")?.addEventListener("change", async (e) => {
+    state.caseSuite = e.target.value;
+    state.caseSelectedId = "";
+    await refreshCaseLibrary();
+  });
+  document.getElementById("case-dimension")?.addEventListener("change", async (e) => {
+    state.caseDimension = e.target.value;
+    state.caseSelectedId = "";
+    await refreshCaseLibrary();
+  });
+  document.getElementById("case-level")?.addEventListener("change", (e) => {
+    state.caseLevel = e.target.value;
+  });
+  document.getElementById("case-pick")?.addEventListener("change", (e) => {
+    state.caseSelectedId = e.target.value;
+    render();
+  });
+  document.getElementById("case-query")?.addEventListener("input", (e) => {
+    state.caseQuery = e.target.value;
+    clearTimeout(_caseQueryTimer);
+    _caseQueryTimer = setTimeout(() => refreshCaseLibrary(), 280);
   });
   document.getElementById("pass-mean")?.addEventListener("change", (e) => {
     state.passMean = Number(e.target.value) || 70;
@@ -1712,6 +2150,9 @@ async function boot() {
     /* ignore */
   }
   render();
+  if (state.caseSource === "library") {
+    refreshCaseLibrary().catch(() => {});
+  }
 }
 
 boot();

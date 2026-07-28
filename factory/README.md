@@ -16,7 +16,7 @@ docker compose up --build
 
 ## 流水线（7 步）
 
-1. **口述 + API Key + 模型** → 生成筛选题目与评分标准（可手改）
+1. **口述 + API Key + 模型** → 生成筛选题目与评分标准（可手改）；**或从 `case/xsct` 用例库载入现成题**（无需 Key）
 2. **题目 / 裁判核对** → 左侧原题（选手），右侧裁判标准（不进基因组）
 3. **标准基线 A/B**（多线程并行）
    - **A**：原题 system + user（地板）
@@ -49,8 +49,10 @@ docker compose up --build
 
 ## 运行日志
 
-`server/run_log.py` 记录：题目 / 裁判 / A·B / 基因组 C / 初筛·终筛。  
+`server/run_log.py` 记录：题目 / 裁判 / A·B / 基因组 C / 初筛·终筛 / **token_usage**。  
 远端上传：`SHIP_ENABLED=False`（占位，当前不发网络）。
+
+每次 LLM 调用累计进会话 `token_meter`（输入 / 输出 / 合计 / 按 purpose）；快照与 `save/` 包内含 `token_usage`。
 
 文案隐藏编辑：`Ctrl/⌘+Shift+E`，或 `?copyEdit=1`。
 

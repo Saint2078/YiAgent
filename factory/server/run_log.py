@@ -42,6 +42,7 @@ class RunLog:
         self.model = model
         self.oral = oral
         self.events: list[dict[str, Any]] = []
+        self.token_usage: dict[str, Any] | None = None
         self._lock = threading.Lock()
         self._ship_pending: list[Path] = []
 
@@ -179,6 +180,7 @@ class RunLog:
             "saved_at": _now_iso(),
             "model": self.model,
             "oral": self.oral,
+            "token_usage": self.token_usage,
             "events": events,
             "ship": {
                 "enabled": SHIP_ENABLED,

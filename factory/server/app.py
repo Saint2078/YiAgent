@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from jobs import MANAGER
 from llm_client import model_ok as _model_ok, models_public
+from case_library import LIBRARY
 
 ROOT = Path(__file__).resolve().parents[1]
 WWW = ROOT / "www"
@@ -79,6 +80,50 @@ def health():
 @app.get("/api/models")
 def models():
     return {"models": models_public()}
+
+
+@app.get("/api/cases/meta")
+def cases_meta():
+    return LIBRARY.meta()
+
+
+@app.get("/api/cases")
+def cases_list(
+    suite: str | None = None,
+    dimension: str | None = None,
+    q: str | None = None,
+    limit: int = 80,
+    offset: int = 0,
+):
+    return LIBRARY.list_cases(
+        suite=suite, dimension=dimension, q=q, limit=limit, offset=offset
+    )
+
+
+class LibraryCaseBody(BaseModel):
+    suite: str = Field(min_length=1)
+    id: str = Field(min_length=1)
+    level: str = "basic"
+    model: str = "k3"
+
+
+@app.post("/api/session/case/library")
+def session_case_library(body: LibraryCaseBody):
+    """Load ready-made case from case/xsct — no LLM / API key required."""
+    if body.model and not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        sess = MANAGER.load_library_case(
+            suite=body.suite.strip(),
+            case_id=body.id.strip(),
+            level=(body.level or "basic").strip(),
+            model=body.model or "k3",
+        )
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "载入用例库失败") from e
+    return sess.snapshot()
 
 
 @app.post("/api/session/case")

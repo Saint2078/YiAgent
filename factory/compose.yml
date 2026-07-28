@@ -6,8 +6,10 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - YIAGENT_CASE_ROOT=/app/case/xsct
     volumes:
       - ./fixtures:/app/fixtures
       - ./save:/app/save
       - ./www:/app/www
       - ./server:/app/server
+      - ../case:/app/case

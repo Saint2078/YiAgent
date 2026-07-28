@@ -7,6 +7,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,8 @@ from generate import (
 from judge import judge_with_retries
 from llm_client import chat_completions, extract_content
 from run_log import get_or_create_log
+from token_meter import TokenMeter
+from case_library import LIBRARY
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "fixtures"
@@ -115,6 +118,8 @@ class Session:
     marks: dict[str, str | None] = field(default_factory=dict)
     error: str | None = None
     frozen_demo: bool = False
+    baseline_stale: bool = False
+    token_meter: TokenMeter = field(default_factory=TokenMeter)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     lock: threading.Lock = field(default_factory=threading.Lock)
@@ -136,6 +141,7 @@ class Session:
                             "hash": v.get("hash"),
                         }
                     )
+            token_usage = self.token_meter.summary()
             return {
                 "id": self.id,
                 "phase": self.phase,
@@ -157,6 +163,7 @@ class Session:
                 "qualified_count": self.qualified_count,
                 "early_stopped": self.early_stopped,
                 "baseline_summaries": baseline_sum,
+                "baseline_stale": self.baseline_stale,
                 "pre_summaries": pre_sum,
                 "champ_summaries": champ_sum,
                 "pool": list(self.pool),
@@ -164,6 +171,7 @@ class Session:
                 "logs": list(self.logs)[:80],
                 "error": self.error,
                 "frozen_demo": self.frozen_demo,
+                "token_usage": token_usage,
                 "updated_at": self.updated_at,
             }
 
@@ -241,7 +249,9 @@ class SessionManager:
         rlog.record_phase(sess.phase)
 
     def create_case(self, *, api_key: str, model: str, oral: str) -> Session:
-        case = generate_case(api_key, model, oral)
+        meter = TokenMeter()
+        with meter.activate():
+            case = generate_case(api_key, model, oral)
         sess = Session(
             id=uuid.uuid4().hex[:12],
             model=model,
@@ -251,6 +261,54 @@ class SessionManager:
             target_text=format_target_text(case),
             criteria_text=format_criteria_text(case),
             status="idle",
+            token_meter=meter,
+        )
+        with self._lock:
+            self._sessions[sess.id] = sess
+        self._log_case(sess)
+        return sess
+
+    def load_library_case(
+        self,
+        *,
+        suite: str,
+        case_id: str,
+        level: str = "basic",
+        model: str = "k3",
+    ) -> Session:
+        """Load a ready-made case from case/xsct (no LLM call)."""
+        factory_case = LIBRARY.to_factory_case(suite, case_id, level)
+        oral = (
+            f"[用例库] {factory_case.get('suite')}/{factory_case.get('id')} · "
+            f"{factory_case.get('level')} · {factory_case.get('title')}"
+        )
+        case = normalize_case(factory_case, oral=oral)
+        # preserve full message thread (multi-turn XSCT cases)
+        msgs = factory_case.get("messages") or []
+        if isinstance(msgs, list) and msgs:
+            case["messages"] = [
+                {"role": str(m.get("role")), "content": str(m.get("content") or "")}
+                for m in msgs
+                if isinstance(m, dict) and m.get("role")
+            ]
+        # preserve library metadata after normalize
+        case["dimension"] = factory_case.get("dimension") or ""
+        case["level"] = factory_case.get("level")
+        case["suite"] = factory_case.get("suite")
+        case["source"] = "xsct"
+        case["description"] = factory_case.get("description") or ""
+        if factory_case.get("reference_answer"):
+            case["reference_answer"] = factory_case["reference_answer"]
+        sess = Session(
+            id=uuid.uuid4().hex[:12],
+            model=model,
+            phase="case_ready",
+            oral=oral,
+            case=case,
+            target_text=format_target_text(case),
+            criteria_text=format_criteria_text(case),
+            status="idle",
+            frozen_demo=False,
         )
         with self._lock:
             self._sessions[sess.id] = sess
@@ -346,6 +404,7 @@ class SessionManager:
                 "early_stopped": sess.early_stopped,
                 "pool": list(sess.pool),
                 "marks": dict(sess.marks),
+                "token_usage": sess.token_meter.summary(),
             }
 
     def save_session(
@@ -395,6 +454,7 @@ class SessionManager:
             rlog.record_phase(sess.phase, note="save")
             rlog.model = sess.model
             rlog.oral = sess.oral
+            rlog.token_usage = sess.token_meter.summary()
 
         SAVE.mkdir(parents=True, exist_ok=True)
         stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
@@ -464,11 +524,10 @@ class SessionManager:
                 sess.criteria_text = criteria_text
                 sess.case = parse_criteria_text(criteria_text, sess.case)
                 changed = True
-            # Only invalidate A/B when rubric/task text actually changed.
-            if changed:
-                sess.baseline_scores = {}
-                if sess.phase == "baseline_done" and not sess.bank:
-                    sess.phase = "case_ready"
+            # Keep A/B scores visible after later steps; only mark stale if texts changed.
+            # Scores are cleared when the user explicitly re-runs baseline.
+            if changed and sess.baseline_scores:
+                sess.baseline_stale = True
             sess.updated_at = time.time()
         if changed:
             self._log_case(sess)
@@ -515,6 +574,7 @@ class SessionManager:
             sess.baseline_reps = max(1, min(int(baseline_reps), 10))
             sess.workers = max(1, min(int(workers), 12))
             sess.baseline_scores = {}
+            sess.baseline_stale = False
             sess.done = 0
             sess.total = len(BASELINE_ARMS) * sess.baseline_reps
             sess.phase = "baselining"
@@ -546,7 +606,9 @@ class SessionManager:
             sess.case = parse_criteria_text(sess.criteria_text, sess.case)
             case = dict(sess.case)
             m = sess.model
-        bank = generate_genomes(api_key, m, case)
+            meter = sess.token_meter
+        with meter.activate():
+            bank = generate_genomes(api_key, m, case)
         with sess.lock:
             sess.bank = bank
             sess.phase = "genomes_ready"
@@ -686,6 +748,32 @@ class SessionManager:
         rep: int,
         reps: int,
         abort: threading.Event,
+        meter: TokenMeter | None = None,
+    ) -> dict[str, Any]:
+        ctx = meter.activate() if meter is not None else nullcontext()
+        with ctx:
+            return self._run_one_inner(
+                api_key=api_key,
+                model=model,
+                case=case,
+                bank=bank,
+                vid=vid,
+                rep=rep,
+                reps=reps,
+                abort=abort,
+            )
+
+    def _run_one_inner(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        case: dict,
+        bank: dict,
+        vid: str,
+        rep: int,
+        reps: int,
+        abort: threading.Event,
     ) -> dict[str, Any]:
         if abort.is_set():
             return {"aborted": True, "variant_id": vid, "rep": rep}
@@ -695,7 +783,9 @@ class SessionManager:
         variant = vmap[vid]
         system = assemble_system(host, bank, variant)
         messages = build_messages(case, system)
-        gen = chat_completions(api_key, model, messages, max_tokens=2200, reasoning_effort="low")
+        gen = chat_completions(
+            api_key, model, messages, max_tokens=2200, reasoning_effort="low", purpose="answer"
+        )
         content = extract_content(gen)
         if abort.is_set():
             return {"aborted": True, "variant_id": vid, "rep": rep}
@@ -725,12 +815,40 @@ class SessionManager:
         rep: int,
         reps: int,
         abort: threading.Event,
+        meter: TokenMeter | None = None,
+    ) -> dict[str, Any]:
+        ctx = meter.activate() if meter is not None else nullcontext()
+        with ctx:
+            return self._run_baseline_one_inner(
+                api_key=api_key,
+                model=model,
+                case=case,
+                arm=arm,
+                title=title,
+                rep=rep,
+                reps=reps,
+                abort=abort,
+            )
+
+    def _run_baseline_one_inner(
+        self,
+        *,
+        api_key: str,
+        model: str,
+        case: dict,
+        arm: str,
+        title: str,
+        rep: int,
+        reps: int,
+        abort: threading.Event,
     ) -> dict[str, Any]:
         if abort.is_set():
             return {"aborted": True, "arm": arm, "rep": rep}
         jbody = judge_body(case)
         messages = build_baseline_messages(case, arm)
-        gen = chat_completions(api_key, model, messages, max_tokens=2200, reasoning_effort="low")
+        gen = chat_completions(
+            api_key, model, messages, max_tokens=2200, reasoning_effort="low", purpose="answer"
+        )
         content = extract_content(gen)
         if abort.is_set():
             return {"aborted": True, "arm": arm, "rep": rep}
@@ -771,6 +889,7 @@ class SessionManager:
                         rep=rep,
                         reps=reps,
                         abort=sess._abort,
+                        meter=sess.token_meter,
                     ): (arm, rep)
                     for arm, title, rep in tasks
                 }
@@ -881,6 +1000,7 @@ class SessionManager:
                             rep=r,
                             reps=reps,
                             abort=sess._abort,
+                            meter=sess.token_meter,
                         )
                         for r in range(1, reps + 1)
                     ]
@@ -994,6 +1114,7 @@ class SessionManager:
                         rep=rep,
                         reps=reps,
                         abort=sess._abort,
+                        meter=sess.token_meter,
                     ): (vid, rep)
                     for vid, rep in tasks
                 }

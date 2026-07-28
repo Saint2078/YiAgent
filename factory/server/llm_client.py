@@ -266,12 +266,16 @@ def chat_completions(
     reasoning_effort: str = "low",
     timeout: int = 300,
     retries: int = 4,
+    purpose: str = "llm",
 ) -> dict[str, Any]:
     """
     Provider-aware chat call.
     OpenAI-compatible providers → POST {base}/chat/completions
     Anthropic → POST {base}/v1/messages (normalized to OpenAI-like response)
+    When a TokenMeter is active, records usage under ``purpose``.
     """
+    from token_meter import record_from_response
+
     key = _normalize_key(api_key)
     meta = model_entry(model) or {"id": model, "provider": "openai", "supported": True}
     provider_id = meta.get("provider") or "openai"
@@ -310,7 +314,7 @@ def chat_completions(
             if isinstance(block, dict) and block.get("type") == "text":
                 text_parts.append(block.get("text") or "")
         content = "".join(text_parts).strip()
-        return {
+        resp = {
             "id": raw.get("id"),
             "model": raw.get("model") or model,
             "choices": [{"message": {"role": "assistant", "content": content}}],
@@ -318,6 +322,8 @@ def chat_completions(
             "_provider": provider_id,
             "_raw": raw,
         }
+        record_from_response(resp, purpose=purpose, model=model)
+        return resp
 
     body = _openai_body(
         model, messages, max_tokens=max_tokens, meta=meta, reasoning_effort=reasoning_effort
@@ -331,7 +337,7 @@ def chat_completions(
         headers["HTTP-Referer"] = "https://github.com/Saint2078/YiAgent"
         headers["X-Title"] = "YiAgent Factory"
 
-    return _post_json(
+    resp = _post_json(
         f"{resolved_base}/chat/completions",
         body,
         headers,
@@ -339,6 +345,10 @@ def chat_completions(
         retries=retries,
         err_prefix=err_prefix,
     )
+    if isinstance(resp, dict):
+        resp.setdefault("_provider", provider_id)
+        record_from_response(resp, purpose=purpose, model=model)
+    return resp
 
 
 def extract_content(resp: dict[str, Any]) -> str:

@@ -21,6 +21,7 @@ def _chat_json(api_key: str, model: str, system: str, user: str, *, max_tokens: 
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             max_tokens=max_tokens,
             reasoning_effort="low",
+            purpose="generate",
         )
     )
     if not raw:
@@ -45,6 +46,7 @@ def _chat_json(api_key: str, model: str, system: str, user: str, *, max_tokens: 
                 ],
                 max_tokens=max_tokens,
                 reasoning_effort="low",
+                purpose="generate",
             )
         )
         try:

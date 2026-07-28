@@ -181,7 +181,13 @@ def normalize_judgment(criteria: dict, judged: dict) -> dict[str, Any]:
 def judge_once(api_key: str, model: str, body: dict, content: str) -> dict[str, Any]:
     criteria = body.get("criteria") or {}
     raw = extract_content(
-        chat_completions(api_key, model, build_judge_messages(body, content), max_tokens=1600)
+        chat_completions(
+            api_key,
+            model,
+            build_judge_messages(body, content),
+            max_tokens=1600,
+            purpose="judge",
+        )
     )
     judged = parse_json(raw)
     return normalize_judgment(criteria, judged)
