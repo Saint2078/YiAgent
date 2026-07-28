@@ -327,6 +327,20 @@ const i18n = {
     genCase: "生成题目与标准",
     demo: "载入冻结演示",
     demoHint: "载入已固化的批判思维演示包（含 A/B 与终筛结果），不调用模型。要实跑请用「生成题目」或逐步点基线按钮。",
+    autoRun: "全自动跑出最优基因",
+    autoHint: "一键串起：载入/生成题 → A/B → 基因组 → 初筛 → 终筛；默认取均衡最优并写入 save/。",
+    autoNeedCase: "用例库模式请先选中一道题",
+    toastAutoStart: "全自动已启动，无需逐步点击",
+    toastAutoDone: "全自动完成 · 最优基因已落盘",
+    autoStepCase: "全自动 · 准备题目",
+    autoStepBaseline: "全自动 · A/B 基线",
+    autoStepGenomes: "全自动 · 生成基因组",
+    autoStepPrefilter: "全自动 · 初筛",
+    autoStepChampion: "全自动 · 终筛",
+    autoStepSave: "全自动 · 保存",
+    autoStepDone: "全自动 · 完成",
+    bestGenome: "本轮最优基因",
+    bestGenomePath: "落盘",
     saveRun: "保存会话",
     freezeDemo: "固化为演示",
     saveNeedSession: "请先有一个会话再保存",
@@ -446,6 +460,20 @@ const i18n = {
     genCase: "Generate task & rubric",
     demo: "Load frozen demo",
     demoHint: "Load the frozen CT demo pack (A/B + finals). No model calls. For a live run, generate a case or click baseline yourself.",
+    autoRun: "Auto: best genome",
+    autoHint: "Unattended: case → A/B → genomes → prefilter → finals; default balanced champion → save/.",
+    autoNeedCase: "Pick a library case first",
+    toastAutoStart: "Auto pipeline started — no manual steps",
+    toastAutoDone: "Auto done · best genome saved",
+    autoStepCase: "Auto · case",
+    autoStepBaseline: "Auto · A/B baseline",
+    autoStepGenomes: "Auto · genomes",
+    autoStepPrefilter: "Auto · prefilter",
+    autoStepChampion: "Auto · finals",
+    autoStepSave: "Auto · save",
+    autoStepDone: "Auto · done",
+    bestGenome: "Best genome this run",
+    bestGenomePath: "Saved",
     saveRun: "Save session",
     freezeDemo: "Freeze as demo",
     saveNeedSession: "Start a session before saving",
@@ -583,6 +611,25 @@ function showToast(msg) {
   }, 4200);
 }
 
+function isAutoActive(snap) {
+  if (!snap?.auto || !snap.auto_step) return false;
+  if (snap.phase === "error" || snap.status === "aborted" || snap.status === "error") return false;
+  return !["done", "error"].includes(snap.auto_step);
+}
+
+function autoStepLabel(step, c) {
+  const map = {
+    case: c.autoStepCase,
+    baseline: c.autoStepBaseline,
+    genomes: c.autoStepGenomes,
+    prefilter: c.autoStepPrefilter,
+    champion: c.autoStepChampion,
+    save: c.autoStepSave,
+    done: c.autoStepDone,
+  };
+  return map[step] || c.autoRun || c.wait;
+}
+
 function applySnap(snap, { syncFocus = false } = {}) {
   state.snap = snap;
   state.sessionId = snap.id;
@@ -649,15 +696,23 @@ function startPoll() {
     try {
       const snap = await api(`/api/session/${state.sessionId}`);
       applySnap(snap);
+      if (isAutoActive(snap)) {
+        state.busy = true;
+        state.localBusyLabel = autoStepLabel(snap.auto_step, t());
+        state.focusStep = currentStep(snap.phase);
+      }
       render();
-      if (snap.status !== "running") {
+      if (snap.status !== "running" && !isAutoActive(snap)) {
         stopPoll();
         state.busy = false;
         state.localBusyLabel = "";
         const c = t();
-        if (snap.phase === "baseline_done") showToast(c.toastBaseline);
-        if (snap.phase === "prefilter_done") showToast(c.toastPre);
-        if (snap.phase === "done") showToast(c.toastChamp);
+        if (snap.auto && snap.auto_step === "done" && snap.phase === "done") {
+          const title = snap.best_genome?.title || snap.best_genome?.variant_id || "";
+          showToast(title ? `${c.toastAutoDone} · ${title}` : c.toastAutoDone);
+        } else if (snap.phase === "baseline_done") showToast(c.toastBaseline);
+        else if (snap.phase === "prefilter_done") showToast(c.toastPre);
+        else if (snap.phase === "done") showToast(c.toastChamp);
         render();
         scrollToStep(state.focusStep);
       }
@@ -1097,6 +1152,67 @@ async function onAbort() {
   render();
 }
 
+async function onAutoRun() {
+  const c = t();
+  readFormIntoState();
+  if (!state.apiKey || state.apiKey.length < 8) {
+    state.error = c.keyNeed;
+    render();
+    return;
+  }
+  const source = state.caseSource === "oral" ? "oral" : "library";
+  if (source === "library" && !state.caseSelectedId) {
+    state.error = c.autoNeedCase;
+    render();
+    return;
+  }
+  if (source === "oral" && (!state.oral.trim() || state.oral.trim().length < 4)) {
+    state.error = c.oralNeed;
+    render();
+    return;
+  }
+  state.busy = true;
+  state.localBusyLabel = c.autoRun;
+  state.error = null;
+  state.baselineCache = null;
+  render();
+  try {
+    const body = {
+      api_key: state.apiKey,
+      model: state.model,
+      source,
+      baseline_reps: state.baselineReps,
+      pre_reps: state.preReps,
+      champ_reps: state.champReps,
+      qualify_target: state.qualifyTarget,
+      pass_mean: state.passMean,
+      workers: state.workers,
+      champion_mark: "balanced",
+      save: true,
+    };
+    if (source === "library") {
+      body.suite = state.caseSuite;
+      body.id = state.caseSelectedId;
+      body.level = state.caseLevel || "basic";
+    } else {
+      body.oral = state.oral.trim();
+    }
+    const snap = await api("/api/session/auto", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    applySnap(snap, { syncFocus: true });
+    state.localBusyLabel = autoStepLabel(snap.auto_step, c);
+    showToast(c.toastAutoStart);
+    startPoll();
+  } catch (e) {
+    state.error = String(e.message || e);
+    state.busy = false;
+    state.localBusyLabel = "";
+  }
+  render();
+}
+
 async function syncPool() {
   if (!state.sessionId) return;
   const snap = await api(`/api/session/${state.sessionId}/champion/pool`, {
@@ -1307,25 +1423,32 @@ function render() {
   const snap = state.snap;
   const phase = snap?.phase || "idle";
   const rank = phaseRank(phase);
-  const running = snap?.status === "running" || state.busy;
+  const autoBusy = isAutoActive(snap);
+  const running = snap?.status === "running" || state.busy || autoBusy;
   const unlock = unlockedMax(rank, snap);
   const focus = Math.min(state.focusStep, unlock);
   const examples = oralExamplesList();
   const demoFrozen = snap?.frozen_demo === true;
   const baselineRows = baselineSummariesOf(snap);
   const hasBaseline = baselineRows.some((r) => (r.n || 0) > 0);
+  const stickyLabel = autoBusy
+    ? autoStepLabel(snap.auto_step, c)
+    : state.localBusyLabel || c.wait;
   const isBaselining =
-    phase === "baselining" || (running && state.localBusyLabel === c.startBaseline);
-  const isGenomesBusy = running && state.localBusyLabel === c.genGenome;
+    phase === "baselining" || (running && state.localBusyLabel === c.startBaseline) || (autoBusy && snap.auto_step === "baseline");
+  const isGenomesBusy =
+    (running && state.localBusyLabel === c.genGenome) || (autoBusy && snap.auto_step === "genomes");
   const isPrefiltering =
-    phase === "prefiltering" || (running && state.localBusyLabel === c.startPre);
+    phase === "prefiltering" || (running && state.localBusyLabel === c.startPre) || (autoBusy && snap.auto_step === "prefilter");
   const isChampioning =
-    phase === "championing" || (running && state.localBusyLabel === c.startChamp);
+    phase === "championing" || (running && state.localBusyLabel === c.startChamp) || (autoBusy && snap.auto_step === "champion");
   const isCaseBusy =
-    running &&
-    (state.localBusyLabel === c.genCase ||
-      state.localBusyLabel === c.caseLoad ||
-      state.localBusyLabel === c.wait);
+    (running &&
+      (state.localBusyLabel === c.genCase ||
+        state.localBusyLabel === c.caseLoad ||
+        state.localBusyLabel === c.wait ||
+        state.localBusyLabel === c.autoRun)) ||
+    (autoBusy && snap.auto_step === "case");
 
   root.className = "app-shell console ux";
   root.innerHTML = `
@@ -1350,8 +1473,8 @@ function render() {
       running
         ? `<div class="run-sticky" role="status">
             <div>
-              <strong>${escapeHtml(state.localBusyLabel || c.wait)}</strong>
-              <span class="dim"> · ${escapeHtml(c.runningHint)}</span>
+              <strong>${escapeHtml(stickyLabel)}</strong>
+              <span class="dim"> · ${escapeHtml(autoBusy ? c.autoHint : c.runningHint)}</span>
             </div>
             ${
               snap?.status === "running"
@@ -1514,10 +1637,14 @@ function render() {
                   <button class="btn-primary" type="button" id="btn-load-case" ${
                     running || state.caseLoading ? "disabled" : ""
                   }>${escapeHtml(c.caseLoad)}</button>
+                  <button class="btn-primary" type="button" id="btn-auto" ${
+                    running || state.caseLoading ? "disabled" : ""
+                  }>${escapeHtml(c.autoRun)}</button>
                   <button class="btn-ghost" type="button" id="btn-demo" ${running ? "disabled" : ""}>${escapeHtml(
                     c.demo
                   )}</button>
                 </div>
+                <p class="field-hint">${escapeHtml(c.autoHint)}</p>
                 <p class="field-hint">${escapeHtml(c.demoHint)}</p>
               </div>`
             : `<label class="field-label">${escapeHtml(c.oral)}</label>
@@ -1563,10 +1690,14 @@ function render() {
           <button class="btn-primary" type="button" id="btn-gen-case" ${running ? "disabled" : ""}>${escapeHtml(
             c.genCase
           )}</button>
+          <button class="btn-primary" type="button" id="btn-auto" ${running ? "disabled" : ""}>${escapeHtml(
+            c.autoRun
+          )}</button>
           <button class="btn-ghost" type="button" id="btn-demo" ${running ? "disabled" : ""}>${escapeHtml(
             c.demo
           )}</button>
         </div>
+        <p class="field-hint">${escapeHtml(c.autoHint)}</p>
         <p class="field-hint">${escapeHtml(c.demoHint)}</p>`
         }
       </section>
@@ -1867,6 +1998,23 @@ function render() {
                     </div>`
                   : ""
               }
+              ${
+                snap?.best_genome
+                  ? `<div class="panel-inset best-genome" style="margin-top:1rem">
+                      <p class="field-label">${escapeHtml(c.bestGenome)}</p>
+                      <p><strong>${escapeHtml(snap.best_genome.title || snap.best_genome.variant_id || "")}</strong>
+                        <span class="dim mono"> · ${escapeHtml(snap.best_genome.champion_mark || "")}
+                        · ${escapeHtml(snap.best_genome.variant_id || "")}</span></p>
+                      ${
+                        snap.auto_save?.best_genome_path
+                          ? `<p class="field-hint mono">${escapeHtml(c.bestGenomePath)}: ${escapeHtml(
+                              snap.auto_save.best_genome_path
+                            )}</p>`
+                          : ""
+                      }
+                    </div>`
+                  : ""
+              }
               ${summaryTable(snap?.champ_summaries, c, snap?.marks)}`
             : ""
         }
@@ -1931,6 +2079,7 @@ function wire(running, unlock) {
   document.getElementById("btn-freeze-demo")?.addEventListener("click", () => onSaveRun(true));
   document.getElementById("btn-gen-case")?.addEventListener("click", onGenCase);
   document.getElementById("btn-load-case")?.addEventListener("click", onLoadLibraryCase);
+  document.getElementById("btn-auto")?.addEventListener("click", onAutoRun);
   document.getElementById("btn-demo")?.addEventListener("click", onDemo);
   document.getElementById("btn-save-case")?.addEventListener("click", onSaveCase);
   document.getElementById("btn-baseline")?.addEventListener("click", onBaseline);

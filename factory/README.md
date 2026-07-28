@@ -26,6 +26,15 @@ docker compose up --build
 6. **冠军池**：合格默认入池，可勾选
 7. **终筛** → **效果最优 / 稳定最优 / 均衡最优**
 
+### 全自动（无人值守）
+
+一步串起 1→7：`POST /api/session/auto`，或 UI「**全自动跑出最优基因**」。
+
+- 用例库：body 含 `source=library` + `suite` + `id` + `level` + `api_key`
+- 口述：`source=oral` + `oral` + `api_key`
+- 默认取终筛 **均衡最优（balanced）**；结果写入 `save/*_best_genome_*.json` + 会话包
+- 进度：轮询 `GET /api/session/{id}` 看 `auto_step` / `phase` / `best_genome`
+
 ### 怎么读 A / B / C
 
 | 条件 | 含义 |

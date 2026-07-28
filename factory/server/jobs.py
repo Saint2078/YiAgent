@@ -119,6 +119,12 @@ class Session:
     error: str | None = None
     frozen_demo: bool = False
     baseline_stale: bool = False
+    auto: bool = False
+    auto_step: str | None = None
+    # case|baseline|genomes|prefilter|champion|save|done
+    champion_mark: str = "balanced"
+    best_genome: dict[str, Any] | None = None
+    auto_save: dict[str, Any] | None = None
     token_meter: TokenMeter = field(default_factory=TokenMeter)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -171,6 +177,11 @@ class Session:
                 "logs": list(self.logs)[:80],
                 "error": self.error,
                 "frozen_demo": self.frozen_demo,
+                "auto": self.auto,
+                "auto_step": self.auto_step,
+                "champion_mark": self.champion_mark,
+                "best_genome": dict(self.best_genome) if self.best_genome else None,
+                "auto_save": dict(self.auto_save) if self.auto_save else None,
                 "token_usage": token_usage,
                 "updated_at": self.updated_at,
             }
@@ -722,6 +733,323 @@ class SessionManager:
             daemon=True,
         ).start()
         return sess
+
+    def start_auto(
+        self,
+        *,
+        api_key: str,
+        model: str = "k3",
+        source: str = "library",
+        suite: str | None = None,
+        case_id: str | None = None,
+        level: str = "basic",
+        oral: str | None = None,
+        skip_baseline: bool = False,
+        baseline_reps: int = 5,
+        pre_reps: int = 3,
+        champ_reps: int = 5,
+        qualify_target: int = 3,
+        pass_mean: float = 70.0,
+        workers: int = 4,
+        champion_mark: str = "balanced",
+        do_save: bool = True,
+    ) -> Session:
+        """Unattended pipeline: case → A/B → genomes → prefilter → champion → best genome."""
+        source = (source or "library").strip().lower()
+        mark = (champion_mark or "balanced").strip().lower()
+        if mark not in ("perf", "stable", "balanced"):
+            raise ValueError("champion_mark must be perf|stable|balanced")
+
+        if source == "library":
+            if not suite or not case_id:
+                raise ValueError("library source requires suite and id")
+            sess = self.load_library_case(
+                suite=suite.strip(),
+                case_id=case_id.strip(),
+                level=(level or "basic").strip(),
+                model=model,
+            )
+        elif source == "oral":
+            text = (oral or "").strip()
+            if len(text) < 4:
+                raise ValueError("oral source requires oral text")
+            sess = self.create_case(api_key=api_key, model=model, oral=text)
+        else:
+            raise ValueError("source must be library|oral")
+
+        with sess.lock:
+            sess.auto = True
+            sess.auto_step = "case"
+            sess.champion_mark = mark
+            sess.best_genome = None
+            sess.auto_save = None
+            sess.baseline_reps = max(1, min(int(baseline_reps), 10))
+            sess.pre_reps = max(1, min(int(pre_reps), 10))
+            sess.champ_reps = max(1, min(int(champ_reps), 10))
+            sess.qualify_target = max(1, min(int(qualify_target), 20))
+            sess.pass_mean = float(pass_mean)
+            sess.workers = max(1, min(int(workers), 12))
+            sess.error = None
+            sess._abort.clear()
+            sess.updated_at = time.time()
+
+        threading.Thread(
+            target=self._run_auto,
+            args=(
+                sess,
+                api_key,
+                bool(skip_baseline),
+                bool(do_save),
+            ),
+            daemon=True,
+        ).start()
+        return sess
+
+    def _set_auto_step(self, sess: Session, step: str) -> None:
+        with sess.lock:
+            sess.auto_step = step
+            sess.updated_at = time.time()
+
+    def _wait_job(self, sess: Session, *, timeout_s: float = 3600.0) -> bool:
+        """Wait until status leaves running. False on abort/error/timeout."""
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            if sess._abort.is_set():
+                with sess.lock:
+                    if sess.status != "running":
+                        return False
+            with sess.lock:
+                st = sess.status
+                ph = sess.phase
+                err = sess.error
+            if st == "running":
+                time.sleep(0.35)
+                continue
+            if st in ("error", "aborted") or ph == "error" or err:
+                return False
+            return True
+        with sess.lock:
+            sess.status = "error"
+            sess.phase = "error"
+            sess.error = "auto pipeline timed out"
+            sess.updated_at = time.time()
+        return False
+
+    def _ensure_champion_pool(self, sess: Session) -> list[str]:
+        with sess.lock:
+            pool = list(sess.pool)
+            if pool:
+                return pool
+            scores = {k: list(v) for k, v in sess.pre_scores.items()}
+            pass_mean = sess.pass_mean
+            target = max(1, sess.qualify_target)
+        summaries = self._summaries_locked(sess, scores, pass_mean)
+        # Prefer passed; else top by mean.
+        passed = [s["variant_id"] for s in summaries if s.get("passed")]
+        if passed:
+            pool = passed[:target]
+        else:
+            pool = [s["variant_id"] for s in summaries if s.get("mean") is not None][:target]
+        if not pool:
+            raise ValueError("prefilter produced no scored variants for champion pool")
+        self.set_pool(sess.id, pool)
+        return pool
+
+    def _summaries_locked(
+        self, sess: Session, scores_by: dict[str, list[float]], pass_mean: float
+    ) -> list[dict]:
+        """Summaries helper that does not re-enter sess.lock (caller holds or not)."""
+        out = []
+        bank = sess.bank
+        for vid, scores in scores_by.items():
+            st = calc_stats(scores)
+            passed = st["mean"] is not None and st["mean"] >= pass_mean
+            title = vid
+            if bank:
+                for v in bank.get("variants") or []:
+                    if v["id"] == vid:
+                        title = v.get("title") or vid
+                        break
+            out.append(
+                {
+                    "variant_id": vid,
+                    "title": title,
+                    **st,
+                    "passed": passed,
+                    "composite": round(st["mean"] - 1.5 * (st["sdv"] or 0), 2)
+                    if st["mean"] is not None
+                    else None,
+                }
+            )
+        out.sort(key=lambda x: (-(x["mean"] or 0), x.get("sdv") or 99))
+        return out
+
+    def _extract_best_genome(self, sess: Session, champion_mark: str) -> dict[str, Any]:
+        with sess.lock:
+            marks = dict(sess.marks or {})
+            bank = dict(sess.bank or {})
+            champ_sum = sess._summaries(sess.champ_scores, sess.pass_mean)
+            baseline_sum = sess._baseline_summaries()
+            case = dict(sess.case or {})
+            oral = sess.oral
+            model = sess.model
+            preferred = champion_mark if champion_mark in ("perf", "stable", "balanced") else "balanced"
+            vid = marks.get(preferred) or marks.get("balanced") or marks.get("perf") or marks.get("stable")
+            mark = preferred if marks.get(preferred) else (
+                "balanced" if marks.get("balanced") else ("perf" if marks.get("perf") else "stable")
+            )
+        if not vid:
+            raise ValueError("no champion marks — finals empty?")
+        variant = None
+        for v in bank.get("variants") or []:
+            if v.get("id") == vid:
+                variant = v
+                break
+        if not variant:
+            raise ValueError(f"champion variant missing in bank: {vid}")
+        slots = dict(variant.get("slots") or {})
+        alleles = bank.get("alleles") or {}
+        slot_texts: dict[str, Any] = {}
+        for slot, allele_id in slots.items():
+            texts = []
+            for a in alleles.get(slot) or []:
+                if a.get("id") == allele_id:
+                    texts.append(
+                        {
+                            "id": a.get("id"),
+                            "label": a.get("label"),
+                            "text": a.get("text"),
+                        }
+                    )
+                    break
+            slot_texts[slot] = {
+                "allele_id": allele_id,
+                "allele": texts[0] if texts else None,
+            }
+        summary = next((s for s in champ_sum if s.get("variant_id") == vid), None)
+        return {
+            "version": 1,
+            "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "session_id": sess.id,
+            "oral": oral,
+            "model": model,
+            "case": {
+                "id": case.get("id"),
+                "title": case.get("title"),
+                "suite": case.get("suite"),
+                "level": case.get("level"),
+                "dimension": case.get("dimension"),
+            },
+            "champion_mark": mark,
+            "marks": marks,
+            "variant_id": vid,
+            "title": variant.get("title") or vid,
+            "hash": variant.get("hash"),
+            "slots": slots,
+            "slot_texts": slot_texts,
+            "champ_summary": summary,
+            "champ_summaries": champ_sum,
+            "baseline_summaries": baseline_sum,
+            "token_usage": sess.token_meter.summary(),
+        }
+
+    def _run_auto(self, sess: Session, api_key: str, skip_baseline: bool, do_save: bool) -> None:
+        try:
+            if skip_baseline:
+                self._set_auto_step(sess, "baseline")
+                self.skip_baseline(sess.id)
+            else:
+                self._set_auto_step(sess, "baseline")
+                self.start_baseline(
+                    sess.id,
+                    api_key=api_key,
+                    baseline_reps=sess.baseline_reps,
+                    workers=sess.workers,
+                    model=sess.model,
+                )
+                if not self._wait_job(sess):
+                    return
+
+            if sess._abort.is_set():
+                return
+
+            self._set_auto_step(sess, "genomes")
+            self.generate_genomes(sess.id, api_key=api_key, model=sess.model)
+
+            if sess._abort.is_set():
+                return
+
+            self._set_auto_step(sess, "prefilter")
+            self.start_prefilter(
+                sess.id,
+                api_key=api_key,
+                pre_reps=sess.pre_reps,
+                qualify_target=sess.qualify_target,
+                pass_mean=sess.pass_mean,
+                workers=sess.workers,
+            )
+            if not self._wait_job(sess):
+                return
+
+            if sess._abort.is_set():
+                return
+
+            self._ensure_champion_pool(sess)
+
+            self._set_auto_step(sess, "champion")
+            self.start_champion(
+                sess.id,
+                api_key=api_key,
+                champ_reps=sess.champ_reps,
+                workers=sess.workers,
+            )
+            if not self._wait_job(sess):
+                return
+
+            if sess._abort.is_set():
+                return
+
+            mark = sess.champion_mark
+            best = self._extract_best_genome(sess, mark)
+            with sess.lock:
+                sess.best_genome = best
+                sess.updated_at = time.time()
+
+            save_info: dict[str, Any] = {}
+            if do_save:
+                self._set_auto_step(sess, "save")
+                import json
+
+                SAVE.mkdir(parents=True, exist_ok=True)
+                stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+                best_path = SAVE / f"{stamp}_best_genome_{sess.id}_v1.0.json"
+                best_path.write_text(
+                    json.dumps(best, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+                saved = self.save_session(
+                    sess.id, freeze_demo=False, label="auto", version_tag="v1.0"
+                )
+                save_info = {
+                    "best_genome_path": str(best_path.relative_to(ROOT)),
+                    "pack_path": saved.get("pack_path"),
+                    "log_path": saved.get("log_path"),
+                }
+
+            with sess.lock:
+                sess.auto_save = save_info or None
+                sess.auto_step = "done"
+                sess.phase = "done"
+                sess.status = "done"
+                sess.updated_at = time.time()
+            rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+            rlog.record_phase("done", note="auto")
+        except Exception as e:  # noqa: BLE001
+            with sess.lock:
+                sess.status = "error"
+                sess.phase = "error"
+                sess.auto_step = "error"
+                sess.error = f"auto: {e}"
+                sess.updated_at = time.time()
 
     def abort(self, session_id: str) -> Session:
         sess = self._require(session_id)

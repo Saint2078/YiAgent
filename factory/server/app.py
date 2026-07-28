@@ -19,7 +19,7 @@ WWW = ROOT / "www"
 log = logging.getLogger("factory")
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="YiAgent Factory Demo", version="0.5.0")
+app = FastAPI(title="YiAgent Factory Demo", version="0.6.0")
 
 
 def _http_from_exc(e: Exception, prefix: str) -> HTTPException:
@@ -72,9 +72,28 @@ class ChampionBody(BaseModel):
     workers: int | None = None
 
 
+class AutoBody(BaseModel):
+    api_key: str = Field(min_length=8)
+    model: str = "k3"
+    source: str = Field(default="library", description="library|oral")
+    suite: str | None = None
+    id: str | None = None
+    level: str = "basic"
+    oral: str | None = None
+    skip_baseline: bool = False
+    baseline_reps: int = Field(default=5, ge=1, le=10)
+    pre_reps: int = Field(default=3, ge=1, le=10)
+    champ_reps: int = Field(default=5, ge=1, le=10)
+    qualify_target: int = Field(default=3, ge=1, le=20)
+    pass_mean: float = Field(default=70.0, ge=0, le=100)
+    workers: int = Field(default=4, ge=1, le=12)
+    champion_mark: str = Field(default="balanced", description="perf|stable|balanced")
+    save: bool = True
+
+
 @app.get("/api/health")
 def health():
-    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.5.0"}
+    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.6.0"}
 
 
 @app.get("/api/models")
@@ -136,6 +155,39 @@ def session_case(body: CaseBody):
         )
     except Exception as e:  # noqa: BLE001
         raise _http_from_exc(e, "生成题目失败") from e
+    return sess.snapshot()
+
+
+@app.post("/api/session/auto")
+def session_auto(body: AutoBody):
+    """Unattended full pipeline → best genome (default balanced mark)."""
+    if not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        sess = MANAGER.start_auto(
+            api_key=body.api_key.strip(),
+            model=body.model,
+            source=body.source,
+            suite=body.suite,
+            case_id=body.id,
+            level=body.level,
+            oral=body.oral,
+            skip_baseline=body.skip_baseline,
+            baseline_reps=body.baseline_reps,
+            pre_reps=body.pre_reps,
+            champ_reps=body.champ_reps,
+            qualify_target=body.qualify_target,
+            pass_mean=body.pass_mean,
+            workers=body.workers,
+            champion_mark=body.champion_mark,
+            do_save=body.save,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except KeyError as e:
+        raise HTTPException(404, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "全自动流水线启动失败") from e
     return sess.snapshot()
 
 
