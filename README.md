@@ -94,11 +94,13 @@ cd factory && docker compose up --build
 - [x] 主张落地：改基因组 + 分槽鉴定晋升  
 - [x] 批判思维冻结演示（A / B / C×3 · 可点开复现）  
 - [x] 组装测试工厂（Docker · 七步筛选 · 保存 / 固化演示）  
+- [x] 多模型 Provider 底座（`yiagent.providers` · chat / stream / usage）  
+- [x] 工厂全自动流水线（`POST /api/session/auto`）  
 
 接下来：
 
 1. [ ] 实现最小化的 Agent 实体  
-2. [ ] 实现全自动组装流程  
+2. [ ] 角色级题集鉴定 / 组装工厂规模化搜索  
 3. [ ] 测试基因是否具有充足的适配性  
 4. [ ] 提供各种 CLI 的支持（方便你们烧掉快过期的 Token Plan）  
 5. [ ] 测试更多的困难与综合问题（初步测试困难问题提升更多）  

@@ -1,15 +1,19 @@
 services:
   factory:
-    build: .
+    build:
+      context: ..
+      dockerfile: factory/Dockerfile
     ports:
       - "8787:80"
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
       - YIAGENT_CASE_ROOT=/app/case/xsct
+      - PYTHONPATH=/app/src
     volumes:
       - ./fixtures:/app/fixtures
       - ./save:/app/save
       - ./www:/app/www
       - ./server:/app/server
       - ../case:/app/case
+      - ../src:/app/src

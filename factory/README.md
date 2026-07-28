@@ -69,11 +69,13 @@ docker compose up --build
 
 ```
 factory/
-  server/     # FastAPI + 多厂商 LLM + 裁判 + run_log
+  server/     # FastAPI + 薄封装（LLM 实现在 src/yiagent/providers）
   www/        # 静态 UI
   fixtures/   # 题 / 等位基因 / demo_pack.json / runs/
   save/       # 本地会话包（gitignore）
 ```
+
+共享 Provider：`pip install -e .` 后 `from yiagent.providers import chat_completions, stream_chat`。
 
 ## 支持的模型（API）
 
