@@ -5,6 +5,9 @@ description = "Gene engineering for agent engineering — G1–G5 slots, scoring
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "LicenseRef-TBD" }
+dependencies = [
+  "textual>=0.80.0",
+]
 
 [project.scripts]
 yiagent = "yiagent.cli.main:main"

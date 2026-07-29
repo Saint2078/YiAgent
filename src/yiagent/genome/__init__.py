@@ -74,11 +74,14 @@ def assemble_system(
     bank: dict[str, Any],
     variant: dict[str, Any],
     *,
-    discipline: str | None = None,
     skills: list[dict[str, Any]] | None = None,
     skill_ids: list[str] | None = None,
 ) -> str:
-    """Assemble contestant system: host + G1–G5 + Skill cassettes + load discipline."""
+    """Assemble contestant genome only: host + G1–G5 + Skill cassettes.
+
+    Platform rules and AGENTS.md are composed later via ``prompt_layers.compose_system``
+    (never stored in the allele bank).
+    """
     slots = variant.get("slots") or {}
     parts = [(host or "").strip() or "你是一个有用的助手。"]
     for s in SLOTS:
@@ -93,16 +96,6 @@ def assemble_system(
         except FileNotFoundError:
             loaded = []
     parts.extend(skill_gene_sections(loaded or []))
-
-    parts.append(
-        discipline
-        or (
-            "## 装载纪律\n"
-            "- 先满足边界与自检，再追求文采。\n"
-            "- Skills 是外部基因盒：可带来工具与 G3/G4/G5 片段，不改写 G1/G2。\n"
-            "- 输出正文本身，不要输出基因元数据。"
-        )
-    )
     return "\n\n".join(parts)
 
 

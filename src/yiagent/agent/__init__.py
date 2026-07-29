@@ -13,6 +13,7 @@ from yiagent.genome import (
     load_skills,
     skill_openai_tools,
 )
+from yiagent.prompt_layers import compose_system
 from yiagent.providers import (
     TokenMeter,
     chat_completions,
@@ -84,6 +85,7 @@ class AgentSession:
         max_turns: int = 16,
         enable_tools: bool = True,
         skill_ids: list[str] | None = None,
+        cfg: dict[str, Any] | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.model = model
@@ -92,6 +94,7 @@ class AgentSession:
         self.max_turns = max(1, int(max_turns))
         self.enable_tools = enable_tools
         self.on_event = on_event
+        self.cfg = cfg
         self.meter = TokenMeter()
         self.tools = make_tools(self.cwd) if enable_tools else {}
         self.bank: dict[str, Any] | None = None
@@ -100,9 +103,9 @@ class AgentSession:
         self._openai_tools: list[dict[str, Any]] = list(OPENAI_TOOL_SPECS) if enable_tools else []
 
         if system:
-            sys_text = system
+            genome_text = system
         elif variant_id:
-            sys_text, self.bank, self.variant, self.skills = assemble_from_ids(
+            genome_text, self.bank, self.variant, self.skills = assemble_from_ids(
                 host=host or DEFAULT_HOST,
                 bank=bank,
                 variant_id=variant_id,
@@ -116,9 +119,12 @@ class AgentSession:
                 raise ValueError("bank has no variants")
             self.variant = variants[0]
             self.skills = load_skills(b, self.variant, skill_ids=skill_ids)
-            sys_text = assemble_system(
+            genome_text = assemble_system(
                 host or DEFAULT_HOST, b, self.variant, skills=self.skills
             )
+
+        # Full prompt: Genome + Runtime rules + AGENTS.md (rules never enter bank)
+        sys_text = compose_system(genome_text, cwd=self.cwd, cfg=cfg)
 
         if enable_tools and self.skills:
             _attach_skill_handlers(self.tools, self.cwd, self.skills)
@@ -131,6 +137,22 @@ class AgentSession:
                 self._openai_tools.append(clean)
 
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": sys_text}]
+        self.persist_id: str | None = None
+        self.on_persist: Callable[[list[dict[str, Any]]], None] | None = None
+
+    def load_messages(self, messages: list[dict[str, Any]], *, keep_system: bool = True) -> None:
+        """Replace history (for session resume). Optionally keep current system prompt."""
+        cleaned = [m for m in messages if isinstance(m, dict) and m.get("role")]
+        if keep_system and self.messages and self.messages[0].get("role") == "system":
+            sys = self.messages[0]
+            rest = [m for m in cleaned if m.get("role") != "system"]
+            self.messages = [sys, *rest]
+        else:
+            self.messages = cleaned or self.messages
+
+    def _persist(self) -> None:
+        if self.on_persist:
+            self.on_persist(list(self.messages))
 
     def _emit(self, kind: str, **payload: Any) -> None:
         if self.on_event:
@@ -140,7 +162,9 @@ class AgentSession:
         """Run one user turn through the tool loop; return final assistant text."""
         self.messages.append({"role": "user", "content": user})
         self._emit("user", text=user)
-        return self._loop(stream_text=stream_text)
+        out = self._loop(stream_text=stream_text)
+        self._persist()
+        return out
 
     def _loop(self, *, stream_text: bool = False) -> str:
         tools_param = self._openai_tools if self.enable_tools else None

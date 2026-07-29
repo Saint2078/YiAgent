@@ -19,7 +19,7 @@ WWW = ROOT / "www"
 log = logging.getLogger("factory")
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="YiAgent Factory Demo", version="0.6.0")
+app = FastAPI(title="YiAgent Factory Demo", version="0.7.0")
 
 
 def _http_from_exc(e: Exception, prefix: str) -> HTTPException:
@@ -91,9 +91,28 @@ class AutoBody(BaseModel):
     save: bool = True
 
 
+class LoadSeedBody(BaseModel):
+    pack: dict
+    model: str = "k3"
+
+
+class ImproveAutoBody(BaseModel):
+    api_key: str = Field(min_length=8)
+    pack: dict
+    model: str = "k3"
+    pre_reps: int = Field(default=3, ge=1, le=10)
+    champ_reps: int = Field(default=5, ge=1, le=10)
+    qualify_target: int = Field(default=3, ge=1, le=20)
+    pass_mean: float = Field(default=70.0, ge=0, le=100)
+    workers: int = Field(default=4, ge=1, le=12)
+    champion_mark: str = Field(default="balanced", description="perf|stable|balanced")
+    save: bool = True
+    skip_refine: bool = False
+
+
 @app.get("/api/health")
 def health():
-    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.6.0"}
+    return {"ok": True, "service": "yiagent-factory-demo", "version": "0.7.0"}
 
 
 @app.get("/api/models")
@@ -188,6 +207,46 @@ def session_auto(body: AutoBody):
         raise HTTPException(404, str(e)) from e
     except Exception as e:  # noqa: BLE001
         raise _http_from_exc(e, "全自动流水线启动失败") from e
+    return sess.snapshot()
+
+
+@app.post("/api/session/load-seed")
+def session_load_seed(body: LoadSeedBody):
+    """Load improve-pack / best_genome → genomes_ready (skip A/B)."""
+    if body.model and not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        sess = MANAGER.load_seed_pack(body.pack, model=body.model or "k3")
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "载入改进包失败") from e
+    return sess.snapshot()
+
+
+@app.post("/api/session/improve-auto")
+def session_improve_auto(body: ImproveAutoBody):
+    """Seed → refine → prefilter → champion → best genome."""
+    if not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        sess = MANAGER.start_improve_auto(
+            api_key=body.api_key.strip(),
+            pack=body.pack,
+            model=body.model,
+            pre_reps=body.pre_reps,
+            champ_reps=body.champ_reps,
+            qualify_target=body.qualify_target,
+            pass_mean=body.pass_mean,
+            workers=body.workers,
+            champion_mark=body.champion_mark,
+            do_save=body.save,
+            skip_refine=body.skip_refine,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "一键改进启动失败") from e
     return sess.snapshot()
 
 
@@ -308,6 +367,23 @@ def session_genomes(session_id: str, body: GenomesBody):
         raise HTTPException(400, str(e)) from e
     except Exception as e:  # noqa: BLE001
         raise _http_from_exc(e, "生成基因组失败") from e
+    return sess.snapshot()
+
+
+@app.post("/api/session/{session_id}/genomes/refine")
+def session_genomes_refine(session_id: str, body: GenomesBody):
+    if body.model and not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        sess = MANAGER.refine_session_genomes(
+            session_id, api_key=body.api_key.strip(), model=body.model
+        )
+    except KeyError:
+        raise HTTPException(404, "session not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "邻域精炼基因组失败") from e
     return sess.snapshot()
 
 

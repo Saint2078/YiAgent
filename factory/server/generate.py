@@ -175,6 +175,268 @@ def normalize_case(data: dict, oral: str = "") -> dict[str, Any]:
     }
 
 
+def bank_from_improve_seed(seed: dict, case: dict | None = None) -> dict[str, Any]:
+    """Rebuild a minimal allele bank from improve-pack / best_genome seed."""
+    alleles: dict[str, list] = {s: [] for s in SLOTS}
+    slots: dict[str, str] = {}
+    slot_texts = seed.get("slot_texts") or {}
+    raw_slots = seed.get("slots") or {}
+
+    for slot in SLOTS:
+        st = slot_texts.get(slot) if isinstance(slot_texts, dict) else None
+        allele = None
+        aid = None
+        if isinstance(st, dict):
+            allele = st.get("allele")
+            aid = st.get("allele_id") or (allele or {}).get("id")
+        if not aid:
+            aid = raw_slots.get(slot)
+        if isinstance(allele, dict) and allele.get("id"):
+            alleles[slot].append(
+                {
+                    "id": str(allele["id"]),
+                    "label": allele.get("label") or allele["id"],
+                    "text": str(allele.get("text") or "").strip() or f"{slot} seed",
+                }
+            )
+            aid = str(allele["id"])
+        elif aid:
+            alleles[slot].append(
+                {
+                    "id": str(aid),
+                    "label": str(aid),
+                    "text": f"{slot} seed allele (text missing).",
+                }
+            )
+        else:
+            aid = f"{slot.lower()}.seed"
+            alleles[slot].append(
+                {"id": aid, "label": f"{slot} seed", "text": f"{slot} seed placeholder."}
+            )
+        if len(alleles[slot]) < 2:
+            alleles[slot].append(
+                {
+                    "id": f"{slot.lower()}.seed.b",
+                    "label": f"{slot} seed B",
+                    "text": f"{slot} neighborhood placeholder.",
+                }
+            )
+        slots[slot] = str(aid)
+
+    vid = str(seed.get("variant_id") or "var.seed")
+    title = str(seed.get("title") or vid)
+    variant: dict[str, Any] = {
+        "id": vid,
+        "hash": seed.get("hash") or f"yg-seed-{vid[-6:]}",
+        "title": title,
+        "slots": slots,
+        "role_in_demo": "seed",
+    }
+    skills = seed.get("skills")
+    if skills:
+        variant["skills"] = skills
+
+    case = case or {}
+    return {
+        "meta": {
+            "display_name": case.get("title") or title,
+            "task": case.get("id") or "improve",
+            "task_title": case.get("title") or title,
+            "seed": True,
+            "generated": False,
+        },
+        "alleles": alleles,
+        "variants": [variant],
+    }
+
+
+def refine_genomes(
+    api_key: str,
+    model: str,
+    case: dict,
+    seed: dict,
+    *,
+    transcript: list | None = None,
+    failure_notes: str = "",
+) -> dict[str, Any]:
+    """Neighborhood search: pin G1, mutate G2/G4/G5 (+ light G3), keep seed variant."""
+    seed_bank = bank_from_improve_seed(seed, case)
+    seed_var = (seed_bank.get("variants") or [{}])[0]
+    seed_slots = dict(seed_var.get("slots") or {})
+    seed_alleles = seed_bank.get("alleles") or {}
+
+    slim_case = {
+        "title": case.get("title"),
+        "description": case.get("description"),
+        "requirements": case.get("requirements"),
+        "user": next(
+            (m.get("content") for m in (case.get("messages") or []) if m.get("role") == "user"),
+            "",
+        ),
+    }
+    seed_texts = {}
+    for slot in SLOTS:
+        aid = seed_slots.get(slot)
+        text = ""
+        for a in seed_alleles.get(slot) or []:
+            if a.get("id") == aid:
+                text = a.get("text") or ""
+                break
+        seed_texts[slot] = {"allele_id": aid, "text": text[:1200]}
+
+    tx = []
+    for m in (transcript or [])[-12:]:
+        if isinstance(m, dict) and m.get("role") in ("user", "assistant"):
+            tx.append({"role": m["role"], "content": str(m.get("content") or "")[:600]})
+
+    system = (
+        "你是基因级 Agent 基因组邻域设计师。只输出合法 JSON。\n"
+        "在给定种子基因组邻域内搜索：固定 G1（只复制种子，不改写）；主变异 G2/G4/G5；"
+        "G3 可轻改或不改。\n"
+        "禁止把评分标准 criteria / rubric 原文塞进任何等位基因文本。\n"
+        "必须保留种子 variant（id 可用 var.seed 或原 id），并另产 5～9 个邻域 variants。\n"
+        "新等位 id 勿与种子 id 冲突；variants.slots 必须引用输出 alleles 中已有 id。"
+    )
+    user = f"""筛选题摘要：
+{json.dumps(slim_case, ensure_ascii=False)}
+
+种子基因组（母本）：
+{json.dumps({"variant_id": seed_var.get("id"), "title": seed_var.get("title"), "slots": seed_texts}, ensure_ascii=False)}
+
+对话摘要（差表现信号）：
+{json.dumps(tx, ensure_ascii=False)}
+
+失败备注：
+{(failure_notes or "").strip() or "(无)"}
+
+输出 schema：
+{{
+  "alleles": {{
+    "G1": [{{"id":"…","label":"…","text":"…"}}],
+    "G2": [{{"id":"…","label":"…","text":"…"}}],
+    "G3": [{{"id":"…","label":"…","text":"…"}}],
+    "G4": [{{"id":"…","label":"…","text":"…"}}],
+    "G5": [{{"id":"…","label":"…","text":"…"}}]
+  }},
+  "variants": [
+    {{"id":"var.seed","title":"种子对照","slots":{{"G1":"…","G2":"…","G3":"…","G4":"…","G5":"…"}}}}
+  ]
+}}"""
+    data = _chat_json(api_key, model, system, user, max_tokens=4500)
+    bank = normalize_bank(data, case)
+
+    # Merge seed alleles (prefer seed texts / ids), then pin G1 on all variants.
+    merged_alleles: dict[str, list] = {}
+    for slot in SLOTS:
+        by_id: dict[str, dict] = {}
+        for a in seed_alleles.get(slot) or []:
+            if isinstance(a, dict) and a.get("id"):
+                by_id[str(a["id"])] = dict(a)
+        for a in (bank.get("alleles") or {}).get(slot) or []:
+            if isinstance(a, dict) and a.get("id"):
+                aid = str(a["id"])
+                if aid not in by_id:
+                    by_id[aid] = dict(a)
+        rows = list(by_id.values())
+        if len(rows) < 2:
+            rows.append(
+                {
+                    "id": f"{slot.lower()}.nb.fallback",
+                    "label": f"{slot} nb",
+                    "text": f"{slot} neighborhood fallback.",
+                }
+            )
+        merged_alleles[slot] = rows
+
+    g1_id = seed_slots.get("G1") or merged_alleles["G1"][0]["id"]
+    # Ensure seed G1 allele exists
+    if g1_id not in {a["id"] for a in merged_alleles["G1"]}:
+        for a in seed_alleles.get("G1") or []:
+            if a.get("id") == g1_id:
+                merged_alleles["G1"].insert(0, dict(a))
+                break
+
+    valid = {s: {a["id"] for a in merged_alleles[s]} for s in SLOTS}
+    variants: list[dict] = []
+    seen_ids: set[str] = set()
+
+    def _push(v: dict) -> None:
+        if not isinstance(v, dict):
+            return
+        slots = dict(v.get("slots") or {})
+        fixed = {}
+        for s in SLOTS:
+            aid = str(slots.get(s) or "")
+            if s == "G1":
+                aid = str(g1_id)
+            if aid not in valid[s]:
+                aid = next(iter(valid[s]))
+            fixed[s] = aid
+        vid = str(v.get("id") or f"var.nb_{len(variants)}").strip()
+        vid = re.sub(r"[^a-zA-Z0-9._-]", "_", vid)
+        if vid in seen_ids:
+            vid = f"{vid}_{len(variants)}"
+        seen_ids.add(vid)
+        row = {
+            "id": vid,
+            "hash": v.get("hash") or f"yg-{uuid.uuid4().hex[:8]}",
+            "title": str(v.get("title") or vid),
+            "slots": fixed,
+        }
+        if v.get("skills"):
+            row["skills"] = v["skills"]
+        variants.append(row)
+
+    # Seed first
+    seed_copy = dict(seed_var)
+    seed_copy["id"] = str(seed_var.get("id") or "var.seed")
+    seed_copy["title"] = str(seed_var.get("title") or "种子对照")
+    _push(seed_copy)
+    for v in bank.get("variants") or []:
+        if str(v.get("id")) == seed_copy["id"]:
+            continue
+        _push(v)
+
+    if len(variants) < 4:
+        g3 = seed_slots.get("G3") or merged_alleles["G3"][0]["id"]
+        for i, g2 in enumerate(merged_alleles["G2"][:3]):
+            for j, g4 in enumerate(merged_alleles["G4"][:2]):
+                for k, g5 in enumerate(merged_alleles["G5"][:2]):
+                    _push(
+                        {
+                            "id": f"var.nb_{i}{j}{k}",
+                            "title": f"邻域 {g2.get('label')}×{g4.get('label')}×{g5.get('label')}",
+                            "slots": {
+                                "G1": g1_id,
+                                "G2": g2["id"],
+                                "G3": g3,
+                                "G4": g4["id"],
+                                "G5": g5["id"],
+                            },
+                        }
+                    )
+                    if len(variants) >= 8:
+                        break
+                if len(variants) >= 8:
+                    break
+            if len(variants) >= 8:
+                break
+
+    title = (case or {}).get("title") or seed_var.get("title") or "improve"
+    return {
+        "meta": {
+            "display_name": title,
+            "task": (case or {}).get("id") or "improve",
+            "task_title": title,
+            "seed": True,
+            "refined": True,
+            "generated": True,
+        },
+        "alleles": merged_alleles,
+        "variants": variants[:12],
+    }
+
+
 def generate_genomes(api_key: str, model: str, case: dict) -> dict[str, Any]:
     system = (
         "你是基因级 Agent 基因组设计师。只输出合法 JSON。\n"

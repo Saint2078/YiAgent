@@ -26,6 +26,17 @@ docker compose up --build
 6. **冠军池**：合格默认入池，可勾选
 7. **终筛** → **效果最优 / 稳定最优 / 均衡最优**
 
+### 改进闭环（CLI session → 工厂）
+
+1. CLI：`yiagent improve`（或 `-r <session>`）→ `~/.yiagent/improve/*.json`
+2. Step1 选「**改进包**」粘贴/选文件 → **载入改进包**（跳过 A/B，phase=`genomes_ready`）或 **一键改进**
+3. Step4 **邻域精炼基因组**（固定 G1，主变异 G2/G4/G5）→ 初筛 / 终筛
+4. CLI：`yiagent improve --apply save/*_best_genome_*.json` 写回 `~/.yiagent`
+
+API：`POST /api/session/load-seed` · `POST /api/session/{id}/genomes/refine` · `POST /api/session/improve-auto`。
+
+改动前快照（可回滚对照）：仓库 `save/*_factory_pre_session_improve_v1.0/`。
+
 ### 全自动（无人值守）
 
 一步串起 1→7：`POST /api/session/auto`，或 UI「**全自动跑出最优基因**」。

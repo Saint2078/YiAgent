@@ -45,7 +45,9 @@ const state = {
   settingsOpen: false,
   showLogs: false,
   focusStep: 1,
-  caseSource: "library", // library | oral
+  caseSource: "library", // library | oral | improve
+  improvePackText: "",
+  improvePackName: "",
   caseMeta: null,
   caseItems: [],
   caseTotal: 0,
@@ -560,6 +562,20 @@ const i18n = {
     autoNeedCase: "用例库模式请先选中一道题",
     toastAutoStart: "全自动已启动，无需逐步点击",
     toastAutoDone: "全自动完成 · 最优基因已落盘",
+    caseSourceImprove: "改进包",
+    improveHint: "粘贴或选择 yiagent improve 导出的 JSON（也接受 best_genome）。跳过 A/B，从种子邻域精炼。",
+    improvePaste: "改进包 JSON",
+    improvePastePh: '{"kind":"yiagent.improve_pack", ...}',
+    improveLoad: "载入改进包",
+    improveAuto: "一键改进",
+    improveAutoHint: "载入 → 邻域精炼 → 初筛 → 终筛 → save best_genome",
+    improveNeedPack: "请先粘贴或选择改进包 JSON",
+    improveBadPack: "改进包 JSON 无法解析",
+    refineGenome: "邻域精炼基因组",
+    seedLoaded: "已跳过 A/B · 种子",
+    toastImproveLoad: "改进包已载入",
+    toastRefine: "邻域基因组已生成",
+    toastImproveAuto: "一键改进已启动",
     autoStepCase: "全自动 · 准备题目",
     autoStepBaseline: "全自动 · A/B 基线",
     autoStepGenomes: "全自动 · 生成基因组",
@@ -706,6 +722,20 @@ const i18n = {
     autoNeedCase: "Pick a library case first",
     toastAutoStart: "Auto pipeline started — no manual steps",
     toastAutoDone: "Auto done · best genome saved",
+    caseSourceImprove: "Improve pack",
+    improveHint: "Paste or pick JSON from `yiagent improve` (or best_genome). Skips A/B; refines around the seed.",
+    improvePaste: "Improve-pack JSON",
+    improvePastePh: '{"kind":"yiagent.improve_pack", ...}',
+    improveLoad: "Load improve pack",
+    improveAuto: "One-click improve",
+    improveAutoHint: "Load → refine → prefilter → finals → save best_genome",
+    improveNeedPack: "Paste or pick an improve-pack JSON first",
+    improveBadPack: "Could not parse improve-pack JSON",
+    refineGenome: "Refine neighborhood genomes",
+    seedLoaded: "Skipped A/B · seed",
+    toastImproveLoad: "Improve pack loaded",
+    toastRefine: "Neighborhood genomes ready",
+    toastImproveAuto: "Improve pipeline started",
     autoStepCase: "Auto · case",
     autoStepBaseline: "Auto · A/B baseline",
     autoStepGenomes: "Auto · genomes",
@@ -975,6 +1005,8 @@ function readFormIntoState() {
   const criteria = document.getElementById("criteria-text");
   const passMean = document.getElementById("pass-mean");
   if (oral) state.oral = oral.value;
+  const improvePack = document.getElementById("improve-pack-text");
+  if (improvePack) state.improvePackText = improvePack.value;
   if (provider) {
     state.provider = provider.value;
   }
@@ -1344,6 +1376,137 @@ async function onGenGenomes() {
   }
 }
 
+function parseImprovePackText() {
+  const c = t();
+  const raw = (state.improvePackText || "").trim();
+  if (!raw) {
+    state.error = c.improveNeedPack;
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    state.error = c.improveBadPack;
+    return null;
+  }
+}
+
+async function onLoadSeed() {
+  const c = t();
+  readFormIntoState();
+  const pack = parseImprovePackText();
+  if (!pack) {
+    render();
+    return;
+  }
+  state.busy = true;
+  state.localBusyLabel = c.improveLoad;
+  state.error = null;
+  render();
+  try {
+    const snap = await api("/api/session/load-seed", {
+      method: "POST",
+      body: JSON.stringify({ pack, model: state.model }),
+    });
+    applySnap(snap);
+    state.focusStep = 4;
+    showToast(c.toastImproveLoad);
+  } catch (e) {
+    state.error = String(e.message || e);
+  } finally {
+    state.busy = false;
+    state.localBusyLabel = "";
+    render();
+    scrollToStep(4);
+  }
+}
+
+async function onImproveAuto() {
+  const c = t();
+  readFormIntoState();
+  if (!state.apiKey || state.apiKey.length < 8) {
+    state.error = c.keyNeed;
+    state.settingsOpen = true;
+    render();
+    return;
+  }
+  const pack = parseImprovePackText();
+  if (!pack) {
+    render();
+    return;
+  }
+  state.busy = true;
+  state.localBusyLabel = c.improveAuto;
+  state.error = null;
+  render();
+  try {
+    const snap = await api("/api/session/improve-auto", {
+      method: "POST",
+      body: JSON.stringify({
+        api_key: state.apiKey,
+        pack,
+        model: state.model,
+        pre_reps: state.preReps,
+        champ_reps: state.champReps,
+        qualify_target: state.qualifyTarget,
+        pass_mean: state.passMean,
+        workers: state.workers,
+        champion_mark: state.championMark,
+        save: true,
+      }),
+    });
+    applySnap(snap);
+    state.focusStep = 4;
+    showToast(c.toastImproveAuto);
+    startPoll();
+  } catch (e) {
+    state.error = String(e.message || e);
+  } finally {
+    state.busy = false;
+    state.localBusyLabel = "";
+    render();
+  }
+}
+
+async function onRefineGenomes() {
+  if (!state.sessionId) return;
+  const c = t();
+  readFormIntoState();
+  if (!state.apiKey || state.apiKey.length < 8) {
+    state.error = c.keyNeed;
+    state.settingsOpen = true;
+    render();
+    return;
+  }
+  state.busy = true;
+  state.localBusyLabel = c.refineGenome;
+  state.error = null;
+  render();
+  try {
+    await api(`/api/session/${state.sessionId}/case`, {
+      method: "PUT",
+      body: JSON.stringify({
+        target_text: state.targetText,
+        criteria_text: state.criteriaText,
+      }),
+    });
+    const snap = await api(`/api/session/${state.sessionId}/genomes/refine`, {
+      method: "POST",
+      body: JSON.stringify({ api_key: state.apiKey, model: state.model }),
+    });
+    applySnap(snap);
+    state.focusStep = 5;
+    showToast(c.toastRefine);
+  } catch (e) {
+    state.error = String(e.message || e);
+  } finally {
+    state.busy = false;
+    state.localBusyLabel = "";
+    render();
+    scrollToStep(5);
+  }
+}
+
 async function onPrefilter() {
   if (!state.sessionId) return;
   const c = t();
@@ -1690,7 +1853,9 @@ function render() {
   const isBaselining =
     phase === "baselining" || (running && state.localBusyLabel === c.startBaseline) || (autoBusy && snap.auto_step === "baseline");
   const isGenomesBusy =
-    (running && state.localBusyLabel === c.genGenome) || (autoBusy && snap.auto_step === "genomes");
+    (running &&
+      (state.localBusyLabel === c.genGenome || state.localBusyLabel === c.refineGenome)) ||
+    (autoBusy && snap.auto_step === "genomes");
   const isPrefiltering =
     phase === "prefiltering" || (running && state.localBusyLabel === c.startPre) || (autoBusy && snap.auto_step === "prefilter");
   const isChampioning =
@@ -1803,6 +1968,9 @@ function render() {
           <button type="button" class="chip ${state.caseSource === "oral" ? "chip-active" : ""}" data-case-source="oral" ${
             running ? "disabled" : ""
           }>${escapeHtml(c.caseSourceOral)}</button>
+          <button type="button" class="chip ${state.caseSource === "improve" ? "chip-active" : ""}" data-case-source="improve" ${
+            running ? "disabled" : ""
+          }>${escapeHtml(c.caseSourceImprove)}</button>
         </div>
         ${
           state.caseSource === "library"
@@ -1882,6 +2050,37 @@ function render() {
                 <p class="field-hint">${escapeHtml(c.autoHint)}</p>
                 <p class="field-hint">${escapeHtml(c.demoHint)}</p>
               </div>`
+            : state.caseSource === "improve"
+              ? `<div class="case-improve">
+                  <p class="field-hint">${escapeHtml(c.improveHint)}</p>
+                  <label class="field-label">${escapeHtml(c.improvePaste)}</label>
+                  <textarea id="improve-pack-text" class="brief-input" rows="8" placeholder="${escapeHtml(
+                    c.improvePastePh
+                  )}" ${running ? "disabled" : ""}>${escapeHtml(state.improvePackText)}</textarea>
+                  <div class="run-field" style="margin-top:0.75rem">
+                    <input id="improve-pack-file" type="file" accept="application/json,.json" ${
+                      running ? "disabled" : ""
+                    } />
+                    ${
+                      state.improvePackName
+                        ? `<span class="mono tiny dim">${escapeHtml(state.improvePackName)}</span>`
+                        : ""
+                    }
+                  </div>
+                  ${settingsSummaryHtml(c)}
+                  <div class="stage-actions">
+                    <button class="btn-primary" type="button" id="btn-load-seed" ${
+                      running ? "disabled" : ""
+                    }>${escapeHtml(c.improveLoad)}</button>
+                    <button class="btn-primary" type="button" id="btn-improve-auto" ${
+                      running ? "disabled" : ""
+                    }>${escapeHtml(c.improveAuto)}</button>
+                    <button class="btn-ghost" type="button" id="btn-demo" ${running ? "disabled" : ""}>${escapeHtml(
+                      c.demo
+                    )}</button>
+                  </div>
+                  <p class="field-hint">${escapeHtml(c.improveAutoHint)}</p>
+                </div>`
             : `<label class="field-label">${escapeHtml(c.oral)}</label>
         <textarea id="oral-text" class="brief-input brief-input-sm" rows="4" placeholder="${escapeHtml(c.oralPh)}" ${
           running ? "disabled" : ""
@@ -2024,10 +2223,24 @@ function render() {
         </div>
         ${
           unlock >= 4
-            ? `              <div class="stage-actions">
+            ? `${
+                snap?.improve_mode
+                  ? `<p class="ok-chip">${escapeHtml(c.seedLoaded)} · <span class="mono">${escapeHtml(
+                      snap.seed_variant_id || ""
+                    )}</span></p>`
+                  : ""
+              }
+              <div class="stage-actions">
                 <button class="btn-primary" type="button" id="btn-gen-genome" ${
                   running || demoFrozen ? "disabled" : ""
                 }>${escapeHtml(c.genGenome)}</button>
+                ${
+                  snap?.improve_mode || snap?.seed_variant_id
+                    ? `<button class="btn-primary" type="button" id="btn-refine-genome" ${
+                        running || demoFrozen ? "disabled" : ""
+                      }>${escapeHtml(c.refineGenome)}</button>`
+                    : ""
+                }
                 ${
                   demoFrozen
                     ? `<span class="ok-chip">${escapeHtml(c.toastDemoPack)}</span>
@@ -2330,6 +2543,24 @@ function wire(running, unlock) {
   document.getElementById("btn-baseline")?.addEventListener("click", onBaseline);
   document.getElementById("btn-skip-baseline")?.addEventListener("click", onSkipBaseline);
   document.getElementById("btn-gen-genome")?.addEventListener("click", onGenGenomes);
+  document.getElementById("btn-refine-genome")?.addEventListener("click", onRefineGenomes);
+  document.getElementById("btn-load-seed")?.addEventListener("click", onLoadSeed);
+  document.getElementById("btn-improve-auto")?.addEventListener("click", onImproveAuto);
+  document.getElementById("improve-pack-text")?.addEventListener("input", (e) => {
+    state.improvePackText = e.target.value;
+  });
+  document.getElementById("improve-pack-file")?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      state.improvePackText = await file.text();
+      state.improvePackName = file.name;
+      state.error = null;
+    } catch (err) {
+      state.error = String(err.message || err);
+    }
+    render();
+  });
   document.getElementById("btn-pre")?.addEventListener("click", onPrefilter);
   document.getElementById("btn-abort")?.addEventListener("click", onAbort);
   document.querySelectorAll("[data-abort-inline]").forEach((btn) => {

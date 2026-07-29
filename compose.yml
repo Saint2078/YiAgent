@@ -1,0 +1,33 @@
+services:
+  yiagent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yiagent:local
+    container_name: yiagent
+    stdin_open: true
+    tty: true
+    environment:
+      - YIAGENT_HOME=/opt/data
+      - YIAGENT_UID=${YIAGENT_UID:-}
+      - YIAGENT_GID=${YIAGENT_GID:-}
+      - PYTHONUNBUFFERED=1
+      # Host env keys pass through when set (compose also loads .env in project dir)
+      - MOONSHOT_API_KEY
+      - KIMI_API_KEY
+      - KIMI_PLAN_API_KEY
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - OPENROUTER_API_KEY
+      - DEEPSEEK_API_KEY
+      - DASHSCOPE_API_KEY
+      - ZHIPU_API_KEY
+      - GLM_API_KEY
+    volumes:
+      # Hermes pattern: durable home on host
+      - ${YIAGENT_HOST_HOME:-${HOME}/.yiagent}:/opt/data
+    # Default interactive chat (TUI when TTY). Override:
+    #   docker compose run --rm yiagent doctor
+    #   docker compose run --rm yiagent --cli
+    #   docker compose run --rm yiagent run 你好
+    command: ["chat", "--tui"]

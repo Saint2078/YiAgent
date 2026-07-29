@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Host CLI → Docker (Hermes-style). Always runs yiagent inside compose.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+export YIAGENT_UID="${YIAGENT_UID:-$(id -u)}"
+export YIAGENT_GID="${YIAGENT_GID:-$(id -g)}"
+export YIAGENT_HOST_HOME="${YIAGENT_HOST_HOME:-$HOME/.yiagent}"
+
+if [[ "${1:-}" == "build" ]]; then
+  exec docker compose build
+fi
+
+if ! docker image inspect yiagent:local >/dev/null 2>&1; then
+  echo "yiagent: image missing — building…" >&2
+  docker compose build
+fi
+
+mkdir -p "$YIAGENT_HOST_HOME"
+
+run=(docker compose run --rm)
+if [[ ! -t 0 ]]; then
+  run+=(-T)
+fi
+
+# No args → chat (entrypoint also defaults to chat)
+if [[ "$#" -eq 0 ]]; then
+  exec "${run[@]}" yiagent chat
+fi
+
+exec "${run[@]}" yiagent "$@"

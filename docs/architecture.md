@@ -1,6 +1,23 @@
-# Architecture · G1–G5
+# Architecture · Genome + Runtime + Context
 
-YiAgent 把 Agent 配置拆成五个高级基因类别，对应生物学「染色体分区」：变哪一区，评分体系应能单独归因。
+## 三层（成熟 Agent 正本）
+
+| 层 | 来源 | 作用 | 进基因组？ |
+|----|------|------|------------|
+| **Genome** | bank variant · G1–G5 + Skills | 可筛选的选手人格（替换 Hermes SOUL） | **是** |
+| **Runtime** | 内置 + `$YIAGENT_HOME/RULES.md` | 平台纪律（禁编造、工具用法等） | **否** |
+| **Context** | cwd 起向上找 `AGENTS.md` | 项目约定（对齐 Hermes） | **否** |
+
+冲突优先级：**G2 硬边界 > Runtime rules > AGENTS.md**。
+
+```
+system = Precedence
+       + Assemble(host + G1–G5 + Skills)   # Genome
+       + Runtime(rules [, RULES.md])
+       + Context(AGENTS.md)
+```
+
+## G1–G5
 
 | 槽 | 英文键 | 一句话 | 变异优先级 |
 |----|--------|--------|------------|
@@ -12,45 +29,34 @@ YiAgent 把 Agent 配置拆成五个高级基因类别，对应生物学「染�
 
 ## Skills · 外部带基因的工具（基因盒）
 
-Skills **不是第六条染色体**。它们是可插拔的 **基因盒（gene cassette）**：
-
-| 携带物 | 说明 |
-|--------|------|
-| 等位片段 | 只注入 **G3 / G4 / G5**（不改写核心 G1/G2） |
-| 外部工具 | OpenAI function 规格 + 可选 `gene_hint`（该工具的程序叠层） |
-| 可选 handler | `builtin:…` 或后续外挂实现 |
-
-```
-Genome = base(G1+G2) + layers(G3+G4) + overlays(G5[])
-system = Assemble(Genome + SkillCassettes[])
-tools  = CoreTools ∪ SkillTools
-```
-
-变体字段：`variant.skills: ["skill.workspace_notes", …]`；CLI：`--skill skill.id`（可重复）。
-
-示例包：`src/yiagent/genome/data/skills/workspace_notes.json`。
-
-## 组装公式
-
-```
-Genome = base(G1 + G2) + layers(G3 + G4) + overlays(G5[])
-system = Assemble(Genome + Skills)   # 或 Host + 分区叠加，取决于宿主策略
-```
+Skills **不是第六条染色体**。可插拔 **gene cassette**：只注入 **G3/G4/G5** + 可选工具。
 
 ## 四步流水线
 
 1. **取基因** — 定义各槽等位基因（含 Skill 盒内片段）  
-2. **组装载体** — `Assemble` + 可观测标记  
-3. **导入** — 装入运行时（核心工具 + Skill 工具）  
+2. **组装载体** — `Assemble` + Runtime/Context 叠层  
+3. **导入** — 装入运行时  
 4. **检测鉴定** — 分槽打分 + 晋升门禁（不可省略）
+
+## 改进闭环（Session → Factory）
+
+效果差时：`yiagent improve` 从 CLI session 导出 improve-pack → 工厂 `:8787` 载入种子（跳过 A/B）→ 邻域精炼（固定 G1，主变异 G2/G4/G5）→ 初筛/终筛 → `save/*_best_genome*` → `yiagent improve --apply` 写回 `~/.yiagent`（`agent.bank` + `agent.variant`）。
+
+API：`POST /api/session/load-seed` · `.../genomes/refine` · `POST /api/session/improve-auto`。
 
 ## 设计纪律
 
 - 边界进 G2，产出规格进 G4，经验进 G5；禁止用 G5 偷运整份作业说明书  
 - Skills 只扩 G3–G5 + 工具，禁止借 Skill 改写 G1/G2  
-- 禁止把完整评分标准 / rubric 灌进任一槽（静态灌装反模式）  
-- **评分门禁规则不进选手基因组**（裁判不能住在选手里）
+- **评分 rubric / 平台 Runtime / AGENTS.md 不进选手基因组**  
+- 任务卡正文、部署环境、观测通道不进基因组  
 
-## 明确不进基因组
+## 配置开关（`config.yaml`）
 
-任务卡正文、团队交接协议、观测仪器通道、宿主机器 / Docker 部署环境。
+```yaml
+runtime:
+  rules: true
+  rules_file: true
+context:
+  agents_md: true
+```

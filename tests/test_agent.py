@@ -26,8 +26,8 @@ class GenomeTests(unittest.TestCase):
         system = assemble_system("HOST", bank, v)
         self.assertIn("HOST", system)
         self.assertIn("g1.identity.v1", system)
-        self.assertIn("装载纪律", system)
         self.assertIn("skill.workspace_notes", system)
+        self.assertNotIn("Runtime rules", system)
         self.assertIn("g4.skill.notes.plan", system)
 
     def test_skill_cassette_definition(self):

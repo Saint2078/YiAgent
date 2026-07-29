@@ -21,6 +21,7 @@ from assemble import (
     variant_map,
 )
 from generate import (
+    bank_from_improve_seed,
     format_criteria_text,
     format_target_text,
     generate_case,
@@ -28,6 +29,7 @@ from generate import (
     normalize_case,
     parse_criteria_text,
     parse_target_text,
+    refine_genomes,
 )
 from judge import judge_with_retries
 from llm_client import chat_completions, extract_content
@@ -125,6 +127,9 @@ class Session:
     champion_mark: str = "balanced"
     best_genome: dict[str, Any] | None = None
     auto_save: dict[str, Any] | None = None
+    improve_mode: bool = False
+    seed_variant_id: str | None = None
+    improve_pack: dict[str, Any] | None = None
     token_meter: TokenMeter = field(default_factory=TokenMeter)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -182,6 +187,8 @@ class Session:
                 "champion_mark": self.champion_mark,
                 "best_genome": dict(self.best_genome) if self.best_genome else None,
                 "auto_save": dict(self.auto_save) if self.auto_save else None,
+                "improve_mode": self.improve_mode,
+                "seed_variant_id": self.seed_variant_id,
                 "token_usage": token_usage,
                 "updated_at": self.updated_at,
             }
@@ -639,6 +646,365 @@ class SessionManager:
         rlog.record_phase("genomes_ready")
         return sess
 
+    def load_seed_pack(self, pack: dict, *, model: str = "k3") -> Session:
+        """Load improve-pack / best_genome → Session at genomes_ready (skip baseline)."""
+        if not isinstance(pack, dict):
+            raise ValueError("pack must be an object")
+
+        # Normalize shapes
+        if pack.get("kind") == "yiagent.improve_pack" or (pack.get("seed") and pack.get("case")):
+            seed = pack.get("seed") or {}
+            case = pack.get("case") or {}
+            oral = str(pack.get("oral") or case.get("title") or "improve")
+            transcript = pack.get("transcript") or []
+            failure_notes = str(pack.get("failure_notes") or "")
+            source_model = pack.get("model") or model
+        elif pack.get("slot_texts") or (pack.get("variant_id") and pack.get("slots")):
+            seed = {
+                "variant_id": pack.get("variant_id"),
+                "title": pack.get("title"),
+                "hash": pack.get("hash"),
+                "slots": pack.get("slots") or {},
+                "slot_texts": pack.get("slot_texts") or {},
+                "skills": pack.get("skills") or [],
+            }
+            case = pack.get("case") if isinstance(pack.get("case"), dict) else {}
+            if not case.get("messages"):
+                case = {
+                    "id": case.get("id") or f"improve_{uuid.uuid4().hex[:8]}",
+                    "title": case.get("title") or seed.get("title") or "改进鉴定",
+                    "description": case.get("description") or "由 improve-pack / best_genome 载入",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "你是已装载 G1–G5 基因组的选手。按基因行事完成用户任务。",
+                        },
+                        {
+                            "role": "user",
+                            "content": str(pack.get("oral") or "请改进回答质量，对齐用户目标。"),
+                        },
+                    ],
+                    "requirements": list(case.get("requirements") or ["对齐用户目标", "不编造", "结构清晰"]),
+                    "criteria": case.get("criteria")
+                    or {
+                        "任务完成度": {
+                            "weight": 40,
+                            "desc": "是否直接回应用户目标",
+                            "rubric": {
+                                "90-100": "完整对齐",
+                                "70-89": "大体完成",
+                                "60-69": "部分完成",
+                                "0-59": "跑偏",
+                            },
+                        },
+                        "边界与诚实": {
+                            "weight": 30,
+                            "desc": "不编造",
+                            "rubric": {
+                                "90-100": "无编造",
+                                "70-89": "偶有含糊",
+                                "60-69": "松",
+                                "0-59": "编造",
+                            },
+                        },
+                        "结构清晰": {
+                            "weight": 30,
+                            "desc": "可操作性",
+                            "rubric": {
+                                "90-100": "清晰",
+                                "70-89": "可读",
+                                "60-69": "散乱",
+                                "0-59": "难懂",
+                            },
+                        },
+                    },
+                }
+            oral = str(pack.get("oral") or case.get("title") or "improve")
+            transcript = pack.get("transcript") or []
+            failure_notes = str(pack.get("failure_notes") or "")
+            source_model = pack.get("model") or model
+            pack = {
+                "kind": "yiagent.improve_pack",
+                "version": 1,
+                "oral": oral,
+                "case": case,
+                "seed": seed,
+                "transcript": transcript,
+                "failure_notes": failure_notes,
+                "model": source_model,
+                "session_id": pack.get("session_id"),
+            }
+        else:
+            raise ValueError("unrecognized pack: need yiagent.improve_pack or best_genome fields")
+
+        if not isinstance(case, dict) or not case.get("messages"):
+            raise ValueError("pack.case.messages required")
+        if not isinstance(seed, dict) or not (seed.get("slots") or seed.get("slot_texts")):
+            raise ValueError("pack.seed slots/slot_texts required")
+
+        bank = bank_from_improve_seed(seed, case)
+        seed_vid = str(seed.get("variant_id") or (bank.get("variants") or [{}])[0].get("id") or "var.seed")
+        sess = Session(
+            id=uuid.uuid4().hex[:12],
+            model=str(source_model or model or "k3"),
+            phase="genomes_ready",
+            oral=oral,
+            case=case,
+            bank=bank,
+            target_text=format_target_text(case),
+            criteria_text=format_criteria_text(case),
+            status="idle",
+            improve_mode=True,
+            seed_variant_id=seed_vid,
+            improve_pack=pack,
+        )
+        with self._lock:
+            self._sessions[sess.id] = sess
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        rlog.record_genomes(bank=bank)
+        rlog.record_phase("genomes_ready", note="load-seed")
+        return sess
+
+    def refine_session_genomes(
+        self, session_id: str, *, api_key: str, model: str | None = None
+    ) -> Session:
+        sess = self._require(session_id)
+        if not sess.case:
+            raise ValueError("case missing")
+        with sess.lock:
+            if model:
+                sess.model = model
+            sess.case = parse_target_text(sess.target_text, sess.case)
+            sess.case = parse_criteria_text(sess.criteria_text, sess.case)
+            case = dict(sess.case)
+            m = sess.model
+            meter = sess.token_meter
+            pack = dict(sess.improve_pack) if sess.improve_pack else {}
+            bank = sess.bank
+            seed_vid = sess.seed_variant_id
+
+        seed = pack.get("seed") if isinstance(pack.get("seed"), dict) else None
+        if not seed and bank:
+            # Rebuild seed from current bank seed variant
+            vid = seed_vid or ((bank.get("variants") or [{}])[0].get("id"))
+            variant = None
+            for v in bank.get("variants") or []:
+                if v.get("id") == vid:
+                    variant = v
+                    break
+            if not variant and bank.get("variants"):
+                variant = bank["variants"][0]
+            if not variant:
+                raise ValueError("no seed genome to refine — load improve-pack first")
+            slots = dict(variant.get("slots") or {})
+            alleles = bank.get("alleles") or {}
+            slot_texts: dict[str, Any] = {}
+            for slot, allele_id in slots.items():
+                allele = None
+                for a in alleles.get(slot) or []:
+                    if a.get("id") == allele_id:
+                        allele = {
+                            "id": a.get("id"),
+                            "label": a.get("label"),
+                            "text": a.get("text"),
+                        }
+                        break
+                slot_texts[slot] = {"allele_id": allele_id, "allele": allele}
+            seed = {
+                "variant_id": variant.get("id"),
+                "title": variant.get("title"),
+                "hash": variant.get("hash"),
+                "slots": slots,
+                "slot_texts": slot_texts,
+                "skills": variant.get("skills") or [],
+            }
+
+        if not seed:
+            raise ValueError("no seed genome to refine — load improve-pack first")
+
+        with meter.activate():
+            new_bank = refine_genomes(
+                api_key,
+                m,
+                case,
+                seed,
+                transcript=pack.get("transcript") or [],
+                failure_notes=str(pack.get("failure_notes") or ""),
+            )
+        with sess.lock:
+            sess.bank = new_bank
+            sess.phase = "genomes_ready"
+            sess.pre_scores.clear()
+            sess.champ_scores.clear()
+            sess.pool = []
+            sess.logs = [l for l in sess.logs if l.get("stage") == "baseline"]
+            sess.marks = {}
+            sess.qualified_count = 0
+            sess.early_stopped = False
+            sess.improve_mode = True
+            sess.seed_variant_id = str(seed.get("variant_id") or sess.seed_variant_id)
+            if not sess.improve_pack:
+                sess.improve_pack = {
+                    "kind": "yiagent.improve_pack",
+                    "seed": seed,
+                    "case": case,
+                    "oral": sess.oral,
+                    "transcript": [],
+                    "failure_notes": "",
+                }
+            sess.error = None
+            sess.status = "idle"
+            sess.updated_at = time.time()
+            bank_snap = new_bank
+        rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+        rlog.record_genomes(bank=bank_snap)
+        rlog.record_phase("genomes_ready", note="refine")
+        return sess
+
+    def start_improve_auto(
+        self,
+        *,
+        api_key: str,
+        pack: dict,
+        model: str = "k3",
+        pre_reps: int = 3,
+        champ_reps: int = 5,
+        qualify_target: int = 3,
+        pass_mean: float = 70.0,
+        workers: int = 4,
+        champion_mark: str = "balanced",
+        do_save: bool = True,
+        skip_refine: bool = False,
+    ) -> Session:
+        """load-seed → refine → prefilter → champion → best genome."""
+        mark = (champion_mark or "balanced").strip().lower()
+        if mark not in ("perf", "stable", "balanced"):
+            raise ValueError("champion_mark must be perf|stable|balanced")
+        sess = self.load_seed_pack(pack, model=model)
+        with sess.lock:
+            sess.auto = True
+            sess.auto_step = "genomes"
+            sess.champion_mark = mark
+            sess.best_genome = None
+            sess.auto_save = None
+            sess.pre_reps = max(1, min(int(pre_reps), 10))
+            sess.champ_reps = max(1, min(int(champ_reps), 10))
+            sess.qualify_target = max(1, min(int(qualify_target), 20))
+            sess.pass_mean = float(pass_mean)
+            sess.workers = max(1, min(int(workers), 12))
+            sess.error = None
+            sess._abort.clear()
+            sess.updated_at = time.time()
+        threading.Thread(
+            target=self._run_improve_auto,
+            args=(sess, api_key, bool(do_save), bool(skip_refine)),
+            daemon=True,
+        ).start()
+        return sess
+
+    def _run_improve_auto(
+        self, sess: Session, api_key: str, do_save: bool, skip_refine: bool
+    ) -> None:
+        try:
+            if not skip_refine:
+                self._set_auto_step(sess, "genomes")
+                self.refine_session_genomes(sess.id, api_key=api_key, model=sess.model)
+
+            if sess._abort.is_set():
+                return
+
+            self._set_auto_step(sess, "prefilter")
+            self.start_prefilter(
+                sess.id,
+                api_key=api_key,
+                pre_reps=sess.pre_reps,
+                qualify_target=sess.qualify_target,
+                pass_mean=sess.pass_mean,
+                workers=sess.workers,
+            )
+            if not self._wait_job(sess):
+                return
+
+            if sess._abort.is_set():
+                return
+
+            self._ensure_champion_pool(sess)
+
+            self._set_auto_step(sess, "champion")
+            self.start_champion(
+                sess.id,
+                api_key=api_key,
+                champ_reps=sess.champ_reps,
+                workers=sess.workers,
+            )
+            if not self._wait_job(sess):
+                return
+
+            if sess._abort.is_set():
+                return
+
+            mark = sess.champion_mark
+            best = self._extract_best_genome(sess, mark)
+            # Enrich for CLI apply
+            with sess.lock:
+                pack = dict(sess.improve_pack) if sess.improve_pack else {}
+                case_full = dict(sess.case or {})
+            best["case"] = {
+                **(best.get("case") or {}),
+                "messages": case_full.get("messages"),
+                "requirements": case_full.get("requirements"),
+                "criteria": case_full.get("criteria"),
+                "description": case_full.get("description"),
+            }
+            if pack.get("transcript"):
+                best["transcript"] = pack.get("transcript")
+            if pack.get("failure_notes"):
+                best["failure_notes"] = pack.get("failure_notes")
+            # attach allele bank for richer apply
+            with sess.lock:
+                if sess.bank:
+                    best["bank"] = sess.bank
+
+            with sess.lock:
+                sess.best_genome = best
+                sess.updated_at = time.time()
+
+            save_info: dict[str, Any] = {}
+            if do_save:
+                self._set_auto_step(sess, "save")
+                import json
+
+                SAVE.mkdir(parents=True, exist_ok=True)
+                stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+                best_path = SAVE / f"{stamp}_best_genome_{sess.id}_v1.0.json"
+                best_path.write_text(
+                    json.dumps(best, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+                saved = self.save_session(
+                    sess.id, freeze_demo=False, label="improve", version_tag="v1.0"
+                )
+                save_info = {
+                    "best_genome_path": str(best_path.relative_to(ROOT)),
+                    "pack_path": saved.get("pack_path"),
+                    "log_path": saved.get("log_path"),
+                }
+
+            with sess.lock:
+                sess.auto_save = save_info or None
+                sess.auto_step = "done"
+                sess.phase = "done"
+                sess.status = "done"
+                sess.updated_at = time.time()
+            rlog = get_or_create_log(sess.id, model=sess.model, oral=sess.oral)
+            rlog.record_phase("done", note="improve-auto")
+        except Exception as e:  # noqa: BLE001
+            with sess.lock:
+                sess.status = "error"
+                sess.phase = "error"
+                sess.auto_step = "error"
+                sess.error = str(e)
+                sess.updated_at = time.time()
+
     def start_prefilter(
         self,
         session_id: str,
@@ -927,7 +1293,7 @@ class SessionManager:
                 "allele": texts[0] if texts else None,
             }
         summary = next((s for s in champ_sum if s.get("variant_id") == vid), None)
-        return {
+        out = {
             "version": 1,
             "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "session_id": sess.id,
@@ -952,6 +1318,9 @@ class SessionManager:
             "baseline_summaries": baseline_sum,
             "token_usage": sess.token_meter.summary(),
         }
+        if variant.get("skills"):
+            out["skills"] = variant.get("skills")
+        return out
 
     def _run_auto(self, sess: Session, api_key: str, skip_baseline: bool, do_save: bool) -> None:
         try:

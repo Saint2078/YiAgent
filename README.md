@@ -55,18 +55,21 @@ C − A ≈ **+25.7**，且更稳——**增益来自基因，不是偷看答案
 
 ## 试试
 
-**实体 Agent（Pi 式工具循环 + G1–G5 + Skills 基因盒）**：
+**实体 Agent CLI（Hermes 形态 · Docker）**：
 
 ```bash
-pip install -e .
-export MOONSHOT_API_KEY=sk-…   # 或对应厂商 Key
-yiagent variants                 # 列出默认基因组变体
-yiagent run "识别这道题里的虚假二选一" --variant var.champion -m kimi-k2.5
-yiagent chat --variant var.champion -m kimi-k2.5 --skill skill.workspace_notes
+./yiagent build
+./yiagent setup          # 种子 ~/.yiagent（config.yaml + .env）
+./yiagent doctor
+./yiagent                # Docker 内 TUI chat
+./yiagent --cli          # 经典 REPL
+./yiagent run 识别虚假二选一
+./yiagent variants
 ```
 
-工具：核心 `read` / `write` / `edit` / `bash` + Skill 外带工具（限制在 `--cwd`）。  
-装载：`Assemble(host + G1–G5 + Skills)`；Skills = **外部带基因的工具**（只注入 G3–G5），见 [docs/architecture.md](docs/architecture.md)。
+状态目录：`~/.yiagent`（挂到容器 `/opt/data`）。细则：[docs/docker-agent.md](docs/docker-agent.md)。
+
+装载：`Assemble(host + G1–G5 + Skills)`；见 [docs/architecture.md](docs/architecture.md)。
 
 **[▶ 点开离线演示](https://htmlpreview.github.io/?https://raw.githubusercontent.com/Saint2078/YiAgent/main/demo/yiagent-offline-demo.html)**  
 （浏览器直接渲染；与 Docker 筛选台同一套 UI / 七步；内嵌冻结数据，不发 API）
