@@ -15,6 +15,15 @@
 
 仓库：[github.com/Saint2078/YiAgent](https://github.com/Saint2078/YiAgent)
 
+### 分支
+
+| 分支 | 用途 |
+|------|------|
+| `main` | 默认主干 |
+| `develop` | 日常开发 |
+| `release` | 发布候选 |
+| `demo` | 演示冻结 |
+
 ---
 
 ## 案例 · 批判思维（虚假二选一）
