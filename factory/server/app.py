@@ -10,9 +10,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from evolve import EVOLVE_DIR, EVOLVE_MANAGER
+import hof_ship
 from jobs import MANAGER
 from llm_client import model_ok as _model_ok, models_public
 from case_library import LIBRARY
+from preflight import run_preflight
+from testset import build_manifest, load_manifest, save_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 WWW = ROOT / "www"
@@ -437,6 +441,209 @@ def session_abort(session_id: str):
     except KeyError:
         raise HTTPException(404, "session not found") from None
     return sess.snapshot()
+
+
+class TestsetManifestBody(BaseModel):
+    demand: str = Field(min_length=1)
+    suites: list[str] | None = None
+    dimensions: list[str] | None = None
+    q: str | None = None
+    level: str = "basic"
+    size: int = Field(default=10, ge=1, le=100)
+    seed: int = 42
+    holdout_ratio: float = Field(default=0.2, ge=0, le=0.5)
+    ids: list[str] | None = None
+
+
+@app.post("/api/testset/manifest")
+def testset_manifest_create(body: TestsetManifestBody):
+    """建测试集 manifest（进化集 + 分层 holdout）并落盘。无需 api_key。"""
+    try:
+        manifest = build_manifest(
+            body.demand.strip(),
+            suites=body.suites,
+            dimensions=body.dimensions,
+            q=body.q,
+            level=body.level,
+            size=body.size,
+            seed=body.seed,
+            holdout_ratio=body.holdout_ratio,
+            ids=body.ids,
+        )
+        save_manifest(manifest)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "建测试集 manifest 失败") from e
+    return manifest
+
+
+@app.get("/api/testset/manifest/{manifest_id}")
+def testset_manifest_get(manifest_id: str):
+    try:
+        return load_manifest(manifest_id)
+    except KeyError:
+        raise HTTPException(404, "manifest not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+class EvolveStartBody(BaseModel):
+    api_key: str = Field(min_length=8)
+    model: str = "k3"
+    oral: str | None = None
+    manifest_id: str | None = None
+    manifest: dict | None = None
+    seed: dict | None = None
+    max_generations: int = Field(default=4, ge=1, le=10)
+    variants_per_gen: int = Field(default=6, ge=2, le=12)
+    eval_reps: int = Field(default=2, ge=1, le=10)
+    final_reps: int = Field(default=3, ge=1, le=10)
+    workers: int = Field(default=16, ge=1, le=64)
+    pass_mean: float = Field(default=70.0, ge=0, le=100)
+    elite_k: int = Field(default=2, ge=1, le=6)
+    stagnation_limit: int = Field(default=2, ge=1, le=5)
+    improve_threshold: float = Field(default=1.0, ge=0, le=20)
+    max_tokens_budget: int | None = Field(default=None, ge=1000)
+    anchor_case: dict | None = None
+    with_baseline: bool = True
+    use_cache: bool = True
+
+
+@app.post("/api/evolve/start")
+def evolve_start(body: EvolveStartBody):
+    """批量鉴定 + 多代进化：manifest 测试集 × 基因组 bank，后台跑。"""
+    if not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        run = EVOLVE_MANAGER.start(
+            body.api_key.strip(),
+            body.model,
+            manifest_id=body.manifest_id,
+            manifest=body.manifest,
+            oral=body.oral,
+            seed=body.seed,
+            max_generations=body.max_generations,
+            variants_per_gen=body.variants_per_gen,
+            eval_reps=body.eval_reps,
+            final_reps=body.final_reps,
+            workers=body.workers,
+            pass_mean=body.pass_mean,
+            elite_k=body.elite_k,
+            stagnation_limit=body.stagnation_limit,
+            improve_threshold=body.improve_threshold,
+            max_tokens_budget=body.max_tokens_budget,
+            anchor_case=body.anchor_case,
+            with_baseline=body.with_baseline,
+            use_cache=body.use_cache,
+        )
+    except KeyError:
+        raise HTTPException(404, "manifest not found") from None
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "进化启动失败") from e
+    snap = run.snapshot()
+    # 附带起飞前检查结果（保守默认：只提示不阻断，含 errors 也不阻断——
+    # manifest/key 类硬失败本身会在 start 里先抛错）
+    try:
+        snap["preflight"] = run_preflight(
+            manifest_id=body.manifest_id or (run.manifest_id or None),
+            manifest=body.manifest,
+            api_key=body.api_key.strip(),
+            params=dict(run.params),
+        )
+    except Exception:  # noqa: BLE001
+        snap["preflight"] = {
+            "ok": True,
+            "errors": [],
+            "warnings": ["preflight 自身异常，已忽略（不影响 run）"],
+            "checks": {},
+        }
+    return snap
+
+
+@app.get("/api/evolve/preflight")
+def evolve_preflight(manifest_id: str | None = None):
+    """起飞前检查：题库/密钥/HOF/缓存/预算体检。不发 LLM、不读密钥内容。
+
+    注意注册顺序：必须位于 /api/evolve/{run_id} 之前，否则被路径参数路由吃掉。
+    """
+    return run_preflight(manifest_id=manifest_id)
+
+
+@app.get("/api/evolve/{run_id}")
+def evolve_get(run_id: str):
+    run = EVOLVE_MANAGER.get(run_id)
+    if not run:
+        raise HTTPException(404, "run not found")
+    return run.snapshot()
+
+
+@app.post("/api/evolve/{run_id}/abort")
+def evolve_abort(run_id: str):
+    try:
+        run = EVOLVE_MANAGER.abort(run_id)
+    except KeyError:
+        raise HTTPException(404, "run not found") from None
+    return run.snapshot()
+
+
+@app.get("/api/evolve/{run_id}/report")
+def evolve_report(run_id: str):
+    import json
+
+    path = EVOLVE_DIR / run_id / "report.json"
+    if not path.is_file():
+        raise HTTPException(404, "report not ready")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@app.get("/api/hof/status")
+def hof_status():
+    """名人堂上报状态（默认关闭，严格 opt-in）。"""
+    return hof_ship.status()
+
+
+@app.get("/api/hof/dry-run/{run_id}")
+def hof_dry_run(run_id: str):
+    """查看"如果开启会上报什么"（redact 后的 payload），不发网络。"""
+    run_dir = EVOLVE_DIR / run_id
+    if not run_dir.is_dir():
+        raise HTTPException(404, "run not found")
+    try:
+        return {"run_id": run_id, "submissions": hof_ship.dry_run(run_dir)}
+    except FileNotFoundError:
+        raise HTTPException(404, "report not ready") from None
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "构造上报 payload 失败") from e
+
+
+@app.post("/api/hof/ship/{run_id}")
+def hof_ship_run(run_id: str):
+    """手动触发上报该 run（需先开启 YIAGENT_HOF_ENABLED），并尝试 flush 队列。"""
+    if not hof_ship.enabled():
+        raise HTTPException(
+            400,
+            "名人堂上报未开启：设置环境变量 YIAGENT_HOF_ENABLED=true "
+            "（可选 YIAGENT_HOF_URL）后重启服务再试",
+        )
+    run_dir = EVOLVE_DIR / run_id
+    if not run_dir.is_dir():
+        raise HTTPException(404, "run not found")
+    try:
+        payloads = hof_ship.build_submissions(
+            run_dir, contributor_id=hof_ship.contributor_id()
+        )
+    except FileNotFoundError:
+        raise HTTPException(404, "report not ready") from None
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "构造上报 payload 失败") from e
+    if not payloads:
+        raise HTTPException(400, "no submissions built from this run")
+    result = hof_ship.ship(payloads, base_url=hof_ship.base_url())
+    result["flush"] = hof_ship.flush_queue()
+    return result
 
 
 @app.get("/")

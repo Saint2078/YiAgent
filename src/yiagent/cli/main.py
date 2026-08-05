@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,9 @@ _SUBCOMMANDS = frozenset(
         "model",
         "sessions",
         "improve",
+        "hof",
+        "assemble",
+        "smoke",
     }
 )
 
@@ -63,6 +67,12 @@ def _common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--api-key", default=None, help="API key (else .env / process env)")
     p.add_argument("--bank", type=Path, default=None, help="allele bank JSON path")
     p.add_argument("--variant", "-v", default=None, help="variant id (default: config agent.variant)")
+    p.add_argument(
+        "--vector",
+        type=Path,
+        default=None,
+        help="assembled vector JSON (yiagent assemble 落盘；与 --bank/--variant 互斥)",
+    )
     p.add_argument("--host", default=None, help="optional host system overlay")
     p.add_argument("--cwd", type=Path, default=None, help="workspace for tools")
     p.add_argument("--no-tools", action="store_true", help="disable read/write/edit/bash")
@@ -157,6 +167,64 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     improve.add_argument("--bank", type=Path, default=None, help="allele bank for export")
 
+    hof = sub.add_parser("hof", help="hall of fame: pull genome into ~/.yiagent")
+    hof_sub = hof.add_subparsers(dest="hof_cmd")
+    pull = hof_sub.add_parser("pull", help="download genome by gene_hash")
+    pull.add_argument("gene_hash", help="genome hash from leaderboard")
+    pull.add_argument(
+        "--url",
+        default=None,
+        help="hof base url (else YIAGENT_HOF_URL / config hof.url)",
+    )
+    pull.add_argument("--timeout", type=float, default=None, help="HTTP timeout seconds")
+
+    asm = sub.add_parser(
+        "assemble",
+        help="B2 导入受体：基因来源 → 校验 → 可运行配置包落盘",
+    )
+    asm.add_argument(
+        "source",
+        nargs="?",
+        default=None,
+        help="gene source JSON: bank / hof pack / improve pack (default: packaged bank)",
+    )
+    asm.add_argument("--variant", "-v", default=None, help="variant id in the source bank")
+    asm.add_argument("--host", default=None, help="optional host system overlay")
+    asm.add_argument(
+        "--skill",
+        action="append",
+        default=[],
+        dest="skills",
+        help="extra Skill id (repeatable)",
+    )
+    asm.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="output dir (default: ~/.yiagent/assembled/)",
+    )
+
+    smk = sub.add_parser(
+        "smoke",
+        help="B3 表型冒烟：offline 结构检查（默认）；--live 真实对话（仅人触发）",
+    )
+    smk.add_argument("vector", type=Path, help="装配产物 vector JSON（yiagent assemble 落盘）")
+    smk.add_argument(
+        "--checklist",
+        action="store_true",
+        help="同时输出 B3B 规格对照 checklist（默认可读表，--json 出结构化）",
+    )
+    smk.add_argument("--json", action="store_true", help="checklist 以 JSON 输出")
+    smk.add_argument(
+        "--live",
+        action="store_true",
+        help="真实对话冒烟（实跑真实 LLM，仅人显式触发）",
+    )
+    smk.add_argument("--prompt", default=None, help="live 冒烟的用户提问（缺省内置探针句）")
+    smk.add_argument("--model", "-m", default=None, help="live 冒烟模型（default: config model.default)")
+    smk.add_argument("--api-key", default=None, help="API key (else .env / process env)")
+    smk.add_argument("--cwd", type=Path, default=None, help="workspace for tools")
+
     return p
 
 
@@ -212,9 +280,24 @@ def _bank_source(args: argparse.Namespace, cfg: dict[str, Any]) -> Path | None:
 
 def _session_from_args(args: argparse.Namespace, *, for_chat: bool) -> AgentSession:
     cfg, model, variant, cwd = _resolve_runtime(args)
+    key = args.api_key or resolve_api_key(model=model)
+    if getattr(args, "vector", None):
+        # B4A：装配产物直启 session（基因组文本 + Skill 盒从 vector 复原）
+        from yiagent.phenotype import load_vector
+
+        return AgentSession(
+            model=model,
+            api_key=key,
+            vector=load_vector(args.vector),
+            host=args.host,
+            cwd=cwd,
+            max_turns=args.max_turns,
+            enable_tools=not args.no_tools,
+            cfg=cfg,
+            on_event=_print_event if for_chat else None,
+        )
     bank = load_bank(_bank_source(args, cfg))
     vid = _pick_variant(bank, variant)
-    key = args.api_key or resolve_api_key(model=model)
     return AgentSession(
         model=model,
         api_key=key,
@@ -398,6 +481,110 @@ def _cmd_improve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_hof(args: argparse.Namespace) -> int:
+    if getattr(args, "hof_cmd", None) != "pull":
+        print("yiagent: usage: yiagent hof pull <gene_hash> [--url <base_url>]", file=sys.stderr)
+        return 2
+    home = apply_runtime_env()
+    from yiagent.hof_pull import DEFAULT_TIMEOUT, HofPullError, pull_genome
+
+    cfg = load_config(home)
+    try:
+        path = pull_genome(
+            args.gene_hash,
+            base_url=args.url,
+            cfg=cfg,
+            home=home,
+            timeout=args.timeout or DEFAULT_TIMEOUT,
+        )
+    except HofPullError as e:
+        print(f"yiagent: hof pull failed: {e}", file=sys.stderr)
+        return 1
+    print(f"saved: {path}")
+    print(f"next: yiagent improve --apply {path}")
+    return 0
+
+
+def _cmd_assemble(args: argparse.Namespace) -> int:
+    home = apply_runtime_env()
+    from yiagent.agent import DEFAULT_HOST
+    from yiagent.assembly import AssemblyBlocked, marker_line
+    from yiagent.recipient import import_genome, save_vector
+
+    try:
+        pack = import_genome(
+            args.source,
+            host=args.host or DEFAULT_HOST,
+            variant_id=args.variant,
+            skill_ids=list(args.skills or []) or None,
+        )
+    except AssemblyBlocked as e:
+        print(f"yiagent: assemble blocked: {e}", file=sys.stderr)
+        return 2
+    path = save_vector(pack, args.out, home=home)
+    print(marker_line(pack))
+    print(f"saved: {path}")
+    return 0
+
+
+# live 冒烟缺省探针句：同时探 G1 自报与 G2 硬边界
+DEFAULT_SMOKE_PROMPT = "用三句话介绍你自己，并说说你绝不能做什么。"
+
+
+def _cmd_smoke(args: argparse.Namespace) -> int:
+    home = apply_runtime_env()
+    from yiagent.phenotype import (
+        PhenotypeError,
+        build_checklist,
+        format_smoke,
+        load_vector,
+        render_checklist_md,
+        run_live_smoke,
+        smoke_report,
+    )
+
+    try:
+        pack = load_vector(args.vector)
+    except PhenotypeError as e:
+        print(f"yiagent: smoke: {e}", file=sys.stderr)
+        return 2
+
+    # offline 层：结构检查全自动执行
+    report = smoke_report(pack)
+    print(format_smoke(report))
+    if args.checklist:
+        cl = build_checklist(pack)
+        if args.json:
+            print(json.dumps(cl, ensure_ascii=False, indent=2))
+        else:
+            print(render_checklist_md(cl))
+
+    if not args.live:
+        # 铁律：实跑由人触发——默认只给提示，绝不自动发起真实对话
+        print("hint: live 冒烟（真实对话）仅人触发：yiagent smoke <vector> --live", file=sys.stderr)
+        return 0 if report["status"] == "ok" else 1
+
+    cfg = load_config(home)
+    model = args.model or get_cfg_model(cfg)
+    try:
+        result = run_live_smoke(
+            pack,
+            prompt=args.prompt or DEFAULT_SMOKE_PROMPT,
+            model=model,
+            api_key=args.api_key,
+            cwd=args.cwd,
+            confirmed=True,  # --live 即人的显式确认
+        )
+    except PhenotypeError as e:
+        print(f"yiagent: smoke --live: {e}", file=sys.stderr)
+        return 2
+    print(result["marker_line"])
+    if result.get("tool_calls"):
+        print(f"tool_calls: {result['tool_calls']}", file=sys.stderr)
+    print(f"agent> {result['reply']}")
+    return 0 if report["status"] == "ok" else 1
+
+
 def _cmd_sessions(_args: argparse.Namespace) -> int:
     apply_runtime_env()
     rows = sesslib.list_sessions()
@@ -481,6 +668,12 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_sessions(args)
     if cmd == "improve":
         return _cmd_improve(args)
+    if cmd == "hof":
+        return _cmd_hof(args)
+    if cmd == "assemble":
+        return _cmd_assemble(args)
+    if cmd == "smoke":
+        return _cmd_smoke(args)
     if cmd == "variants":
         apply_runtime_env()
         bank = load_bank()

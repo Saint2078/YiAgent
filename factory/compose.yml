@@ -10,6 +10,9 @@ services:
       - PYTHONUNBUFFERED=1
       - YIAGENT_CASE_ROOT=/app/case/xsct
       - PYTHONPATH=/app/src
+      # Hall of Fame ship: opt-in, pass through from shell env
+      - YIAGENT_HOF_ENABLED
+      - YIAGENT_HOF_URL
     volumes:
       - ./fixtures:/app/fixtures
       - ./save:/app/save

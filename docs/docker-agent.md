@@ -23,6 +23,7 @@
 ./yiagent improve              # 最近 session → ~/.yiagent/improve/*.json
 ./yiagent improve -r <id>
 ./yiagent improve --apply path/to/best_genome.json
+./yiagent hof pull <gene_hash>   # 名人堂基因组 → ~/.yiagent/hof/（需 YIAGENT_HOF_URL）
 ```
 
 ## Sessions（对齐 Hermes）

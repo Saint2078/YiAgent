@@ -31,3 +31,22 @@ services:
     #   docker compose run --rm yiagent --cli
     #   docker compose run --rm yiagent run 你好
     command: ["chat", "--tui"]
+
+  # 名人堂（Hall of Fame）：社区基因组评分档案服务 + 可视化工作台
+  hof:
+    build:
+      context: .
+      dockerfile: hof/Dockerfile
+    image: yiagent-hof:local
+    container_name: yiagent-hof
+    ports:
+      - "8788:80"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HOF_DB_PATH=/app/data/hof.db
+    volumes:
+      - hof_data:/app/data
+
+volumes:
+  hof_data:

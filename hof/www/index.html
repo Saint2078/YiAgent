@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YiAgent · 名人堂</title>
+    <meta
+      name="description"
+      content="YiAgent 名人堂：社区自报的基因组评分档案——排行榜、等位边际表现、冠军基因组种子下载。"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">YiAgent</span>
+          <h1 class="brand-title">名人堂 <em>Hall of Fame</em></h1>
+        </div>
+        <nav class="tabs" id="tabs">
+          <button data-view="leaderboard" class="tab active">排行榜</button>
+          <button data-view="alleles" class="tab">等位表现</button>
+          <button data-view="submissions" class="tab">提交流水</button>
+          <button data-view="overview" class="tab">概览</button>
+        </nav>
+      </header>
+
+      <main id="main">
+        <section id="view-leaderboard" class="view">
+          <div class="filter-bar">
+            <label>维度
+              <input id="f-dimension" type="text" placeholder="如 instruction_following" />
+            </label>
+            <label>模型
+              <input id="f-model" type="text" placeholder="如 k3" />
+            </label>
+            <label>题集 suite
+              <input id="f-suite" type="text" placeholder="如 xsct-l" />
+            </label>
+            <label>min_n
+              <input id="f-min-n" type="number" min="0" value="3" />
+            </label>
+            <button id="f-apply" class="btn-primary">查询</button>
+          </div>
+          <p class="hint">
+            排名按收缩分（shrunk）排序：shrunk = (n·composite + 5·75) / (n + 5)，样本量小的基因组先向 75 收缩，防单次高分刷榜。
+          </p>
+          <div id="lb-status" class="status"></div>
+          <table class="data-table" id="lb-table">
+            <thead>
+              <tr>
+                <th>#</th><th>shrunk</th><th>mean ± sdv</th><th>n</th>
+                <th>模型</th><th>tags</th><th>贡献者</th><th>gene_hash</th><th>最近上报</th>
+              </tr>
+            </thead>
+            <tbody id="lb-body"></tbody>
+          </table>
+          <div id="genome-detail" class="genome-detail" hidden></div>
+        </section>
+
+        <section id="view-alleles" class="view" hidden>
+          <div class="filter-bar">
+            <label>槽位
+              <select id="a-slot">
+                <option value="">全部</option>
+                <option>G1</option><option>G2</option><option>G3</option>
+                <option>G4</option><option>G5</option>
+              </select>
+            </label>
+            <button id="a-apply" class="btn-primary">查询</button>
+          </div>
+          <p class="hint">等位边际表现：每条等位在其出场 genome 中的平均 composite，供全局 PBIL 分布导出。</p>
+          <div id="al-status" class="status"></div>
+          <div id="al-list" class="allele-list"></div>
+        </section>
+
+        <section id="view-submissions" class="view" hidden>
+          <div class="filter-bar">
+            <button id="s-refresh" class="btn-primary">刷新</button>
+          </div>
+          <div id="sub-status" class="status"></div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>时间</th><th>贡献者</th><th>gene_hash</th><th>模型</th>
+                <th>composite</th><th>状态</th><th>原因</th>
+              </tr>
+            </thead>
+            <tbody id="sub-body"></tbody>
+          </table>
+        </section>
+
+        <section id="view-overview" class="view" hidden>
+          <div id="ov-cards" class="stat-cards"></div>
+          <div class="about">
+            <h2>这是什么</h2>
+            <p>
+              名人堂是 YiAgent 社区的公共基因组评分档案：各地自部署的 factory 在跑完筛选/进化后，
+              <strong>自愿（opt-in）</strong>把评分卡上报到这里，汇聚成跨用户的排行榜与等位基因边际表现。
+              冷启动不再从零进化——从排行榜下载冠军基因组 JSON，直接当作 factory
+              <code>evolve/start</code> 的 seed。
+            </p>
+            <h2>数据口径</h2>
+            <ul>
+              <li>榜单分数一律为 <strong>community 社区自报分</strong>，未经项目方复跑验证。</li>
+              <li>同 <code>gene_hash</code> 的多次上报按样本量 n 加权合并 mean/sdv，再做贝塔收缩（m=5, prior=75）。</li>
+              <li>上榜门槛 <code>min_n</code>：累计鉴定样本量不足的不进榜。</li>
+              <li>等位文本含 rubric / 评分标准关键词的上报直接拒收（灌评分标准等于作弊）。</li>
+            </ul>
+            <h2>如何 opt-in 上报</h2>
+            <ol>
+              <li>在本地 YiAgent config 中显式打开 <code>ship.enabled = true</code>（默认永远关闭）。</li>
+              <li>可用 <code>--dry-run</code> 先查看"如果打开会上报什么"，payload schema 公开可查。</li>
+              <li>进化 run 结束后，客户端自动把终代冠军与各代冠军的评分卡 POST 到 <code>/api/hof/submit</code>。</li>
+              <li>贡献者标识为本地随机匿名 ID，可随时重置；绝不上报 API key、原始 prompt 或模型输出全文。</li>
+              <li>企业内网可自建私有名人堂：把 <code>SHIP_URL</code> 指向内网实例即可。</li>
+            </ol>
+          </div>
+        </section>
+      </main>
+
+      <div id="toast" class="toast" hidden></div>
+    </div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

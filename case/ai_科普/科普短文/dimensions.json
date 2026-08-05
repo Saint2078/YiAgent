@@ -1,0 +1,20 @@
+{
+  "suite": "科普短文",
+  "source": "ai_科普",
+  "version": "0.1",
+  "dimensions": [
+    "串联",
+    "短文",
+    "产品",
+    "查证",
+    "边界"
+  ],
+  "criteria_ids": [
+    "accuracy_verified",
+    "structure_chain",
+    "readability_wechat",
+    "boundary_honesty",
+    "no_hype"
+  ],
+  "count": 12
+}

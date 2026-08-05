@@ -6,10 +6,12 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable
 
+from yiagent.assembly import PACK_KIND, assemble_vector, marker_line
 from yiagent.genome import (
     assemble_from_ids,
     assemble_system,
     load_bank,
+    load_skill,
     load_skills,
     skill_openai_tools,
 )
@@ -80,6 +82,7 @@ class AgentSession:
         system: str | None = None,
         bank: dict[str, Any] | str | Path | None = None,
         variant_id: str | None = None,
+        vector: dict[str, Any] | None = None,
         host: str | None = None,
         cwd: str | Path | None = None,
         max_turns: int = 16,
@@ -100,10 +103,28 @@ class AgentSession:
         self.bank: dict[str, Any] | None = None
         self.variant: dict[str, Any] | None = None
         self.skills: list[dict[str, Any]] = []
+        self.genome_pack: dict[str, Any] | None = None  # B1 表达载体配置包（可观测标记）
         self._openai_tools: list[dict[str, Any]] = list(OPENAI_TOOL_SPECS) if enable_tools else []
 
         if system:
             genome_text = system
+        elif vector is not None:
+            # B4A：直接消费装配产物（`yiagent assemble` 落盘的 vector JSON），
+            # 基因组文本与 Skill 盒都从配置包复原，与装配时同一口径
+            if vector.get("kind") != PACK_KIND:
+                raise ValueError(f"vector 不是装配产物（kind 应为 {PACK_KIND}）")
+            self.genome_pack = vector
+            genome_text = str((vector.get("runtime") or {}).get("genome_system") or "")
+            if not genome_text.strip():
+                raise ValueError("vector 缺 runtime.genome_system，数据不完整")
+            try:
+                self.skills = [
+                    load_skill(str(s.get("id")))
+                    for s in (vector.get("markers") or {}).get("skills") or []
+                    if s.get("id")
+                ]
+            except FileNotFoundError as exc:
+                raise ValueError(f"vector 引用的 Skill 不存在: {exc}") from exc
         elif variant_id:
             genome_text, self.bank, self.variant, self.skills = assemble_from_ids(
                 host=host or DEFAULT_HOST,
@@ -123,6 +144,17 @@ class AgentSession:
                 host or DEFAULT_HOST, b, self.variant, skills=self.skills
             )
 
+        # B1 表达载体：凡走基因组装配的路径都过装配规则 + 校验，
+        # 坏基因在此被 AssemblyBlocked 阻断；配置包挂到 session 供观测
+        if self.variant is not None:
+            self.genome_pack = assemble_vector(
+                host or DEFAULT_HOST,
+                bank=self.bank,
+                variant=self.variant,
+                skills=self.skills,
+            )
+            genome_text = self.genome_pack["runtime"]["genome_system"]
+
         # Full prompt: Genome + Runtime rules + AGENTS.md (rules never enter bank)
         sys_text = compose_system(genome_text, cwd=self.cwd, cfg=cfg)
 
@@ -139,6 +171,13 @@ class AgentSession:
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": sys_text}]
         self.persist_id: str | None = None
         self.on_persist: Callable[[list[dict[str, Any]]], None] | None = None
+        if self.genome_pack is not None:
+            # 可观测标记进事件流：一次装配可审计、可复现
+            self._emit(
+                "genome_pack",
+                line=marker_line(self.genome_pack),
+                markers=self.genome_pack["markers"],
+            )
 
     def load_messages(self, messages: list[dict[str, Any]], *, keep_system: bool = True) -> None:
         """Replace history (for session resume). Optionally keep current system prompt."""

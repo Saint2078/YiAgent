@@ -1,0 +1,288 @@
+/* YiAgent 名人堂工作台 —— 视觉语言沿用 factory www（暗底 + 铜绿撞色 + 同字体栈） */
+:root {
+  --ink: #0c1412;
+  --foam: #e8f2ee;
+  --mist: #b7cfc6;
+  --teal: #1f8a70;
+  --teal-bright: #2eb892;
+  --copper: #c4783a;
+  --copper-hot: #e0944e;
+  --danger: #c44b3c;
+  --glass: rgba(232, 242, 238, 0.06);
+  --line: rgba(183, 207, 198, 0.22);
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--foam);
+  background: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 90% 60% at 10% -10%, rgba(46, 184, 146, 0.18), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 10%, rgba(196, 120, 58, 0.12), transparent 50%),
+    linear-gradient(165deg, #07100e 0%, #0c1412 40%, #101c19 100%);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1.1rem clamp(1.25rem, 3vw, 2.25rem);
+  background: linear-gradient(180deg, rgba(7, 16, 14, 0.92), rgba(7, 16, 14, 0.35));
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { display: flex; align-items: baseline; gap: 0.9rem; }
+.brand-mark {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: var(--copper-hot);
+  border: 1px solid var(--copper);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+}
+.brand-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.7rem;
+}
+.brand-title em {
+  font-size: 1rem;
+  color: var(--mist);
+  font-style: italic;
+}
+
+.tabs { display: flex; gap: 0.35rem; }
+.tab {
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  color: var(--mist);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.tab:hover { color: var(--foam); border-color: var(--line); }
+.tab.active {
+  color: var(--ink);
+  background: var(--teal-bright);
+  font-weight: 600;
+}
+
+main { padding: 1.5rem clamp(1.25rem, 3vw, 2.25rem) 3rem; }
+.view { max-width: 1180px; margin: 0 auto; }
+
+.filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.filter-bar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--mist);
+}
+.filter-bar input,
+.filter-bar select {
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--foam);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  min-width: 9rem;
+}
+.filter-bar input:focus,
+.filter-bar select:focus { outline: 1px solid var(--teal-bright); }
+.filter-bar input[type="number"] { min-width: 5rem; }
+
+.btn-primary {
+  background: var(--teal);
+  color: var(--foam);
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  transition: background 0.15s ease;
+}
+.btn-primary:hover { background: var(--teal-bright); color: var(--ink); }
+
+.btn-ghost {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.8rem;
+  color: var(--mist);
+  font-size: 0.82rem;
+}
+.btn-ghost:hover { color: var(--foam); border-color: var(--teal-bright); }
+
+.hint { font-size: 0.8rem; color: var(--mist); margin: 0 0 0.9rem; }
+.status { font-size: 0.85rem; color: var(--mist); margin: 0.4rem 0; min-height: 1.2em; }
+.status.error { color: var(--danger); }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.data-table th, .data-table td {
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.data-table th {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--mist);
+  background: rgba(7, 16, 14, 0.5);
+}
+.data-table tbody tr { cursor: pointer; transition: background 0.12s ease; }
+.data-table tbody tr:hover { background: rgba(46, 184, 146, 0.08); }
+.data-table tbody tr.expanded { background: rgba(46, 184, 146, 0.12); }
+.mono { font-family: var(--font-mono); font-size: 0.8rem; }
+.num { font-family: var(--font-mono); }
+.shrunk { color: var(--teal-bright); font-weight: 700; font-family: var(--font-mono); }
+
+.tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+  margin-right: 0.25rem;
+  color: var(--mist);
+}
+.pill-ok { color: var(--teal-bright); font-weight: 600; }
+.pill-bad { color: var(--danger); font-weight: 600; }
+
+.genome-detail {
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--glass);
+  padding: 1rem 1.25rem;
+}
+.genome-detail h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.3rem;
+}
+.genome-detail .meta { font-size: 0.8rem; color: var(--mist); margin-bottom: 0.8rem; }
+.slot-block { margin: 0.6rem 0; }
+.slot-block .slot-name {
+  font-family: var(--font-mono);
+  color: var(--copper-hot);
+  font-size: 0.8rem;
+  margin-bottom: 0.15rem;
+}
+.slot-block .allele-label { font-size: 0.85rem; font-weight: 600; }
+.slot-block .allele-text {
+  font-size: 0.82rem;
+  color: var(--mist);
+  white-space: pre-wrap;
+  background: rgba(7, 16, 14, 0.45);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  margin-top: 0.25rem;
+}
+
+.allele-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.allele-row {
+  display: grid;
+  grid-template-columns: 5rem 1fr 9rem 7rem;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.85rem;
+}
+.allele-row .bar-track {
+  height: 10px;
+  background: rgba(7, 16, 14, 0.6);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.allele-row .bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), var(--teal-bright));
+  border-radius: 999px;
+}
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.6rem;
+}
+.stat-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--glass);
+  padding: 1rem 1.1rem;
+}
+.stat-card .value {
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  color: var(--teal-bright);
+}
+.stat-card .label { font-size: 0.8rem; color: var(--mist); margin-top: 0.2rem; }
+.stat-card .sub { font-size: 0.75rem; color: var(--mist); margin-top: 0.4rem; font-family: var(--font-mono); }
+
+.about { max-width: 760px; line-height: 1.75; font-size: 0.92rem; }
+.about h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.35rem;
+  margin: 1.6rem 0 0.4rem;
+}
+.about code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: rgba(7, 16, 14, 0.6);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.about ul, .about ol { padding-left: 1.4rem; }
+.about li { margin: 0.3rem 0; }
+
+.toast {
+  position: fixed;
+  bottom: 1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--copper);
+  color: var(--ink);
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}

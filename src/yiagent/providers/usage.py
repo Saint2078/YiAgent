@@ -31,6 +31,30 @@ def normalize_usage(usage: dict[str, Any] | None) -> dict[str, int]:
     }
 
 
+def derive_usage(bucket: dict[str, int]) -> dict[str, Any]:
+    """Derive billing-oriented fields from raw usage counters.
+
+    - input_uncached_tokens: 输入中未命中缓存、按全价计的部分
+    - cache_hit_rate: 缓存命中占输入比（0–1，无输入为 None）
+    - billable_estimate: 实际消耗下界估计 = 未缓存输入 + 输出
+      （缓存命中部分按 0 计；若厂商对缓存按折扣价计，实际账单略高于此值）
+    """
+    prompt = int(bucket.get("prompt_tokens") or 0)
+    completion = int(bucket.get("completion_tokens") or 0)
+    cached = int(bucket.get("cached_tokens") or 0)
+    total = int(bucket.get("total_tokens") or (prompt + completion))
+    uncached = max(0, prompt - cached)
+    return {
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "cached_tokens": cached,
+        "total_tokens": total,
+        "input_uncached_tokens": uncached,
+        "cache_hit_rate": round(cached / prompt, 4) if prompt > 0 else None,
+        "billable_estimate": uncached + completion,
+    }
+
+
 class TokenMeter:
     """Thread-safe accumulator for one session / agent run."""
 
@@ -87,11 +111,18 @@ class TokenMeter:
         with self._lock:
             return {
                 "calls": len(self.calls),
-                "prompt_tokens": self.prompt_tokens,
-                "completion_tokens": self.completion_tokens,
-                "cached_tokens": self.cached_tokens,
-                "total_tokens": self.total_tokens,
-                "by_purpose": {k: dict(v) for k, v in self.by_purpose.items()},
+                **derive_usage(
+                    {
+                        "prompt_tokens": self.prompt_tokens,
+                        "completion_tokens": self.completion_tokens,
+                        "cached_tokens": self.cached_tokens,
+                        "total_tokens": self.total_tokens,
+                    }
+                ),
+                "by_purpose": {
+                    k: {"calls": v["calls"], **derive_usage(v)}
+                    for k, v in self.by_purpose.items()
+                },
             }
 
     @contextmanager

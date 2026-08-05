@@ -258,8 +258,14 @@ def refine_genomes(
     *,
     transcript: list | None = None,
     failure_notes: str = "",
+    mode: str = "local",
 ) -> dict[str, Any]:
-    """Neighborhood search: pin G1, mutate G2/G4/G5 (+ light G3), keep seed variant."""
+    """Neighborhood search: pin G1, mutate G2/G4/G5 (+ light G3), keep seed variant.
+
+    mode="local"（默认）：邻域精炼，固定 G1；mode="wide"：停滞期大开角重写，
+    放开 G1 并鼓励与种子差异较大的策略方向。
+    """
+    wide = mode == "wide"
     seed_bank = bank_from_improve_seed(seed, case)
     seed_var = (seed_bank.get("variants") or [{}])[0]
     seed_slots = dict(seed_var.get("slots") or {})
@@ -289,14 +295,24 @@ def refine_genomes(
         if isinstance(m, dict) and m.get("role") in ("user", "assistant"):
             tx.append({"role": m["role"], "content": str(m.get("content") or "")[:600]})
 
-    system = (
-        "你是基因级 Agent 基因组邻域设计师。只输出合法 JSON。\n"
-        "在给定种子基因组邻域内搜索：固定 G1（只复制种子，不改写）；主变异 G2/G4/G5；"
-        "G3 可轻改或不改。\n"
-        "禁止把评分标准 criteria / rubric 原文塞进任何等位基因文本。\n"
-        "必须保留种子 variant（id 可用 var.seed 或原 id），并另产 5～9 个邻域 variants。\n"
-        "新等位 id 勿与种子 id 冲突；variants.slots 必须引用输出 alleles 中已有 id。"
-    )
+    if wide:
+        system = (
+            "你是基因级 Agent 基因组重写设计师。只输出合法 JSON。\n"
+            "进化已停滞，执行大开角重写：放开全部槽位（含 G1 身份），鼓励与种子差异"
+            "较大的策略方向，不要只做措辞微调。\n"
+            "禁止把评分标准 criteria / rubric 原文塞进任何等位基因文本。\n"
+            "必须保留种子 variant（id 可用 var.seed 或原 id），并另产 5～9 个重写 variants。\n"
+            "新等位 id 勿与种子 id 冲突；variants.slots 必须引用输出 alleles 中已有 id。"
+        )
+    else:
+        system = (
+            "你是基因级 Agent 基因组邻域设计师。只输出合法 JSON。\n"
+            "在给定种子基因组邻域内搜索：固定 G1（只复制种子，不改写）；主变异 G2/G4/G5；"
+            "G3 可轻改或不改。\n"
+            "禁止把评分标准 criteria / rubric 原文塞进任何等位基因文本。\n"
+            "必须保留种子 variant（id 可用 var.seed 或原 id），并另产 5～9 个邻域 variants。\n"
+            "新等位 id 勿与种子 id 冲突；variants.slots 必须引用输出 alleles 中已有 id。"
+        )
     user = f"""筛选题摘要：
 {json.dumps(slim_case, ensure_ascii=False)}
 
@@ -367,7 +383,7 @@ def refine_genomes(
         fixed = {}
         for s in SLOTS:
             aid = str(slots.get(s) or "")
-            if s == "G1":
+            if s == "G1" and not wide:
                 aid = str(g1_id)
             if aid not in valid[s]:
                 aid = next(iter(valid[s]))
