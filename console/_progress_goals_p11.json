@@ -1,0 +1,552 @@
+[
+  {
+    "letter": "A",
+    "title": "一句话 → 完整 Agent 基因",
+    "example": "我需要一个专门写营销文章的 Agent",
+    "tree": [
+      {
+        "title": "表型目标：一句话 → 可评测规格",
+        "means": "基因工程·实验目标",
+        "relation": "黑盒外侧先定成功样子",
+        "status": "done",
+        "due": "目标 A",
+        "evidence": "一句话落到可评分规格；不靠灌装说明书当进化",
+        "children": [
+          {
+            "title": "需求句模板与解析",
+            "means": "规格入口",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T7：docs/seed-genome.md 需求句→manifest 模板＋科普填好样例"
+          },
+          {
+            "title": "Agent 规格一页（能做/不做）",
+            "means": "表型成功标准",
+            "status": "done",
+            "due": "当期",
+            "evidence": "04/00 规格一页；T7 核验 8 条全可挂题目与裁判"
+          }
+        ]
+      },
+      {
+        "title": "取得目的 DNA：G1–G5 槽与等位",
+        "means": "基因工程①取得目的DNA",
+        "relation": "按槽可评分才叫基因分区",
+        "status": "done",
+        "due": "目标 A",
+        "evidence": "T7：种子库＋锚点＋黑盒约束三件套齐",
+        "children": [
+          {
+            "title": "G1–G5 槽位与评分锚点",
+            "means": "基因分区",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T7：每槽评分锚点表入 docs/seed-genome.md"
+          },
+          {
+            "title": "种子等位与初值库",
+            "means": "等位基因库",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T7：factory/fixtures/seed/ai_kepu_seed.json（G1–G5 每槽 2–3 等位＋对照等位）"
+          },
+          {
+            "title": "黑盒约束：拒绝灌装当进化",
+            "means": "告知≠提升",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T7：声明＋单测（等位文本不含维度 id / 权重 / 分档原文）"
+          }
+        ]
+      },
+      {
+        "title": "鉴定体系：题目 + 裁判 + 门禁",
+        "means": "基因工程④检测鉴定",
+        "relation": "无鉴定不算基因工程；‖ 可与 A2 并行",
+        "status": "done",
+        "due": "目标 A",
+        "evidence": "题库 12 题＋五维裁判＋配对门禁全接线",
+        "children": [
+          {
+            "title": "题目收集与组合（manifest）",
+            "means": "表型检测集",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T7：0803c197a73c（8 进化＋4 holdout，preflight 无 errors）"
+          },
+          {
+            "title": "裁判维度 / prompt / 模型固定",
+            "means": "鉴定标准",
+            "status": "done",
+            "due": "当期",
+            "evidence": "04/01 五维加权＋一票否决；T7 核验 judge 接线并修 test_type 回填"
+          },
+          {
+            "title": "晋升门禁与显著性口径",
+            "means": "裁决层（空位）",
+            "status": "done",
+            "due": "可后置",
+            "evidence": "T1：配对 t + bootstrap CI 替代固定 Δ，门禁记录 p/CI；阈值回填待实跑"
+          }
+        ]
+      },
+      {
+        "title": "进化筛选：变异 + 选择 + 多样性",
+        "means": "基因算法·Mutation/Selection",
+        "relation": "差异化在筛选侧；依赖 A2+A3 输入",
+        "status": "current",
+        "due": "目标 A",
+        "evidence": "种群多代后冠军基因有可复现证据",
+        "children": [
+          {
+            "title": "单题基因优化闭环验证",
+            "means": "最小进化闭环",
+            "status": "done",
+            "due": "已达成",
+            "evidence": "冒烟 2a431c0f67be"
+          },
+          {
+            "title": "槽交叉 / 突变 / 随机移民",
+            "means": "Recombination·Migration",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T1：自适应变异（停滞→大开角重写，提升回落）+ 每代 1–2 随机移民；消融数字待实跑"
+          },
+          {
+            "title": "题组合多代 + 可复现 report",
+            "means": "适应度卡",
+            "status": "blocked",
+            "due": "当期",
+            "evidence": "待实跑：人触发 POST /api/evolve/start（manifest 0803c197a73c＋种子 ai_kepu_seed）"
+          },
+          {
+            "title": "小样本漂移控制（配对/CI）",
+            "means": "Drift 对策",
+            "status": "done",
+            "due": "可后置",
+            "evidence": "T1 paired_gate 即漂移控制口径；数据验证随 A4C 实跑"
+          }
+        ]
+      },
+      {
+        "title": "经鉴定的完整基因组交付",
+        "means": "基因工程验收物",
+        "relation": "目标 A 验收 · 供目标 B 组装",
+        "status": "current",
+        "due": "目标 A",
+        "evidence": "gene hash 可加载；非「聊天壳」",
+        "children": [
+          {
+            "title": "冠军基因组固化",
+            "means": "基因型归档",
+            "status": "blocked",
+            "due": "当期",
+            "evidence": "待实跑：依赖 T4 出冠军后固化 gene hash"
+          },
+          {
+            "title": "基因组可加载接口",
+            "means": "供表达载体消费",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T2：yiagent hof pull → ~/.yiagent/hof → improve --apply 离线闭环"
+          },
+          {
+            "title": "边界一页 + 对外可讲",
+            "means": "表型主张",
+            "status": "done",
+            "due": "当期",
+            "evidence": "04/00 规格一页即对外边界；T7 核验可挂裁判"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "letter": "B",
+    "title": "基于基因，组装出一个 Agent",
+    "example": "拿冠军基因组 → 装配成可运行的营销文 Agent",
+    "tree": [
+      {
+        "title": "构建表达载体：装配规则与标记",
+        "means": "基因工程②构建表达载体",
+        "relation": "目标 B 设计层",
+        "status": "done",
+        "due": "目标 B",
+        "evidence": "T3：src/yiagent/assembly.py 落地",
+        "children": [
+          {
+            "title": "分槽装配规则（G→运行时）",
+            "means": "载体结构",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T3：SLOT_RULES——G1/G2 必需 block、G3–G5 缺省跳过、Skill 限注 G3–G5"
+          },
+          {
+            "title": "可观测标记与配置包格式",
+            "means": "选择标记类比",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T3：expression_vector 配置包，gene_hash/槽位标记/校验结果可审计可复现"
+          }
+        ]
+      },
+      {
+        "title": "导入受体：装入运行时躯体",
+        "means": "基因工程③导入受体",
+        "relation": "输入来自 A 或基因库",
+        "status": "done",
+        "due": "目标 B",
+        "evidence": "T5＋T8：三来源收口＋严格 hash 门禁＋三账齐",
+        "children": [
+          {
+            "title": "基因来源接入与完整性校验",
+            "means": "转化前质检",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T5：recipient.py 三来源收口（本地 bank / hof 包 / improve 包），validation.status!=ok 即 Blocked；严格 hash 门禁"
+          },
+          {
+            "title": "基因 → 可运行配置",
+            "means": "转化/转染",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T5：yiagent assemble → expression_vector 落盘 ~/.yiagent/assembled/，固定时间戳逐字节可复现"
+          },
+          {
+            "title": "工具 / 记忆 / 人设挂载",
+            "means": "表达开启",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T8：能力三账齐（tools_match / slot_mounts / genome_text）"
+          }
+        ]
+      },
+      {
+        "title": "组装后检测鉴定（表型）",
+        "means": "基因工程④检测鉴定",
+        "relation": "验收前必过",
+        "status": "done",
+        "due": "目标 B",
+        "evidence": "T8：offline 鉴定全过；live 行为鉴定待人触发",
+        "children": [
+          {
+            "title": "表型冒烟：对话或工具调用",
+            "means": "表型筛选",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T8：yiagent smoke offline 9 项全过；--live 仅人触发"
+          },
+          {
+            "title": "与规格对照（能做/不做）",
+            "means": "基因型+表型对照",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T8：checklist auto 7 过 0 挂；4 条 wont 待 live 打分"
+          }
+        ]
+      },
+      {
+        "title": "可交付组装件",
+        "means": "工程交付",
+        "relation": "目标 B 验收",
+        "status": "done",
+        "due": "目标 B",
+        "evidence": "T8：三步链路核验＋演示包；live 演示待人触发",
+        "children": [
+          {
+            "title": "一键组装 CLI / API",
+            "means": "标准化转化",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T8：hof pull → assemble → chat --vector 三步可审计"
+          },
+          {
+            "title": "场景演示包",
+            "means": "表型展示",
+            "status": "done",
+            "due": "当期",
+            "evidence": "T8：demo/kepu/（种子 bank＋组装脚本＋可复现样例 vector）"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "letter": "C",
+    "title": "尽可能提升基因筛选的速度",
+    "example": "同样鉴定标准下，单位时间筛完更多代",
+    "tree": [
+      {
+        "title": "度量：选择侧墙钟瓶颈",
+        "means": "基因算法·先量适应度成本",
+        "relation": "先量后改",
+        "status": "upcoming",
+        "due": "目标 C",
+        "evidence": "评测/裁判/变异/IO 占比 + KPI",
+        "children": [
+          {
+            "title": "筛选耗时拆解",
+            "means": "剖析",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "各阶段占比可指"
+          },
+          {
+            "title": "速度 KPI（代际墙钟、P50/P95）",
+            "means": "吞吐指标",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "基线数字可复跑"
+          }
+        ]
+      },
+      {
+        "title": "适应度缓存与去重",
+        "means": "避免重复 Selection 评测",
+        "relation": "低风险加速",
+        "status": "upcoming",
+        "due": "目标 C",
+        "evidence": "gene×题×裁判命中；命中率进 report",
+        "children": [
+          {
+            "title": "缓存键规范",
+            "means": "复用",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "键稳定可复现"
+          },
+          {
+            "title": "跨代 / 跨跑复用",
+            "means": "种群记忆",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "重复个体不重复评测"
+          }
+        ]
+      },
+      {
+        "title": "种群并行与批量评测",
+        "means": "基因算法·种群并行适应度",
+        "relation": "吞吐主杠杆",
+        "status": "upcoming",
+        "due": "目标 C",
+        "evidence": "墙钟随并发下降有数字",
+        "children": [
+          {
+            "title": "种群级并行评测",
+            "means": "并行适应度",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "并发上限可配"
+          },
+          {
+            "title": "裁判 / API 批处理",
+            "means": "批适应度",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "无限流静默丢分"
+          }
+        ]
+      },
+      {
+        "title": "级联早停与自适应采样",
+        "means": "Cascade evaluation 类比",
+        "relation": "少评同样可信",
+        "status": "upcoming",
+        "due": "目标 C",
+        "evidence": "与 A 门禁兼容的早停规则",
+        "children": [
+          {
+            "title": "逐题 / 逐 rep 早停",
+            "means": "级联门禁",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "劣势个体少评；规则可辩护"
+          },
+          {
+            "title": "代际收敛早停",
+            "means": "终止条件",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "停滞停烧代"
+          }
+        ]
+      },
+      {
+        "title": "代理预筛 + 完整裁判后置",
+        "means": "级联筛选 / 廉价适应度",
+        "relation": "贵裁判后置",
+        "status": "upcoming",
+        "due": "目标 C",
+        "evidence": "漏筛率有估计",
+        "children": [
+          {
+            "title": "代理分 / 启发式预筛",
+            "means": "廉价适应度",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "预筛规则可指"
+          },
+          {
+            "title": "Top-k / 边界晋升完整裁判",
+            "means": "级联终评",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "仅关键个体吃满 A3 裁判"
+          }
+        ]
+      },
+      {
+        "title": "速度验收包",
+        "means": "对照实验",
+        "relation": "目标 C 验收",
+        "status": "upcoming",
+        "due": "目标 C",
+        "evidence": "加速比 + 质量不崩（同 A3 组合）",
+        "children": [
+          {
+            "title": "同题组合加速对比报告",
+            "means": "消融/对照",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "墙钟 + 门禁对照表"
+          },
+          {
+            "title": "默认速度配置与回退",
+            "means": "工程开关",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "一键回退基线"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "letter": "D",
+    "title": "尽可能降低基因筛选的消耗",
+    "example": "同样可辩护门禁下，更低 token/$ 拿到可用冠军",
+    "tree": [
+      {
+        "title": "度量：适应度账单拆解",
+        "means": "基因算法·适应度成本会计",
+        "relation": "先算清楚再省",
+        "status": "upcoming",
+        "due": "目标 D",
+        "evidence": "生成/作答/裁判分项 token/$ 基线",
+        "children": [
+          {
+            "title": "消耗分项记账",
+            "means": "成本剖析",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "三路消耗可指"
+          },
+          {
+            "title": "消耗 KPI（$/代、token/基因）",
+            "means": "成本指标",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "基线可复跑"
+          }
+        ]
+      },
+      {
+        "title": "少调用：复用与预算帽",
+        "means": "Selection 调用最小化",
+        "relation": "与 C 缓存/早停协同，验收看 $",
+        "status": "upcoming",
+        "due": "目标 D",
+        "evidence": "命中节省额 + max $/次 evolve",
+        "children": [
+          {
+            "title": "强制缓存命中计节省",
+            "means": "复用适应度",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "report 写次数与估算 $"
+          },
+          {
+            "title": "评测预算帽",
+            "means": "成本预算门禁",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "超限可停可降级"
+          }
+        ]
+      },
+      {
+        "title": "降单价：模型与分级路由",
+        "means": "廉价适应度 + 贵终评",
+        "relation": "与 C5 / 级联对齐",
+        "status": "upcoming",
+        "due": "目标 D",
+        "evidence": "大部分走低价路径",
+        "children": [
+          {
+            "title": "候选生成（变异）用廉价模型",
+            "means": "Mutation 降本",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "质量对照可指"
+          },
+          {
+            "title": "裁判分级计价路由",
+            "means": "Selection 降本",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "预筛便宜、终评完整裁判"
+          }
+        ]
+      },
+      {
+        "title": "降体量：代表题与上下文裁剪",
+        "means": "控制 Drift 成本",
+        "relation": "小样本仍可辩护；禁偷砍 holdout",
+        "status": "upcoming",
+        "due": "目标 D",
+        "evidence": "进化子集与 holdout 分账；输入 token 下降有数",
+        "children": [
+          {
+            "title": "题集分层与代表题",
+            "means": "适应度抽样",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "holdout 另账不混烧"
+          },
+          {
+            "title": "prompt / 轨迹裁剪",
+            "means": "上下文降本",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "评分口径不变"
+          }
+        ]
+      },
+      {
+        "title": "消耗验收包",
+        "means": "对照实验",
+        "relation": "目标 D 验收",
+        "status": "upcoming",
+        "due": "目标 D",
+        "evidence": "消耗下降 + 门禁质量不崩",
+        "children": [
+          {
+            "title": "同题组合消耗对比报告",
+            "means": "消融/对照",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "token/$/调用 + 冠军/门禁"
+          },
+          {
+            "title": "默认省耗配置与回退",
+            "means": "工程开关",
+            "status": "upcoming",
+            "due": "当期",
+            "evidence": "一键回退基线消耗路径"
+          }
+        ]
+      }
+    ]
+  }
+]

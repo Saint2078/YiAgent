@@ -1,0 +1,126 @@
+name: yitech002-yiagent
+
+# yitech002 · yiagent 控制台（独立 Compose）
+# WORKBENCH = /Users/caelum/Desktop/yitech002/yiagent
+# factory 内网代理 → /api/factory/*（不对外暴露 8787）
+
+services:
+  projects-api:
+    build: ./api
+    image: yitech002-yiagent-projects-api:local
+    container_name: yitech002-yiagent-projects-api
+    environment:
+      OPC_01_DB: /data/opc.sqlite
+      OPC_PROJECTS_DIR: /workbench/项目
+      PORT: "8090"
+      SITE_GATE: "yiagent"
+      KB_SEED_DIR: /workbench/kb-seed
+      KB_DOCS_DIR: /workbench/kb
+    volumes:
+      - ${WORKBENCH_HOST_PATH}/运行数据/projects:/data
+      - ${WORKBENCH_HOST_PATH}/项目:/workbench/项目
+      - ${WORKBENCH_HOST_PATH}/docs/kb:/workbench/kb-seed:ro
+      - ${WORKBENCH_HOST_PATH}/知识库:/workbench/kb
+    ports:
+      - "127.0.0.1:8190:8090"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8090/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    networks: [ceo]
+
+  agent-bridge:
+    build: ./cursor-bridge
+    image: yitech002-yiagent-agent-bridge:local
+    container_name: yitech002-yiagent-agent-bridge
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8091"
+      WORKBENCH_CWD: /workbench
+      MODEL: ${MODEL:-composer-2.5}
+    volumes:
+      - ${WORKBENCH_HOST_PATH}:/workbench
+      - ${WORKBENCH_HOST_PATH}/运行数据/agent-bridge/.env:/app/.env
+      - ${WORKBENCH_HOST_PATH}/运行数据/agent-bridge/providers.json:/app/providers.json
+    ports:
+      - "127.0.0.1:8191:8091"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8091/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks: [ceo]
+
+  factory:
+    build:
+      context: ../工程/20260726_YiAgent
+      dockerfile: factory/Dockerfile
+    image: yitech002-yiagent-factory:local
+    container_name: yitech002-yiagent-factory
+    environment:
+      - PYTHONUNBUFFERED=1
+      - YIAGENT_CASE_ROOT=/app/case
+      - PYTHONPATH=/app/src
+      - YIAGENT_HOF_ENABLED
+      - YIAGENT_HOF_URL
+    volumes:
+      - ../工程/20260726_YiAgent/factory/fixtures:/app/fixtures
+      - ../工程/20260726_YiAgent/factory/save:/app/save
+      - ../工程/20260726_YiAgent/factory/www:/app/www
+      - ../工程/20260726_YiAgent/factory/server:/app/server
+      - ../工程/20260726_YiAgent/case:/app/case
+      - ../工程/20260726_YiAgent/src:/app/src
+    ports:
+      # 原版冻结演示台入口（与独立 factory compose 一致）
+      - "127.0.0.1:8787:80"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:80/api/health', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+    networks: [ceo]
+
+  ceo-console:
+    build: .
+    image: yitech002-yiagent-ceo-console:local
+    container_name: yitech002-yiagent-ceo-console
+    ports:
+      - "127.0.0.1:8188:8080"
+    depends_on:
+      projects-api:
+        condition: service_healthy
+      agent-bridge:
+        condition: service_healthy
+      factory:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    networks: [ceo]
+
+networks:
+  ceo:
+    driver: bridge

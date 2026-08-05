@@ -1,0 +1,4 @@
+.env
+cursor-bridge/.env
+cursor-bridge/providers.json
+cursor-bridge/node_modules/

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>YiAgent · Agent 编辑台</title>
+  <link rel="stylesheet" href="styles.css?v=20260804-extra-col" />
+</head>
+<body class="site-yiagent">
+  <div class="shell" id="app">
+    <aside class="nav" aria-label="主菜单">
+      <header class="nav-brand">
+        <div class="logo" aria-hidden="true">Y</div>
+        <div>
+          <div class="nav-title">YiAgent</div>
+          <div class="nav-you">Agent 编辑台</div>
+        </div>
+      </header>
+      <div class="nav-scroll" id="nav-scroll"></div>
+      <footer class="nav-foot">
+        <div class="nav-user">
+          <div class="av-sm you">你</div>
+          <div>
+            <div class="nav-user-name">编辑者</div>
+            <div class="nav-user-meta">单基因 · 基因组</div>
+          </div>
+        </div>
+      </footer>
+    </aside>
+
+    <main class="workspace" id="workspace">
+      <header class="ws-head">
+        <button class="icon-btn menu-btn" type="button" id="btn-menu" aria-label="菜单">☰</button>
+        <div class="ws-titles">
+          <h1 id="ws-title">单基因工作台</h1>
+          <p id="ws-sub">单题 / 题组搜索 · 筛最优等位组合</p>
+        </div>
+        <div class="ws-actions" id="ws-actions"></div>
+      </header>
+      <section class="ws-body" id="ws-body"></section>
+    </main>
+
+    <div class="nav-scrim" id="nav-scrim" hidden></div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="factory-bench.js?v=20260804-extra-col"></script>
+  <script src="evolve-bench.js?v=20260804-extra-col"></script>
+  <script src="kb-specs.js?v=20260804-extra-col"></script>
+  <script src="kb-manage.js?v=20260804-extra-col"></script>
+  <script src="app.js?v=20260804-fde"></script>
+</body>
+</html>

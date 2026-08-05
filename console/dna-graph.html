@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" style="color-scheme: dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>YiAgent · FDE DNA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #071018;
+      --panel: #0d1824;
+      --ink: #edf3f7;
+      --muted: #8aa0b2;
+      --line: rgba(237, 243, 247, 0.12);
+      --accent: #3ecfbe;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Instrument Sans", "PingFang SC", "Noto Sans SC", sans-serif;
+      overflow: hidden;
+      color-scheme: dark;
+    }
+    body {
+      background:
+        radial-gradient(900px 520px at 20% 0%, rgba(62, 207, 190, 0.1), transparent 55%),
+        radial-gradient(700px 480px at 90% 100%, rgba(245, 166, 35, 0.07), transparent 50%),
+        #071018;
+    }
+    #stage { position: absolute; inset: 0; z-index: 1; display: block; }
+    #labels { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    #labels * { pointer-events: auto; }
+    .hud { position: absolute; z-index: 20; pointer-events: none; }
+    .hud * { pointer-events: auto; }
+
+    .topbar {
+      top: 20px; left: 20px; right: 20px;
+      display: flex; justify-content: space-between; gap: 16px;
+      align-items: flex-start;
+    }
+    .brand { max-width: 420px; }
+    .brand-kicker {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 3.2vw, 40px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 36ch;
+    }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: rgba(13, 24, 36, 0.88);
+      color: var(--ink);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .chip.on, .chip:hover {
+      border-color: rgba(62, 207, 190, 0.55);
+      color: var(--accent);
+    }
+
+    /* 分区标签（螺旋右侧） */
+    .zone-tag {
+      position: absolute;
+      transform: translateY(-50%);
+      display: flex; align-items: center; gap: 8px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      padding: 7px 11px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+      user-select: none;
+      background: rgba(13, 24, 36, 0.72);
+    }
+    .zone-tag i {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex: none;
+    }
+    .zone-tag.dim { opacity: 0.28; }
+    .zone-tag.lit {
+      background: rgba(13, 24, 36, 0.92);
+    }
+
+    /* 基因槽：三列同形异内容；每列最多表达1+对照3，完全展示不滚动 */
+    .allele-rack {
+      position: absolute;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      transition: opacity 0.15s;
+    }
+    .allele-rack.dim { opacity: 0.28; }
+    .allele-card {
+      width: 200px;
+      overflow: hidden;
+      padding: 4px 0;
+      border-radius: 10px;
+      background: rgba(13, 24, 36, 0.88);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      line-height: 1.45;
+      user-select: none;
+    }
+    .allele-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 9px;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      height: 32px;
+      box-sizing: border-box;
+    }
+    .allele-row .dot {
+      flex: none;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .allele-row .name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .allele-row .tag {
+      margin-left: auto;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      flex: none;
+    }
+    .allele-row.active { color: var(--ink); font-weight: 500; }
+    .allele-row.active .tag { color: inherit; opacity: 0.85; }
+    .allele-row.weak { color: var(--muted); }
+    .allele-row.lit { background: rgba(13, 24, 36, 0.92); }
+    .allele-row.slot-empty {
+      cursor: default;
+      border: 1px dashed rgba(237, 243, 247, 0.14);
+      margin: 2px 6px;
+      height: 28px;
+      background: rgba(7, 16, 24, 0.28);
+      color: transparent;
+    }
+
+    .panel {
+      top: 118px; right: 20px;
+      width: min(300px, calc(100vw - 40px));
+      background: rgba(13, 24, 36, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      display: none;
+    }
+    .panel.show { display: block; }
+    .panel-type {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .panel h2 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+    .panel-meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; line-height: 1.4; }
+    .panel-body {
+      color: #d7e2ea;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      max-height: 38vh;
+      overflow: auto;
+    }
+
+    .legend {
+      bottom: 18px; left: 20px;
+      display: flex; flex-wrap: wrap; gap: 8px 14px;
+      padding: 10px 12px;
+      background: rgba(13, 24, 36, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .legend b { color: var(--ink); font-weight: 500; }
+    .legend i {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      margin-right: 6px; vertical-align: middle;
+    }
+    .hint {
+      bottom: 18px; right: 20px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(13, 24, 36, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    html.embed .brand-kicker { display: none; }
+    html.embed .brand h1 { font-size: 20px; margin: 0; }
+    html.embed .brand p { display: none; }
+    html.embed .topbar { top: 12px; left: 14px; right: 14px; }
+    html.embed .legend { bottom: 12px; left: 14px; }
+    html.embed .hint { bottom: 12px; right: 14px; }
+  </style>
+</head>
+<body>
+  <script>
+    if (new URLSearchParams(location.search).get("embed") === "1") {
+      document.documentElement.classList.add("embed");
+    }
+  </script>
+  <canvas id="stage"></canvas>
+  <div id="labels"></div>
+
+  <div class="hud topbar">
+    <div class="brand">
+      <div class="brand-kicker">YiAgent Genome · 演示基因组</div>
+      <h1>FDE DNA</h1>
+      <p>ASE 前线部署工程师 · G1–G5 等位嵌在螺旋链上 · 悬停查看基因详情</p>
+    </div>
+    <div class="controls">
+      <button class="chip" type="button" id="btn-spin">旋转 · 关</button>
+      <button class="chip" type="button" id="btn-particles">粒子 · 关</button>
+      <button class="chip" type="button" id="btn-fit">适配</button>
+    </div>
+  </div>
+
+  <aside class="hud panel" id="detail">
+    <div class="panel-type" id="d-type">NODE</div>
+    <h2 id="d-title">—</h2>
+    <div class="panel-meta" id="d-meta"></div>
+    <div class="panel-body" id="d-body"></div>
+  </aside>
+
+  <div class="hud legend">
+    <span><i style="background:#5ec8ff"></i><b>G1</b> 身份</span>
+    <span><i style="background:#3ecfbe"></i><b>G2</b> 人设</span>
+    <span><i style="background:#9fd356"></i><b>G3</b> 知识</span>
+    <span><i style="background:#f5a623"></i><b>G4</b> 落地</span>
+    <span><i style="background:#ff6b8a"></i><b>G5</b> 经验</span>
+  </div>
+  <div class="hud hint">拖拽平移 · 滚轮缩放 · 悬停查看</div>
+
+  <script>
+    const SLOTS = ["G1", "G2", "G3", "G4", "G5"];
+    const SLOT_META = {
+      G1: { label: "身份", note: "我是谁、对外怎么自报" },
+      G2: { label: "人设边界", note: "能定什么 / 绝不能定什么" },
+      G3: { label: "知识", note: "长期挂载的已认证材料" },
+      G4: { label: "落地策略", note: "怎么规划与执行现场交付" },
+      G5: { label: "经验策略", note: "失败/成功蒸馏的控制信号" },
+    };
+    const SLOT_COLORS = {
+      G1: "#5ec8ff",
+      G2: "#3ecfbe",
+      G3: "#9fd356",
+      G4: "#f5a623",
+      G5: "#ff6b8a",
+    };
+    const ALLELES = {
+      G1: [
+        { id: "g1.fde", label: "FDE 前线工程师", active: true, text: "role: ase_fde\n显示名: FDE / 前线部署工程师\n主责: 在客户现场把 ASE 单场景/一体机跑通，验证→关键动作人审→可复制扩展\n自报: 驻场工程搭档；不自称全栈万能、不冒充客户员工、不卖课硬广" },
+        { id: "g1.sa", label: "解决方案架构师", active: false, text: "备选：偏蓝图与选型；现场动手与排障弱于 FDE" },
+        { id: "g1.csm", label: "客户成功经理", active: false, text: "备选：关系与续约驱动；技术落地深度不足" },
+        { id: "g1.se", label: "售前工程师", active: false, text: "对照：演示与 PoC 导向，易停在「能看」不「能用」" },
+        { id: "g1.consultant", label: "驻场顾问人设", active: false, text: "对照：报告与会议优先，缺交付闭环" },
+        { id: "g1.ops", label: "纯运维值班", active: false, text: "对照：只守可用性，不推场景价值" },
+        { id: "g1.remote", label: "远程票务工程师", active: false, text: "对照：工单驱动、不到场，难拿场景真相" },
+      ],
+      G2: [
+        { id: "g2.partner", label: "现场搭档克制", active: true, text: "语气: 短句、可核对；先复述客户目标再动手\nmay: 画最小路径、当场验证、写人审清单\nmust_not: 夸大能力、绕过审批、替客户拍关键业务决策\nhuman_gates: 写库/对外发送/权限变更/合同口径" },
+        { id: "g2.coach", label: "教练式引导", active: false, text: "备选：多问少做，培养客户自运维；紧急排障时偏慢" },
+        { id: "g2.checklist", label: "清单先行", active: false, text: "备选：先对齐验收清单再动手；适合规范客户" },
+        { id: "g2.warroom", label: "作战室节奏", active: false, text: "备选：短周期同步+白板；适合多干系人" },
+        { id: "g2.hype", label: "销售腔", active: false, text: "对照：承诺路线图当现状，伤信任" },
+        { id: "g2.jargon", label: "黑话堆砌", active: false, text: "对照：内部隐喻直接对客，听不懂" },
+        { id: "g2.hero", label: "个人英雄主义", active: false, text: "对照：独吞键盘，不留可交接资产" },
+        { id: "g2.blame", label: "甩锅式沟通", active: false, text: "对照：先找人背锅，后找根因" },
+      ],
+      G3: [
+        { id: "g3.scene", label: "场景与一体机手册", active: true, text: "挂载: 目标场景边界、一体机/环境约束、验收口径、已知坑\n规则: 配置/版本/接口以可核文档为准；拿不准标「未核实」并要人确认\ndenylist: 编造客户内网拓扑、伪内部 SLA、把演示数据当生产真相" },
+        { id: "g3.runbook", label: "排障 Runbook", active: false, text: "备选：常见故障树与回滚步骤；偏运维" },
+        { id: "g3.api_contract", label: "接口契约表", active: false, text: "备选：请求/响应/错误码与人审点；偏集成" },
+        { id: "g3.security", label: "权限与安全基线", active: false, text: "备选：最小权限、密钥不落日志、变更双人" },
+        { id: "g3.ase_story", label: "ASE 对外口径", active: false, text: "备选：官网/案例可讲句；不对客泄露未发布路线" },
+        { id: "g3.metrics", label: "验收度量定义", active: false, text: "备选：时延/成功率/人审占比等可复核指标" },
+        { id: "g3.rumor", label: "道听途说配置", active: false, text: "对照：口头传说当真理，无出处" },
+        { id: "g3.dump", label: "全量文档倾倒", active: false, text: "对照：无主次，客户找不到下手点" },
+        { id: "g3.secret", label: "密钥明文惯犯", active: false, text: "对照：截图/聊天贴密钥，严重违规" },
+      ],
+      G4: [
+        { id: "g4.fde_loop", label: "验证→人审→扩展", active: true, text: "结构: ①锁单场景目标 ②最小可运行路径 ③当场验证 ④关键写操作列人审闸 ⑤可复制清单留给客户\n自检: 每步回答「这步失败怎么回滚」；扩展前必须有一次人审通过的关键动作" },
+        { id: "g4.spike", label: "尖刀 PoC", active: false, text: "备选：48h 内证明一件事；适合立项前" },
+        { id: "g4.shadow", label: "影子对照跑", active: false, text: "备选：新旧并行只读对照；适合怕切换的客户" },
+        { id: "g4.cutover", label: "切换演练", active: false, text: "备选：演练窗口+回滚演练；适合上线周" },
+        { id: "g4.handoff", label: "资产交接包", active: false, text: "备选：账号/脚本/验收表打包移交" },
+        { id: "g4.workshop", label: "现场工作坊", active: false, text: "备选：干系人对齐半天；决策多时有用" },
+        { id: "g4.bigbang", label: "一次全切", active: false, text: "对照：无灰度无回滚，风险爆炸" },
+        { id: "g4.ticket_only", label: "只提单不驻场", active: false, text: "对照：丢场景上下文，闭环极慢" },
+        { id: "g4.scope_creep", label: "范围漂移交付", active: false, text: "对照：样板未稳就加需求，永远不完" },
+      ],
+      G5: [
+        { id: "g5.human_gate", label: "关键动作人审", active: true, text: "DO: 写库/对外发送/权限变更前列清单等人确认；确认后留痕\nAVOID: 静默改生产、口头「应该没事」、用演示账号冒充生产结论" },
+        { id: "g5.verify", label: "当场验收三连", active: false, text: "备选：看日志 + 看指标 + 客户点头，缺一不算过" },
+        { id: "g5.rollback", label: "回滚肌肉记忆", active: false, text: "备选：改前先写回滚；演练过才动真格" },
+        { id: "g5.notes", label: "驻场笔记日清", active: false, text: "备选：当日决策/坑/待人审项不过夜" },
+        { id: "g5.teachback", label: "客户复述验收", active: false, text: "备选：请客户讲清「怎么开/怎么停/找谁」" },
+        { id: "g5.copy", label: "可复制检查", active: false, text: "备选：换人能否按清单重放；不能则未完成" },
+        { id: "g5.cowboy", label: "无备份直改", active: false, text: "对照：生产直接下手，出事无退路" },
+        { id: "g5.overpromise", label: "口头保证 SLA", active: false, text: "对照：未核资源就承诺时效" },
+        { id: "g5.hide", label: "藏风险不报", active: false, text: "对照：怕难看隐瞒阻塞，放大事故" },
+      ],
+    };
+
+    const GENOME = {
+      title: "ASE 前线部署工程师（FDE）",
+      id: "ase_fde",
+      note: "演示基因组：一体机/单场景验证 → 关键动作人审 → 可复制扩展；每槽 1 个当前表达，其余为备选/对照。",
+    };
+
+    /** 三列同形异内容；每列固定 4 行（表达1+对照3），完全展示 */
+    const SLOT_COLS = 3;
+    const ROWS_PER_CARD = 4; // 表达1 + 对照3
+    const CARD_W = 200;
+    const RACK_GAP = 8;
+    const RACK_W = SLOT_COLS * CARD_W + (SLOT_COLS - 1) * RACK_GAP;
+
+    /** 列0：表达1+对照3；列1/2：后续对照（每列最多4），不足空槽 */
+    function partitionAlleleColumns(slot) {
+      const list = ALLELES[slot] || [];
+      const active = list.filter((a) => a.active);
+      const rest = list.filter((a) => !a.active);
+      const col0 = [...active.slice(0, 1), ...rest.slice(0, 3)];
+      let rem = rest.slice(3);
+      const col1 = rem.slice(0, ROWS_PER_CARD);
+      rem = rem.slice(ROWS_PER_CARD);
+      const col2 = rem.slice(0, ROWS_PER_CARD);
+      return [col0, col1, col2];
+    }
+
+    // ---------- 工具 ----------
+    function hexRgb(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function rgba(hex, a) {
+      const [r, g, b] = hexRgb(hex);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const zoneOf = (t) => SLOTS[clamp(Math.floor(t * 5), 0, 4)];
+
+    // ---------- 画布与视图 ----------
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const labelLayer = document.getElementById("labels");
+
+    const view = { zoom: 1, panX: 0, panY: 0 };
+    const base = { w: 0, h: 0, cx: 0, cy: 0, R: 100, yTop: 0, yBot: 0, H: 0 };
+
+    const HELIX = { turns: 2.1, samples: 150, rungEvery: 6 };
+    let phase = 0;
+    let spinning = false;
+    let particlesOn = false;
+
+    const isEmbed = document.documentElement.classList.contains("embed");
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      base.w = window.innerWidth;
+      base.h = window.innerHeight;
+      canvas.width = base.w * dpr;
+      canvas.height = base.h * dpr;
+      canvas.style.width = base.w + "px";
+      canvas.style.height = base.h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      base.R = clamp(base.w * 0.09, 72, 130);
+      // 螺旋略偏左（再往右挪一点），右侧留给 G 标签 + 贴右基因槽
+      base.cx = base.R * 1.45 + 72;
+      // 竖直拉满：螺旋占满可用高度（顶栏留给 HUD，底留给图例）
+      base.yTop = base.h * (isEmbed ? 0.08 : 0.12);
+      base.yBot = base.h * (isEmbed ? 0.96 : 0.93);
+      base.cy = (base.yTop + base.yBot) / 2;
+      base.H = base.yBot - base.yTop;
+      layoutLabels();
+    }
+    window.addEventListener("resize", resize);
+
+    // t∈[0,1]，phaseOff：0=表达链，π=对照链；返回屏幕坐标 + 深度 z∈[-1,1]
+    function helixPoint(t, phaseOff) {
+      const ang = t * HELIX.turns * Math.PI * 2 + phase + phaseOff;
+      const wx = base.R * Math.cos(ang);
+      const wy = base.yTop + t * base.H;
+      return {
+        x: base.cx + view.panX + wx * view.zoom,
+        y: base.cy + view.panY + (wy - base.cy) * view.zoom,
+        z: Math.sin(ang),
+      };
+    }
+    function midY(i) {
+      const t = (i + 0.5) / 5;
+      return base.cy + view.panY + (base.yTop + t * base.H - base.cy) * view.zoom;
+    }
+
+    // ---------- 螺旋靠左 · G1–G5 · 贴右三列同形异内容基因槽 ----------
+    const zoneTags = [];
+    const alleleRacks = [];
+    function buildAlleleListCard(slot, color, alleles) {
+      const card = document.createElement("div");
+      card.className = "allele-card";
+      for (let i = 0; i < ROWS_PER_CARD; i++) {
+        const al = alleles[i];
+        const row = document.createElement("div");
+        if (!al) {
+          row.className = "allele-row slot-empty";
+          row.setAttribute("aria-label", `${slot} 空槽`);
+          card.appendChild(row);
+          continue;
+        }
+        row.className = "allele-row " + (al.active ? "active" : "weak");
+        row._allele = al;
+        row.innerHTML = al.active
+          ? `<span class="dot" style="color:${color}">●</span><span class="name">${al.label}</span><span class="tag">表达</span>`
+          : `<span class="dot" style="color:#5b6d7d">○</span><span class="name">${al.label}</span><span class="tag">对照</span>`;
+        row.addEventListener("mouseenter", () => setFocus({ kind: "allele", slot, allele: al }));
+        row.addEventListener("mouseleave", clearFocus);
+        row.addEventListener("click", (e) => {
+          e.stopPropagation();
+          pinFocus({ kind: "allele", slot, allele: al });
+        });
+        card.appendChild(row);
+      }
+      return card;
+    }
+    function buildLabels() {
+      labelLayer.innerHTML = "";
+      zoneTags.length = 0;
+      alleleRacks.length = 0;
+      SLOTS.forEach((slot) => {
+        const color = SLOT_COLORS[slot];
+        const tag = document.createElement("div");
+        tag.className = "zone-tag";
+        tag.style.color = color;
+        tag.style.borderColor = "transparent";
+        tag.innerHTML = `<i style="background:${color}"></i><b>${slot}</b>&nbsp;${SLOT_META[slot].label}`;
+        tag.addEventListener("mouseenter", () => setFocus({ kind: "zone", slot }));
+        tag.addEventListener("mouseleave", clearFocus);
+        tag.addEventListener("click", () => pinFocus({ kind: "zone", slot }));
+        labelLayer.appendChild(tag);
+        zoneTags.push(tag);
+
+        const rack = document.createElement("div");
+        rack.className = "allele-rack";
+        const cols = partitionAlleleColumns(slot);
+        for (let c = 0; c < SLOT_COLS; c++) {
+          rack.appendChild(buildAlleleListCard(slot, color, cols[c] || []));
+        }
+        labelLayer.appendChild(rack);
+        alleleRacks.push(rack);
+      });
+    }
+
+    function layoutLabels() {
+      const R = base.R * view.zoom;
+      const helixRight = base.cx + view.panX + R;
+      const rackRightPad = 14;
+      const rackLeft = Math.max(8, base.w - RACK_W - rackRightPad);
+      // G1–G5 放在螺旋与基因槽正中间
+      const midGap = (helixRight + rackLeft) / 2;
+
+      alleleRacks.forEach((rack, i) => {
+        rack.style.left = rackLeft + "px";
+        rack.style.top = midY(i) + "px";
+      });
+
+      zoneTags.forEach((tag, i) => {
+        const tagW = tag.offsetWidth || 120;
+        let tagLeft = midGap - tagW / 2;
+        // 不压螺旋、不压基因槽
+        tagLeft = Math.max(helixRight + 12, tagLeft);
+        tagLeft = Math.min(rackLeft - tagW - 12, tagLeft);
+        tag.style.left = Math.max(8, tagLeft) + "px";
+        tag.style.top = midY(i) + "px";
+      });
+    }
+
+    // ---------- 焦点 / 详情面板 ----------
+    const detail = document.getElementById("detail");
+    let focus = null;   // {kind:'zone'|'allele', slot, allele?}
+    let pinned = null;
+
+    function currentFocus() { return focus || pinned; }
+
+    function setFocus(f) {
+      focus = f;
+      render();
+    }
+    function clearFocus() {
+      focus = null;
+      render();
+    }
+    function pinFocus(f) {
+      pinned = pinned && pinned.kind === f.kind && pinned.slot === f.slot &&
+               pinned.allele === f.allele ? null : f;
+      render();
+    }
+
+    function render() {
+      const f = currentFocus();
+      zoneTags.forEach((tag, i) => {
+        const slot = SLOTS[i];
+        const lit = f && f.slot === slot;
+        tag.classList.toggle("dim", !!f && !lit);
+        tag.classList.toggle("lit", !!lit);
+        tag.style.borderColor = lit ? rgba(SLOT_COLORS[slot], 0.55) : "transparent";
+      });
+      alleleRacks.forEach((rack, i) => {
+        const slot = SLOTS[i];
+        const lit = f && f.slot === slot;
+        rack.classList.toggle("dim", !!f && !lit);
+        rack.querySelectorAll(".allele-row:not(.slot-empty)").forEach((row) => {
+          const al = row._allele;
+          const rowLit = f && f.kind === "allele" && f.slot === slot && f.allele === al;
+          row.classList.toggle("lit", !!rowLit);
+          row.style.borderColor = rowLit ? rgba(SLOT_COLORS[slot], 0.45) : "transparent";
+        });
+      });
+      if (!f) {
+        detail.classList.remove("show");
+        return;
+      }
+      if (f.kind === "zone") {
+        const slot = f.slot;
+        const list = ALLELES[slot];
+        const active = list.filter((a) => a.active);
+        const rest = list.filter((a) => !a.active);
+        document.getElementById("d-type").textContent = "分区 · " + list.length + " 个等位";
+        document.getElementById("d-title").textContent = `${slot}  ${SLOT_META[slot].label}`;
+        document.getElementById("d-meta").textContent = SLOT_META[slot].note + " · " + GENOME.title;
+        document.getElementById("d-body").textContent =
+          `当前表达（${active.length}）\n` +
+          active.map((a) => `● ${a.label}\n  ${a.text}`).join("\n\n") +
+          `\n\n备选 / 对照（${rest.length}）\n` +
+          rest.map((a) => `○ ${a.label} — ${a.text.split("\n")[0]}`).join("\n");
+      } else {
+        document.getElementById("d-type").textContent = f.allele.active ? "活跃等位" : "对照等位";
+        document.getElementById("d-title").textContent = f.allele.label;
+        document.getElementById("d-meta").textContent =
+          `${f.slot} ${SLOT_META[f.slot].label} · ${f.allele.active ? "当前表达" : "对照"}`;
+        document.getElementById("d-body").textContent = f.allele.text;
+      }
+      detail.classList.add("show");
+    }
+
+    // ---------- 螺旋上的基因珠（等位直接嵌链） ----------
+    function geneBeads() {
+      const beads = [];
+      SLOTS.forEach((slot, zi) => {
+        const list = ALLELES[slot];
+        const t0 = zi / 5;
+        const t1 = (zi + 1) / 5;
+        list.forEach((al, j) => {
+          const u = (j + 1) / (list.length + 1);
+          const t = t0 + u * (t1 - t0);
+          const strand = al.active ? 0 : 1;
+          beads.push({ allele: al, slot, t, strand });
+        });
+      });
+      return beads;
+    }
+    const GENE_BEADS = geneBeads();
+
+    // ---------- 粒子（沿链流动的小点，数量随基因增多） ----------
+    const particles = [];
+    for (let i = 0; i < 42; i++) {
+      particles.push({
+        t: Math.random(),
+        strand: i % 2,
+        speed: 0.018 + Math.random() * 0.04,
+        size: 1.3 + Math.random() * 1.5,
+      });
+    }
+
+    // ---------- 绘制 ----------
+    function draw(ts) {
+      ctx.clearRect(0, 0, base.w, base.h);
+      const f = currentFocus();
+      const R = base.R * view.zoom;
+
+      // 分区底色带
+      for (let i = 0; i < 5; i++) {
+        const slot = SLOTS[i];
+        const y0 = base.cy + view.panY + (base.yTop + (i / 5) * base.H - base.cy) * view.zoom;
+        const y1 = base.cy + view.panY + (base.yTop + ((i + 1) / 5) * base.H - base.cy) * view.zoom;
+        const lit = f && f.slot === slot;
+        const a = f ? (lit ? 0.09 : 0.015) : 0.045;
+        ctx.fillStyle = rgba(SLOT_COLORS[slot], a);
+        ctx.fillRect(base.cx + view.panX - R * 1.28, y0, R * 2.56, y1 - y0);
+      }
+
+      // 连线：螺旋 → G 标签 → 基因槽文字
+      ctx.lineWidth = 1;
+      zoneTags.forEach((tag, i) => {
+        const slot = SLOTS[i];
+        const lit = f && f.slot === slot;
+        const a = f ? (lit ? 0.7 : 0.08) : 0.3;
+        const y = midY(i);
+        const tagLeft = parseFloat(tag.style.left) || 0;
+        ctx.strokeStyle = rgba(SLOT_COLORS[slot], a);
+        ctx.beginPath();
+        ctx.moveTo(base.cx + view.panX + R * 1.05, y);
+        ctx.lineTo(tagLeft - 6, y);
+        ctx.stroke();
+      });
+      alleleRacks.forEach((rack, i) => {
+        const slot = SLOTS[i];
+        const lit = f && f.slot === slot;
+        const a = f ? (lit ? 0.55 : 0.06) : 0.22;
+        const y = midY(i);
+        const tag = zoneTags[i];
+        const tagRight = (parseFloat(tag.style.left) || 0) + tag.offsetWidth;
+        const rackLeft = parseFloat(rack.style.left) || 0;
+        ctx.strokeStyle = rgba(SLOT_COLORS[slot], a);
+        ctx.beginPath();
+        ctx.moveTo(tagRight + 4, y);
+        ctx.lineTo(rackLeft - 6, y);
+        ctx.stroke();
+      });
+
+      // 采样点
+      const N = HELIX.samples;
+      const ptsA = [];
+      const ptsB = [];
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        ptsA.push({ ...helixPoint(t, 0), t });
+        ptsB.push({ ...helixPoint(t, Math.PI), t });
+      }
+
+      const dim = (slot) => (f && f.slot !== slot ? 0.22 : 1);
+
+      // 碱基对横档（先画远景一半）
+      const drawRung = (i) => {
+        const a = ptsA[i];
+        const b = ptsB[i];
+        const slot = zoneOf(a.t);
+        const depth = (a.z + b.z) / 2; // -1 远 → 1 近
+        const zoneMidT = (SLOTS.indexOf(slot) + 0.5) / 5;
+        const isExpress = Math.abs(a.t - zoneMidT) < (1 / 5) / 8;
+        let alpha = (0.22 + 0.5 * (depth + 1) / 2) * dim(slot);
+        let width = (depth > 0 ? 2.2 : 1.2) * view.zoom;
+        if (isExpress) {
+          const pulse = 0.75 + 0.25 * Math.sin(ts * 2.6 + SLOTS.indexOf(slot));
+          alpha = Math.min(1, (alpha + 0.35) * pulse);
+          width += 0.9;
+          ctx.shadowColor = SLOT_COLORS[slot];
+          ctx.shadowBlur = 10 * pulse;
+        }
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = rgba(SLOT_COLORS[slot], alpha);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(mx, my); ctx.stroke();
+        ctx.strokeStyle = `rgba(127,147,165,${alpha * 0.8})`;
+        ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(b.x, b.y); ctx.stroke();
+        ctx.shadowBlur = 0;
+        // 碱基对中心点
+        ctx.fillStyle = rgba(SLOT_COLORS[slot], Math.min(1, alpha + 0.25));
+        ctx.beginPath(); ctx.arc(mx, my, 1.8 * view.zoom, 0, Math.PI * 2); ctx.fill();
+      };
+      for (let i = 0; i < N; i += HELIX.rungEvery) {
+        if ((ptsA[i].z + ptsB[i].z) / 2 <= 0) drawRung(i);
+      }
+      for (let i = 0; i < N; i += HELIX.rungEvery) {
+        if ((ptsA[i].z + ptsB[i].z) / 2 > 0) drawRung(i);
+      }
+
+      // 链珠（按深度排序，远的先画）
+      const beads = [];
+      for (let i = 0; i < N; i++) {
+        beads.push({ p: ptsA[i], strand: 0 });
+        beads.push({ p: ptsB[i], strand: 1 });
+      }
+      beads.sort((u, v) => u.p.z - v.p.z);
+      for (const { p, strand } of beads) {
+        const slot = zoneOf(p.t);
+        const near = (p.z + 1) / 2;
+        const r = (1.6 + 2.0 * near) * view.zoom;
+        const alpha = (0.3 + 0.7 * near) * dim(slot);
+        if (strand === 0) {
+          ctx.fillStyle = rgba(SLOT_COLORS[slot], alpha);
+          if (near > 0.82) {
+            ctx.shadowColor = SLOT_COLORS[slot];
+            ctx.shadowBlur = 7;
+          }
+        } else {
+          ctx.fillStyle = `rgba(127,147,165,${alpha * 0.85})`;
+        }
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // 基因珠：等位直接画在螺旋链上（比骨架珠更大，可悬停）
+      const geneDraw = GENE_BEADS.map((g) => {
+        const p = helixPoint(g.t, g.strand * Math.PI);
+        return { ...g, p };
+      }).sort((a, b) => a.p.z - b.p.z);
+
+      for (const g of geneDraw) {
+        const { p, allele, slot, strand } = g;
+        const near = (p.z + 1) / 2;
+        const lit =
+          f &&
+          ((f.kind === "allele" && f.allele === allele) ||
+            (f.kind === "zone" && f.slot === slot));
+        const alpha = (0.45 + 0.55 * near) * dim(slot) * (f && !lit ? 0.35 : 1);
+        const pulse = allele.active ? 0.85 + 0.15 * Math.sin(ts * 2.4 + g.t * 10) : 1;
+        const r = (allele.active ? 5.2 : 4.0) * view.zoom * pulse * (0.75 + 0.35 * near);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        if (strand === 0) {
+          ctx.fillStyle = rgba(SLOT_COLORS[slot], alpha);
+          ctx.shadowColor = SLOT_COLORS[slot];
+          ctx.shadowBlur = lit ? 16 : 8;
+        } else {
+          ctx.fillStyle = `rgba(148,163,184,${alpha * 0.9})`;
+          ctx.shadowBlur = lit ? 10 : 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = (lit ? 2 : 1) * view.zoom;
+        ctx.strokeStyle = lit ? "#edf3f7" : "rgba(237,243,247,0.35)";
+        ctx.stroke();
+
+        // 珠旁基因名：旋转时近侧/聚焦/表达等位持续显示
+        const showLabel =
+          allele.active ||
+          lit ||
+          (near > 0.12 && (!f || lit));
+        if (showLabel && view.zoom > 0.55) {
+          const label = allele.label;
+          const fontSize = Math.max(11, (allele.active ? 12.5 : 11.5) * view.zoom);
+          ctx.font = `${allele.active || lit ? 600 : 500} ${fontSize}px Instrument Sans, sans-serif`;
+          const la = (allele.active || lit ? 0.95 : 0.45 + 0.5 * near) * (f && !lit ? 0.35 : 1);
+          ctx.fillStyle = lit || allele.active
+            ? `rgba(237,243,247,${la})`
+            : `rgba(237,243,247,${0.4 + 0.35 * near})`;
+          // 螺旋在左：字画在珠右侧，避免出屏
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, p.x + r + 8, p.y);
+        }
+      }
+
+      // 粒子沿链流动
+      if (particlesOn) {
+        for (const pt of particles) {
+          const p = pt.strand === 0 ? helixPoint(pt.t, 0) : helixPoint(pt.t, Math.PI);
+          const slot = zoneOf(pt.t);
+          const near = (p.z + 1) / 2;
+          const alpha = (0.25 + 0.75 * near) * dim(slot);
+          const color = pt.strand === 0 ? SLOT_COLORS[slot] : "#9db2c2";
+          ctx.fillStyle = pt.strand === 0 ? rgba(color, alpha) : `rgba(157,178,194,${alpha * 0.8})`;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = pt.strand === 0 ? 8 : 3;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, pt.size * view.zoom * (0.7 + 0.5 * near), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
+    // ---------- 交互：缩放 / 平移 / 悬停 ----------
+    let dragging = false;
+    let dragMoved = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    canvas.addEventListener("mousedown", (e) => {
+      dragging = true;
+      dragMoved = false;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    });
+    window.addEventListener("mouseup", () => { dragging = false; });
+    window.addEventListener("mousemove", (e) => {
+      if (dragging) {
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        if (Math.abs(dx) + Math.abs(dy) > 3) dragMoved = true;
+        view.panX += dx;
+        view.panY += dy;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        layoutLabels();
+        return;
+      }
+      if (e.target !== canvas) return;
+      // 优先命中基因珠
+      let hit = null;
+      let best = 28;
+      for (const g of GENE_BEADS) {
+        const p = helixPoint(g.t, g.strand * Math.PI);
+        const d = Math.hypot(e.clientX - p.x, e.clientY - p.y);
+        const thresh = (g.allele.active ? 16 : 13) * view.zoom;
+        if (d < thresh && d < best) {
+          best = d;
+          hit = g;
+        }
+      }
+      if (hit) {
+        if (!focus || focus.kind !== "allele" || focus.allele !== hit.allele) {
+          setFocus({ kind: "allele", slot: hit.slot, allele: hit.allele });
+        }
+        canvas.style.cursor = "pointer";
+        return;
+      }
+      const t = ((e.clientY - view.panY - base.cy) / view.zoom + base.cy - base.yTop) / base.H;
+      const nearHelix = Math.abs(e.clientX - base.cx - view.panX) < base.R * view.zoom * 1.35;
+      if (nearHelix && t >= 0 && t <= 1) {
+        const slot = zoneOf(t);
+        if (!focus || focus.kind !== "zone" || focus.slot !== slot) {
+          setFocus({ kind: "zone", slot });
+        }
+        canvas.style.cursor = "pointer";
+      } else {
+        if (focus) clearFocus();
+        canvas.style.cursor = "default";
+      }
+    });
+    canvas.addEventListener("click", () => {
+      if (dragMoved) return;
+      if (focus) {
+        pinFocus(focus);
+      } else {
+        pinned = null;
+        render();
+      }
+    });
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      view.zoom = clamp(view.zoom * Math.exp(-e.deltaY * 0.001), 0.55, 2.6);
+      layoutLabels();
+    }, { passive: false });
+
+    function fit() {
+      view.zoom = 1;
+      view.panX = 0;
+      view.panY = 0;
+      layoutLabels();
+      kick();
+    }
+    document.getElementById("btn-fit").onclick = fit;
+    document.getElementById("btn-spin").onclick = function () {
+      spinning = !spinning;
+      this.classList.toggle("on", spinning);
+      this.textContent = spinning ? "旋转 · 开" : "旋转 · 关";
+      kick();
+    };
+    document.getElementById("btn-particles").onclick = function () {
+      particlesOn = !particlesOn;
+      this.classList.toggle("on", particlesOn);
+      this.textContent = particlesOn ? "粒子 · 开" : "粒子 · 关";
+      kick();
+    };
+
+    // ---------- 主循环：默认静止；仅旋转/粒子开或有交互时才跑帧 ----------
+    let last = performance.now();
+    let rafId = 0;
+    let needsPaint = true;
+    function kick() {
+      needsPaint = true;
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    }
+    function tick(now) {
+      rafId = 0;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const animating = spinning || particlesOn;
+      if (spinning) phase += dt * 0.55;
+      if (particlesOn) {
+        for (const pt of particles) {
+          pt.t += pt.speed * dt;
+          if (pt.t > 1) pt.t -= 1;
+        }
+      }
+      if (needsPaint || animating) {
+        needsPaint = false;
+        draw(now / 1000);
+      }
+      if (animating) rafId = requestAnimationFrame(tick);
+    }
+
+    // 交互时补一帧
+    const _layoutLabels = layoutLabels;
+    layoutLabels = function () {
+      _layoutLabels();
+      kick();
+    };
+    const _setFocus = setFocus;
+    setFocus = function (f) {
+      _setFocus(f);
+      kick();
+    };
+    const _clearFocus = clearFocus;
+    clearFocus = function () {
+      _clearFocus();
+      kick();
+    };
+    const _pinFocus = pinFocus;
+    pinFocus = function (f) {
+      _pinFocus(f);
+      kick();
+    };
+
+    buildLabels();
+    resize();
+    kick();
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "opc-ceo-cursor-bridge",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CEO 工作台 · Agent bridge（Compose 内 SDK/API · 挂载 /workbench）",
+  "scripts": {
+    "start": "./start.sh",
+    "dev": "node --watch server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.0"
+  }
+}

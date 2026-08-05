@@ -1,0 +1,289 @@
+{
+  "schema": "yiagent.console.evolve_demo_pack",
+  "version": 1,
+  "label": "题组冻结演示",
+  "source_run_id": "2a431c0f67be",
+  "demand": "一个擅长批判性思维分析与严谨写作的通用助手",
+  "model": "k3",
+  "params": {
+    "max_generations": 2,
+    "variants_per_gen": 6,
+    "eval_reps": 2,
+    "final_reps": 2,
+    "workers": 4,
+    "pass_mean": 70.0,
+    "elite_k": 2,
+    "stagnation_limit": 2,
+    "improve_threshold": 1.0,
+    "max_tokens_budget": null,
+    "with_baseline": true,
+    "use_cache": true,
+    "seeded": false,
+    "manifest_cases": 5,
+    "manifest_holdout": 1
+  },
+  "manifest": {
+    "id": "5c4f2c62c632",
+    "cases": 5,
+    "holdout": 1,
+    "case_ids": []
+  },
+  "manifest_story": {
+    "id": "0803c197a73c",
+    "demand": "我需要一个专门写 AI 技术与产品科普短文的 Agent，面向普通人，公众号可读，可联网查证。",
+    "suite": [
+      "科普短文"
+    ],
+    "evolve_cases": [
+      "pop_bound_001",
+      "pop_chain_002",
+      "pop_chain_001",
+      "pop_article_002",
+      "pop_article_001",
+      "pop_bound_002",
+      "pop_product_001",
+      "pop_verify_002"
+    ],
+    "holdout_cases": [
+      "pop_chain_003",
+      "pop_product_002",
+      "pop_article_003",
+      "pop_verify_001"
+    ],
+    "note": "产品线目标题组（AI科普 8+4）；演示曲线来自冒烟 run，题量不同"
+  },
+  "baseline_arm_a": {
+    "arm": "A",
+    "n": 10,
+    "mean": 73.72,
+    "sdv": 25.01,
+    "composite": 36.2
+  },
+  "champion_curve": [
+    {
+      "gen": 0,
+      "variant_id": "var.editorial_polish",
+      "mean": 79.25,
+      "sdv": 20.31,
+      "composite": 48.79
+    },
+    {
+      "gen": 1,
+      "variant_id": "var.editorial_polish",
+      "mean": 77.83,
+      "sdv": 19.67,
+      "composite": 48.32
+    }
+  ],
+  "gates": [
+    {
+      "gen": 0,
+      "verdict": "promote",
+      "reason": "first_generation",
+      "stagnant_count": 0,
+      "improvement": null
+    },
+    {
+      "gen": 1,
+      "verdict": "stagnant",
+      "reason": "improvement -0.47 < threshold 1.0",
+      "stagnant_count": 1,
+      "improvement": -0.47
+    }
+  ],
+  "stop_reason": "max_generations",
+  "champion": {
+    "gen": 0,
+    "variant_id": "var.editorial_polish",
+    "composite": 48.79,
+    "variant": {
+      "id": "var.editorial_polish",
+      "hash": "yg-a9797e7a",
+      "title": "评论版打磨型",
+      "slots": {
+        "G1": "g1.academic_editor",
+        "G2": "g2.plain_firm",
+        "G3": "g3.argument_rebuild",
+        "G4": "g4.analyze_then_rewrite",
+        "G5": "g5.opinion_editorial"
+      },
+      "fixed_slots": false
+    }
+  },
+  "champion_minus_baseline_mean": 5.53,
+  "holdout": {
+    "n": 2,
+    "mean": 100.0,
+    "sdv": 0.0,
+    "composite": 100.0
+  },
+  "variants": [
+    {
+      "id": "var.strict_logician",
+      "hash": "yg-9fc38aa9",
+      "title": "严谨逻辑学家型",
+      "slots": {
+        "G1": "g1.logician",
+        "G2": "g2.precise_neutral",
+        "G3": "g3.fallacy_taxonomy",
+        "G4": "g4.analyze_then_rewrite",
+        "G5": "g5.none"
+      },
+      "fixed_slots": false
+    },
+    {
+      "id": "var.charitable_rebuilder",
+      "hash": "yg-11a2a775",
+      "title": "善意重构型",
+      "slots": {
+        "G1": "g1.academic_editor",
+        "G2": "g2.charitable",
+        "G3": "g3.argument_rebuild",
+        "G4": "g4.keep_concern",
+        "G5": "g5.opinion_editorial"
+      },
+      "fixed_slots": false
+    },
+    {
+      "id": "var.quote_forensic",
+      "hash": "yg-1f1a47fc",
+      "title": "逐句取证型",
+      "slots": {
+        "G1": "g1.logician",
+        "G2": "g2.plain_firm",
+        "G3": "g3.fallacy_taxonomy",
+        "G4": "g4.quote_anchor",
+        "G5": "g5.classroom_rubric"
+      },
+      "fixed_slots": false
+    },
+    {
+      "id": "var.evidence_auditor",
+      "hash": "yg-2c2ecf5b",
+      "title": "证据审计型",
+      "slots": {
+        "G1": "g1.debate_coach",
+        "G2": "g2.precise_neutral",
+        "G3": "g3.evidence_methods",
+        "G4": "g4.quote_anchor",
+        "G5": "g5.peer_review"
+      },
+      "fixed_slots": false
+    },
+    {
+      "id": "var.editorial_polish",
+      "hash": "yg-a9797e7a",
+      "title": "评论版打磨型",
+      "slots": {
+        "G1": "g1.academic_editor",
+        "G2": "g2.plain_firm",
+        "G3": "g3.argument_rebuild",
+        "G4": "g4.analyze_then_rewrite",
+        "G5": "g5.opinion_editorial"
+      },
+      "fixed_slots": false
+    },
+    {
+      "id": "var.coach_selfcheck",
+      "hash": "yg-e96d42a3",
+      "title": "教练自查型",
+      "slots": {
+        "G1": "g1.debate_coach",
+        "G2": "g2.charitable",
+        "G3": "g3.fallacy_taxonomy",
+        "G4": "g4.self_check",
+        "G5": "g5.classroom_rubric"
+      },
+      "fixed_slots": false
+    }
+  ],
+  "allele_labels": {
+    "G1": [
+      {
+        "id": "g1.logician",
+        "label": "逻辑学者"
+      },
+      {
+        "id": "g1.academic_editor",
+        "label": "学术编辑"
+      },
+      {
+        "id": "g1.debate_coach",
+        "label": "辩论教练"
+      }
+    ],
+    "G2": [
+      {
+        "id": "g2.precise_neutral",
+        "label": "精确中立"
+      },
+      {
+        "id": "g2.charitable",
+        "label": "善意解读"
+      },
+      {
+        "id": "g2.plain_firm",
+        "label": "平实而坚定"
+      }
+    ],
+    "G3": [
+      {
+        "id": "g3.fallacy_taxonomy",
+        "label": "谬误分类库"
+      },
+      {
+        "id": "g3.evidence_methods",
+        "label": "证据方法论"
+      },
+      {
+        "id": "g3.argument_rebuild",
+        "label": "论证重构范式"
+      }
+    ],
+    "G4": [
+      {
+        "id": "g4.analyze_then_rewrite",
+        "label": "先析后改"
+      },
+      {
+        "id": "g4.quote_anchor",
+        "label": "引句锚定"
+      },
+      {
+        "id": "g4.keep_concern",
+        "label": "保留关切"
+      },
+      {
+        "id": "g4.self_check",
+        "label": "自查清单"
+      }
+    ],
+    "G5": [
+      {
+        "id": "g5.peer_review",
+        "label": "同行评审经验"
+      },
+      {
+        "id": "g5.classroom_rubric",
+        "label": "课堂讲评经验"
+      },
+      {
+        "id": "g5.opinion_editorial",
+        "label": "评论版经验"
+      },
+      {
+        "id": "g5.none",
+        "label": "无额外经验"
+      }
+    ]
+  },
+  "token_usage": {
+    "total_tokens": 461894,
+    "calls": 257,
+    "by_purpose": {
+      "generate": 6472,
+      "answer": 177459,
+      "judge": 277963
+    }
+  }
+}
