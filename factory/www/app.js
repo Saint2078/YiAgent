@@ -341,6 +341,15 @@ function settingsModalHtml(c, running) {
         </div>
         <p class="field-hint">${escapeHtml(c.championMarkHelp)}</p>
       </div>
+      <div class="run-field settings-demo-block" style="margin-top:1.25rem">
+        <label class="field-label">${escapeHtml(c.settingsDemoSection)}</label>
+        <p class="field-hint">${escapeHtml(c.settingsDemoHelp)}</p>
+        <div class="stage-actions" style="margin-top:0.5rem">
+          <button type="button" class="btn-ghost" id="btn-settings-demo" ${running ? "disabled" : ""}>${escapeHtml(
+            c.settingsDemoLoad
+          )}</button>
+        </div>
+      </div>
       <div class="stage-actions">
         <button type="button" class="btn-primary" id="btn-save-settings" ${running ? "disabled" : ""}>${escapeHtml(
           c.settingsSave
@@ -545,18 +554,21 @@ const i18n = {
     apiKeyHelpProvider: "用于 {provider}；切换 Provider 会换用各自已存的 Key。",
     settings: "设置",
     settingsTitle: "运行设置",
-    settingsHelp: "先选 Provider，再选模型并填写该厂商 Key。",
+    settingsHelp: "先选 Provider，再选模型并填写该厂商 Key。工作台默认空白可实跑；冻结演示在下方可选载入。",
     settingsClose: "关闭",
     settingsSave: "保存设置",
     settingsReady: "已配置",
     settingsNeedKey: "未配置 Key",
+    settingsDemoSection: "演示数据",
+    settingsDemoHelp: "可选：载入已固化的批判思维演示包（含 A/B 与终筛），不调用模型。不影响你当前的 Provider / Key。",
+    settingsDemoLoad: "载入冻结演示",
     championMark: "全自动最优标记",
     championMarkHelp: "全自动终筛后默认取哪块金牌写入最优基因。",
     workers: "并发线程",
     advanced: "高级选项",
     genCase: "生成题目与标准",
     demo: "载入冻结演示",
-    demoHint: "载入已固化的批判思维演示包（含 A/B 与终筛结果），不调用模型。要实跑请用「生成题目」或逐步点基线按钮。",
+    demoHint: "也可在「设置」里载入冻结演示。演示包含 A/B 与终筛结果，不调用模型；实跑请用生成题目或用例库。",
     autoRun: "全自动跑出最优基因",
     autoHint: "一键串起：载入/生成题 → A/B → 基因组 → 初筛 → 终筛；默认取均衡最优并写入 save/。",
     autoNeedCase: "用例库模式请先选中一道题",
@@ -705,18 +717,21 @@ const i18n = {
     apiKeyHelpProvider: "For {provider}. Switching provider uses that provider’s saved key.",
     settings: "Settings",
     settingsTitle: "Run settings",
-    settingsHelp: "Pick a provider first, then its model and API key.",
+    settingsHelp: "Pick a provider, model, and API key. The bench starts empty for live runs; frozen demo is optional below.",
     settingsClose: "Close",
     settingsSave: "Save settings",
     settingsReady: "Ready",
     settingsNeedKey: "Key missing",
+    settingsDemoSection: "Demo data",
+    settingsDemoHelp: "Optional: load the frozen critical-thinking pack (A/B + finals). No model calls. Does not change your provider/key.",
+    settingsDemoLoad: "Load frozen demo",
     championMark: "Auto champion mark",
     championMarkHelp: "Which finals medal to save as the best genome after auto runs.",
     workers: "Workers",
     advanced: "Advanced",
     genCase: "Generate task & rubric",
     demo: "Load frozen demo",
-    demoHint: "Load the frozen CT demo pack (A/B + finals). No model calls. For a live run, generate a case or click baseline yourself.",
+    demoHint: "You can also load the frozen demo from Settings. Pack includes A/B + finals; for live runs use generate case or the library.",
     autoRun: "Auto: best genome",
     autoHint: "Unattended: case → A/B → genomes → prefilter → finals; default balanced champion → save/.",
     autoNeedCase: "Pick a library case first",
@@ -1188,6 +1203,7 @@ async function onLoadLibraryCase() {
 async function onDemo() {
   const c = t();
   readFormIntoState();
+  state.settingsOpen = false;
   state.busy = true;
   state.error = null;
   render();
@@ -2539,6 +2555,7 @@ function wire(running, unlock) {
   document.getElementById("btn-load-case")?.addEventListener("click", onLoadLibraryCase);
   document.getElementById("btn-auto")?.addEventListener("click", onAutoRun);
   document.getElementById("btn-demo")?.addEventListener("click", onDemo);
+  document.getElementById("btn-settings-demo")?.addEventListener("click", onDemo);
   document.getElementById("btn-save-case")?.addEventListener("click", onSaveCase);
   document.getElementById("btn-baseline")?.addEventListener("click", onBaseline);
   document.getElementById("btn-skip-baseline")?.addEventListener("click", onSkipBaseline);

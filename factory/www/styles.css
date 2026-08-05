@@ -2032,6 +2032,11 @@ body.copy-edit-open #root {
   background: rgba(232, 192, 122, 0.08);
 }
 
+.settings-demo-block {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
 .settings-backdrop {
   position: fixed;
   inset: 0;
