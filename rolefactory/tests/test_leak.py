@@ -88,6 +88,27 @@ class LeakDetectionTests(unittest.TestCase):
         self.assertNotIn("可以上线", text)
 
 
+class IdempotenceTests(unittest.TestCase):
+    """normalize_checks 必须幂等 —— 打分前会再过一遍（judge.py），不能每过一次就改一次分。
+
+    这条是 holdout 复核的地基：新题在出题期已归一化，复核时再过一遍必须**同分**；
+    旧题则被就地纠正，让 `scorer_version` 名副其实。
+    """
+
+    def test_twice_equals_once(self):
+        once = normalize_checks([dict(NUM), _mi("共 365 天", "平年天数", "结论")])
+        twice = normalize_checks([dict(c) for c in once])
+        self.assertEqual(twice, once)
+
+    def test_score_stable_across_renormalize(self):
+        once = normalize_checks([dict(NUM), _mi("共 365 天", "平年天数", "结论")])
+        reply = "结论：平年天数是 365 天。"
+        self.assertEqual(
+            score_answer(reply, once)["total"],
+            score_answer(reply, normalize_checks([dict(c) for c in once]))["total"],
+        )
+
+
 class SoupFloorTests(unittest.TestCase):
     """清洗后「抄关键词」不该再拿到数值分——这是整件事的目的。"""
 

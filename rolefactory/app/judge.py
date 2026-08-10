@@ -173,7 +173,12 @@ async def eval_one(
         "reply": reply,
     }
     if mode == "objective":
-        res = objective.score_answer(reply, case.get("checks") or [])
+        # 打分前再过一遍 normalize_checks。新题在出题时已归一化，这里是**幂等**的；
+        # 意义在旧 run 的 holdout 复核：那批题是旧口径生成的（权重未归一、同义词里
+        # 泄着 numeric 答案），直接拿来打分就会写出「标称 v3、实际按旧尺子量」的结果，
+        # 而 scorer_version 会理直气壮地写 3（PERF.md §14）。
+        checks = objective.normalize_checks([dict(c) for c in (case.get("checks") or [])])
+        res = objective.score_answer(reply, checks)
         if res.get("total") is None:
             raise ValueError(f"客观打分失败：{res.get('note')}")
         row.update(
