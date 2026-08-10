@@ -818,6 +818,9 @@ def write_report(run: Run) -> None:
             [
                 "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
                 "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+                "must_not_include 自 2026-08-11 起区分「主张错误说法」与「引用它并否掉」"
+                "（同句、词前 40 字内有否定线索才免扣）；此前的 run 未享此修正，"
+                "其分数含约 2 分/条的误扣噪声，跨日期对比请先跑 tools/rescore.py 对齐口径。",
                 "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
                 "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。",
             ]

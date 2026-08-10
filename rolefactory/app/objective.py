@@ -150,12 +150,90 @@ def _hit_must_include(text: str, spec: dict[str, Any]) -> tuple[float, str]:
     return score, f"覆盖 {len(hit)}/{len(groups)}" + (f"，缺：{'、'.join(miss[:4])}" if miss else "")
 
 
+# 否定/反驳线索：禁词前面出现这些，说明答题者是在**引用错误说法并否掉它**，不是在主张它。
+# 只收明确的否定词；「上线前需要…」这类中性表述不算，否则真错答案也会被放过。
+_NEGATION_CUES = (
+    "不能",
+    "不可",
+    "不应",
+    "不得",
+    "不该",
+    "不宜",
+    "不足以",
+    "不构成",
+    "不成立",
+    "不代表",
+    "不等于",
+    "不建议",
+    "不要",
+    "不是",
+    "并非",
+    "并不",
+    "而非",
+    "无法",
+    "禁止",
+    "切勿",
+    "避免",
+    "错误",
+    "误判",
+    "误读",
+    "反例",
+    "驳",
+    "伪",
+)
+_SENT_SPLIT = re.compile(r"[。！？；\n]")
+_NEG_LOOKBACK = 40  # 同句内往前看多少字；跨句反驳不予认定（见下方说明）
+
+
+def _is_refuted(text: str, phrase: str) -> bool:
+    """禁词的**每一次**出现都在被否定的语境里 → 视为引用反驳，不扣分。
+
+    只要有一次是「裸主张」（同句前 40 字无否定线索）就当作真的说了错话。
+    跨句反驳（先一句下结论、后一句才引错误说法）**不予认定**：那需要理解指代，
+    程序判不可靠，宁可漏放也不误放 —— 客观打分的价值就在于口径可预期。
+    """
+    p = phrase.lower()
+    found = False
+    for sent in _SENT_SPLIT.split(text):
+        low = sent.lower()
+        start = 0
+        while (idx := low.find(p, start)) >= 0:
+            found = True
+            if not any(c in sent[max(0, idx - _NEG_LOOKBACK) : idx] for c in _NEGATION_CUES):
+                return False
+            start = idx + len(p)
+    return found
+
+
 def _hit_must_not_include(text: str, spec: dict[str, Any]) -> tuple[float, str]:
+    """禁止性断言。**区分「主张错误说法」与「引用它并否掉」** —— 二者形态几乎一样。
+
+    为什么必须区分：同一道题的 `must_include` 要求答题者显式指出陷阱，而指出陷阱
+    最自然的写法就是把错误说法引出来再否掉。纯子串匹配下，越把陷阱讲清楚越被扣分：
+
+        「不能继续全量，应立即暂停回滚」  命中禁词「继续全量」→ 旧口径 0 分
+        「不应判为 resolved」            命中禁词「判为 resolved」→ 旧口径 0 分
+
+    实测（`tools/audit_checks.py`）：402 条扣光里 **32% 属于这种误判**，
+    按权重折算约 2.0 分/条评测 —— 而进化要检出的分差只有 1–8 分，同一量级。
+    也就是说这偏差足以主导结论，且它随答题风格变化，等于往分数里灌噪声。
+    """
     groups = _groups_of(spec)
     low = text.lower()
-    bad = [label for label, syns in groups if any(s.lower() in low for s in syns)]
+    bad: list[str] = []
+    quoted: list[str] = []
+    for label, syns in groups:
+        present = [s for s in syns if s.lower() in low]
+        if not present:
+            continue
+        if all(_is_refuted(text, s) for s in present):
+            quoted.append(label)
+        else:
+            bad.append(label)
     if bad:
         return 0.0, f"出现禁止表述：{'、'.join(bad[:4])}"
+    if quoted:
+        return 1.0, f"提到但已否定（视为指出陷阱）：{'、'.join(quoted[:3])}"
     return 1.0, "无禁止表述"
 
 
