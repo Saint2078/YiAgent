@@ -276,6 +276,46 @@ class EntityReproducibleTests(unittest.TestCase):
         self.assertEqual(_fixed_stamp(old), "2026-08-11T03:00:00Z")
 
 
+class EntityCallableTests(unittest.TestCase):
+    """`yiagent --vector <载体>` 必须真能起会话。
+
+    US-004 宣称的是「由基因得到**可直接调用**的 Agent 实体」。上一层测试证明了
+    `AgentSession(vector=...)` 能起来，但用户手里只有一条命令行 ——
+    如果 CLI 那条路断了，宣称就是空的。这里走的是 CLI 自己的解析与构造函数。
+    """
+
+    def test_cli_vector_flag_builds_session_with_genes(self):
+        from yiagent.cli.main import (  # noqa: PLC0415
+            _build_parser,
+            _normalize_argv,
+            _session_from_args,
+        )
+
+        seats = REPO / "console" / "_workbench" / "AgentTeam" / "Develop"
+        vectors = sorted(seats.glob("*/vector.json")) if seats.is_dir() else []
+        if not vectors:
+            self.skipTest("本机没有落盘载体；跑 scripts/build_agent_entities.py 后生效")
+
+        vpath = vectors[0]
+        # 走用户真会敲的那一行（含 Hermes 式「省略子命令即 chat」的归一化）
+        argv = _normalize_argv(["--vector", str(vpath), "--api-key", "sk-test-xxxxxxxx"])
+        self.assertEqual(argv[0], "chat")
+        args = _build_parser().parse_args(argv)
+        with tempfile.TemporaryDirectory() as td:
+            args.cwd = Path(td)
+            sess = _session_from_args(args, for_chat=False)
+
+        pack = json.loads(vpath.read_text(encoding="utf-8"))
+        system = sess.messages[0]["content"]
+        for slot in ("G1", "G2"):
+            aid = pack["markers"]["slots"][slot]["allele_id"]
+            self.assertIn(aid, system, f"{vpath.parent.name} 的 {slot} 等位没进 system")
+        # 血统必须随会话走：会话里看不出「能不能宣称更强」，门禁就形同虚设
+        markers = (sess.genome_pack or {}).get("markers") or {}
+        self.assertTrue(markers.get("provenance"), "会话上的配置包丢了血统")
+        self.assertEqual(markers.get("gene_hash"), pack["markers"]["gene_hash"])
+
+
 class EntityBootsTests(unittest.TestCase):
     """六席载体必须真能启动成 Agent —— 不只是「存在一个 JSON」。
 
