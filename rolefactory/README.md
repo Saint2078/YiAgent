@@ -70,6 +70,9 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
   一段，却是「有没有泛化」的唯一判据。
   **但别指望靠它判出结论**：方差分解（[PERF.md](PERF.md) §10.1）显示 6 题时半宽下限 1.72
   已大于实测效应 1.41 —— 重复多少次都判不了，只能加题（最省配法 `reps=1 × 55 题`）。
+- `holdout_per_dim` 默认 **1**：每维度留几道给 holdout。**这是 holdout 题量的唯一开关** ——
+  调 `per_dim` 只会把题都加到 train，holdout 恒等于维度数（约 6 道，见 §10.2）。
+  想判定就 `{"per_dim": 10, "holdout_per_dim": 9, "holdout_reps": 1}`（train 6 / holdout 54）。
 
 ## 命令行工具
 

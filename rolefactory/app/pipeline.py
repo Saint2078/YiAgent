@@ -371,7 +371,7 @@ async def execute(run: Run, api_key: str) -> None:
                 bank_task.cancel()
             raise RuntimeError("题组为空")
         run.cases = cases
-        train, hold = roles.split_holdout(cases)
+        train, hold = roles.split_holdout(cases, per_dim=int(p.get("holdout_per_dim") or 1))
         run.train_ids = [c["id"] for c in train]
         run.holdout_ids = [c["id"] for c in hold]
         store.save_suite(run.role_id, cases, run.blueprint)
@@ -379,6 +379,12 @@ async def execute(run: Run, api_key: str) -> None:
         run.log(
             f"题组 {len(cases)} 道（{time.monotonic() - t_phase:.1f}s）｜train {len(train)} / holdout {len(hold)}"
         )
+        if len(hold) < 20:
+            # 判定力话说在前头：题量不够时事后再解释「为什么判不了」没有意义。
+            run.log(
+                f"⚠ holdout 仅 {len(hold)} 道：按 PERF.md §10.1 的方差量级，"
+                "低于约 20 道时大概率判不出实测效应（调 holdout_per_dim 加题）"
+            )
         run.persist()
 
         # 4) 基因库（多半已在出题期间跑掉大半）

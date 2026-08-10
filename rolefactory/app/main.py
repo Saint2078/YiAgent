@@ -151,8 +151,11 @@ async def start_run(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         "generations": int(payload.get("generations") or 3),
         "variants_per_gen": int(payload.get("variants_per_gen") or 6),
         "reps": int(payload.get("reps") or 1),
-        # holdout 单独提采样：2 个臂 × 5–6 题，多跑几次只多一个批次，换来能判定的泛化结论
+        # holdout 单独提采样：2 个臂 × 5–6 题，多跑几次只多一个批次
         "holdout_reps": int(payload.get("holdout_reps") or 3),
+        # 每维留几道给 holdout。默认 1 会把 holdout 题量锁死在维度数（约 6 道），
+        # 而那个题量判不出实测效应（PERF.md §10.1）；要判定就往上调，加题比加重复省。
+        "holdout_per_dim": int(payload.get("holdout_per_dim") or 1),
         "elite": int(payload.get("elite") or 2),
         "min_gain": float(payload.get("min_gain") or 0.5),
         "patience": int(payload.get("patience") or 1),

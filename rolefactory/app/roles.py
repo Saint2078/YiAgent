@@ -370,8 +370,19 @@ async def build_suite(
     return cases
 
 
-def split_holdout(cases: list[dict[str, Any]]) -> tuple[list[dict], list[dict]]:
-    """按维度分层切分：每维度最后一道进 holdout，其余进 train。单题维度只进 train。"""
+def split_holdout(
+    cases: list[dict[str, Any]], *, per_dim: int = 1
+) -> tuple[list[dict], list[dict]]:
+    """按维度分层切分：每维度最后 `per_dim` 道进 holdout，其余进 train。
+
+    `per_dim` 必须能调，否则 holdout 题量被**维度数**锁死（每维恰好 1 道）：
+    把出题量 `per_dim` 从 2 提到 10，train 从 6 涨到 54，而 holdout 还是 6 道。
+    而 holdout 题量正是「能不能判定泛化」的瓶颈（见 PERF.md §10.1：
+    6 道题时区间半宽下限 1.72 已大于实测效应 1.41，重复多少次都判不了）。
+
+    每维至少留 1 道给 train：train 空了进化就没有可优化的目标。
+    """
+    keep = max(1, int(per_dim))
     by_dim: dict[str, list[dict]] = {}
     for c in cases:
         by_dim.setdefault(c["dimension_key"], []).append(c)
@@ -379,9 +390,10 @@ def split_holdout(cases: list[dict[str, Any]]) -> tuple[list[dict], list[dict]]:
     hold: list[dict] = []
     for _, group in sorted(by_dim.items()):
         group = sorted(group, key=lambda c: c["id"])
-        if len(group) >= 2:
-            train.extend(group[:-1])
-            hold.append(group[-1])
+        take = min(keep, len(group) - 1)  # 单题维度 take=0 → 全进 train
+        if take > 0:
+            train.extend(group[:-take])
+            hold.extend(group[-take:])
         else:
             train.extend(group)
     return train, hold
