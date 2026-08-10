@@ -94,6 +94,13 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/variance_decomp.py <run_id> [--source auto\|run\|reholdout]` | 方差分解：拆开题内噪声与题间差异（离线；需 reps≥2，会自动去 `<run>-reholdout/` 找） |
 | `tools/decomp_table.py [--md]` | 六席处方表：每席该加重复 / 该加题 / 判不了，并给「不出新题只加重复」的配法（离线） |
 | `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
+| `tools/headroom.py [--min-gain 5]` | 基线可涨空间：多少题贴天花板量不出提升，以及 Δ 被截断偏了多少（离线） |
+| `tools/case_outliers.py <run_id>` | 留一法：哪道题在撑着结论（**诊断用，不是筛题用**；离线） |
+| `tools/show_case.py <run_id> <题号子串>` | 并排看一道题的断言 / 两臂回答 / 逐条得分（离线） |
+| `tools/variance_by_check.py <run_id>` | 每题分差的方差摊在哪类断言上（离线） |
+| `tools/dim_delta.py <run_id>` | 效应是否按维度异质，以及多少题分差恒为 0（离线） |
+| `tools/numeric_spread.py` | numeric 的 60% 权重摊在几条断言上（离线） |
+| `tools/recheck_plan.py` | 天花板题会不会把"只加重复就够"的处方算歪（离线） |
 | `tools/run_reholdout.py <run_id> [--reps 3] [--seat PM] [--wait-quota]` | 单独重跑某 run 的 holdout（**要额度**），跑完打方差分解；给 `--seat` 就顺带传导到下游四处 |
 | `tools/queue_decisive.py` | 等额度，按「最便宜的可判席位」顺序跑高重复复核（顺序由 `decomp_table` 算出） |
 | `tools/holdout_table.py [--md]` | 六席 holdout 判定汇总（两个 Δ 分列 + 区间归属，有复核就用复核；离线） |
