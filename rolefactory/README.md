@@ -67,7 +67,9 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
   受控对照里变体数 5→12 让同相位评测数翻倍而墙钟只多 10.6%（[PERF.md](PERF.md) §8）。
   代价是 token 随变体数线性涨。
 - `holdout_reps` 默认 **3**（与 `reps` 分开）。holdout 只有 2 个臂 × 5–6 题，是全流程最便宜的
-  一段，却是「有没有泛化」的唯一判据；多跑几次只多一个批次，换来能判定的结论。
+  一段，却是「有没有泛化」的唯一判据。
+  **但别指望靠它判出结论**：方差分解（[PERF.md](PERF.md) §10.1）显示 6 题时半宽下限 1.72
+  已大于实测效应 1.41 —— 重复多少次都判不了，只能加题（最省配法 `reps=1 × 55 题`）。
 
 ## 命令行工具
 
@@ -80,6 +82,8 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/build_devteam.py adopt <席位> <run_id>` | 采纳一次已完成的 run 为该席位基因组，不重跑 |
 | `tools/build_devteam.py registry` | 只按现有落盘基因组重写登记表 |
 | `tools/export_yiagent_bank.py <run_id>\|--seat X\|--all` | 实跑冠军 → `yiagent` 能装配的基因库（带血统与泛化判定） |
+| `tools/power_check.py [--md]` | 判定力核算：现有题量能判出多大效应、判出实测效应要多少题（离线） |
+| `tools/variance_decomp.py <run_id>` | 方差分解：拆开题内噪声与题间差异，回答「该加重复还是加题」（离线） |
 | `tools/quota_probe.py` | 一次请求探上游额度是否可用（用服务端密钥，退出码 0=可用） |
 | `tools/watch_quota_reholdout.py` | 额度封顶时等待，恢复即自动把待复核席位的 holdout 按 `reps=3` 补齐 |
 

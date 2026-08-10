@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 from power_check import Z95, _derive_sd, analyse  # noqa: E402
+from variance_decomp import decompose, half_width  # noqa: E402
 
 
 def row(**kw):
@@ -63,6 +64,60 @@ class MdeTests(unittest.TestCase):
     def test_single_case_cannot_be_analysed(self):
         out = analyse(row(n=1))
         self.assertIsNone(out["mde"])
+
+
+class VarianceDecompTests(unittest.TestCase):
+    """方差分解：把「该加重复还是加题」的处方守住。
+
+    这套数给出的结论（6 题无论重复多少次都判不了、最省配法是 reps=1 × 55 题）
+    写进了 PERF.md §10.1 与项目总表的下一刀，必须有测试。
+    """
+
+    def cells(self, *, within_spread: float, between_spread: float, reps: int = 3):
+        """造一批 (臂, 题) → 逐次分数：题间差异与题内噪声可分别调。"""
+        out: dict[tuple[str, str], list[float]] = {}
+        for ci in range(6):
+            base_level = 80.0 + ci * between_spread
+            for arm in ("baseline", "champ"):
+                bump = 2.0 if arm == "champ" else 0.0
+                # 用 ±spread 交替造出确定的题内方差，避免测试依赖随机数
+                out[(arm, f"case_{ci}")] = [
+                    base_level + bump + (within_spread if i % 2 == 0 else -within_spread)
+                    for i in range(reps)
+                ]
+        return out
+
+    def test_pure_within_noise_gives_zero_between(self):
+        # 所有题同一水平 → 题间差异应被判为 0（原始估计可能为负，按 0 处理）
+        d = decompose(self.cells(within_spread=5.0, between_spread=0.0), "champ", "baseline")
+        self.assertEqual(d["var_between"], 0.0)
+        self.assertGreater(d["var_within"], 0)
+
+    def test_pure_between_variation_gives_zero_within(self):
+        # 每次重复完全一致 → 题内噪声为 0，分差方差全归题间
+        d = decompose(self.cells(within_spread=0.0, between_spread=4.0), "champ", "baseline")
+        self.assertEqual(d["var_within"], 0.0)
+
+    def test_half_width_shrinks_with_reps_but_has_floor(self):
+        # 关键性质：reps→∞ 时半宽收敛到 1.96·σ_b/√n，压不到 0
+        var_b, var_w, n = 4.62, 11.83, 6  # PM 实测量级
+        wide = half_width(var_b, var_w, n, 1)
+        narrow = half_width(var_b, var_w, n, 30)
+        floor = Z95 * math.sqrt(var_b) / math.sqrt(n)
+        self.assertGreater(wide, narrow)
+        self.assertGreater(narrow, floor)
+        self.assertAlmostEqual(half_width(var_b, 0.0, n, 1), floor, places=6)
+
+    def test_more_cases_is_cheaper_than_more_reps(self):
+        # 达到同一半宽：题数线性压、重复只压 1/r，所以 reps 小题多总评测数更省。
+        # 这条是 PERF.md §10.1 的处方，别被「加重复更省事」的直觉改掉。
+        var_b, var_w, delta = 4.62, 11.83, 1.41
+        cost = {}
+        for r in (1, 3, 10):
+            n = math.ceil((Z95 / delta) ** 2 * (var_b + 2 * var_w / r))
+            cost[r] = 2 * n * r
+        self.assertLess(cost[1], cost[3])
+        self.assertLess(cost[3], cost[10])
 
 
 class DeriveSdTests(unittest.TestCase):
