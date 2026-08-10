@@ -57,3 +57,6 @@ factory/save/
 factory/node_modules/
 factory/app/node_modules/
 factory/app/dist/
+
+# 提交信息临时文件（PowerShell 传多行 -m 会炸，改用 -F 读文件）
+_commitmsg.txt
