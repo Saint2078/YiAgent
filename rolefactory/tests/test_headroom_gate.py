@@ -359,5 +359,48 @@ class ProbeBookkeepingTests(unittest.TestCase):
         )
 
 
+class DilutionVsDragTests(unittest.TestCase):
+    """`ceiling_mech.classify` 的判读必须**跟着数据走**。
+
+    这组测试的由来：那段判读的第一版写死在 print 里，于是在
+    高基线组 Δ=−6.27、其余组 Δ=+5.21 的实测数据上照样印出
+    「高基线组的 |Δ| 明显小于其余组」—— 6.27 明显大于 5.21，一句假话，而且不报错。
+    今晚修的就是这一类，所以自己造的这个必须也钉住。
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        import ceiling_mech
+
+        self.cm = ceiling_mech
+
+    def test_near_zero_high_group_is_dilution(self):
+        v = self.cm.classify(mh=0.2, ml=8.0, sh=1.0, sl=10.0)
+        self.assertEqual(v["mechanism"], "dilution")
+
+    def test_systematically_negative_high_group_is_drag(self):
+        # 实测口径：高基线组 −6.27、其余 +5.21 → 拖拽，不是稀释
+        v = self.cm.classify(mh=-6.27, ml=5.21, sh=7.15, sl=20.03)
+        self.assertEqual(v["mechanism"], "drag")
+        self.assertEqual(v["drag_toward"], "negative")
+
+    def test_low_variance_high_group_falsifies_power_claim(self):
+        """高基线组方差更小 → 扔掉会抬高 sd → 「扔了更准」被证伪。"""
+        v = self.cm.classify(mh=-6.27, ml=5.21, sh=7.15, sl=20.03)
+        self.assertEqual(v["sd_effect"], "drop_raises_sd")
+        self.assertEqual(v["power_claim"], "falsified")
+
+    def test_high_variance_high_group_does_not_falsify(self):
+        v = self.cm.classify(mh=-6.0, ml=5.0, sh=30.0, sl=10.0)
+        self.assertEqual(v["power_claim"], "not_falsified")
+
+    def test_verdict_is_not_constant(self):
+        """反向数据必须给出反向结论 —— 否则又是一句写死的话。"""
+        a = self.cm.classify(mh=-6.0, ml=5.0, sh=7.0, sl=20.0)
+        b = self.cm.classify(mh=6.0, ml=-5.0, sh=20.0, sl=7.0)
+        self.assertNotEqual(a["drag_toward"], b["drag_toward"])
+        self.assertNotEqual(a["sd_effect"], b["sd_effect"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -111,6 +111,8 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/variance_decomp.py <run_id> [--source auto\|run\|reholdout]` | 方差分解：拆开题内噪声与题间差异（离线；需 reps≥2，会自动去 `<run>-reholdout/` 找） |
 | `tools/decomp_table.py [--md]` | 六席处方表：每席该加重复 / 该加题 / 判不了，并给「不出新题只加重复」的配法（离线） |
 | `tools/gate_dryrun.py [--ceiling 90] [--holdout-per-dim N] [--train-per-dim N]` | 筛题门槛空跑：拿历史题组算「会扔哪些题、holdout 会不会反而变小、进化成本动不动」（离线） |
+| `tools/ceiling_sweep.py [--md]` | 扫门槛 100→70，看扔掉天花板题后区间是变窄还是变宽（离线；结论：**变宽**，见 §18.9） |
+| `tools/ceiling_mech.py [--ceiling 90]` | 分辨天花板题是「稀释到 0」还是「系统性拖拽」，并检查逐席方向是否一致（离线） |
 | `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
 | `tools/headroom.py [--min-gain 5]` | 基线可涨空间：多少题贴天花板量不出提升，以及 Δ 被截断偏了多少（离线） |
 | `tools/case_outliers.py <run_id>` | 留一法：哪道题在撑着结论（**诊断用，不是筛题用**；离线） |
