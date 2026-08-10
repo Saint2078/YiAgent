@@ -148,6 +148,13 @@ class Run:
     # 被筛题门槛扔掉的题（基线已近满分）。必须落盘：题组里少了题却查不到为什么，
     # 是下一个「算错了还不报错」。
     dropped_saturated: list[dict] = field(default_factory=list)
+    # 筛题探针的逐题基线分（**全部**题，不只是被扔的）。
+    # 只记被扔的那些等于只留了半张账：留下来的题为什么留，同样要能复查。
+    probe_scores: dict[str, float] = field(default_factory=dict)
+    # 探针另计数，不混进 eval_*：它不参与冠军对比，但**消耗 token** ——
+    # 若不计入分母，`tokens_per_eval` 会把探针的 token 摊到评测头上，凭空变大。
+    probe_done: int = 0
+    probe_failed: int = 0
     phase_seconds: dict[str, float] = field(default_factory=dict)
     session: Session | None = None
     task: asyncio.Task | None = None
@@ -189,6 +196,8 @@ class Run:
                 "eval_done": self.eval_done,
                 "eval_total": self.eval_total,
                 "eval_failed": self.eval_failed,
+                "probe_done": self.probe_done,
+                "probe_failed": self.probe_failed,
                 "phase_seconds": self.phase_seconds,
             },
             "llm": {**llm, "calls_per_second": throughput, "model": (s.model if s else SETTINGS.model),
@@ -268,14 +277,33 @@ async def probe_baseline(
         except Budget:
             raise
         except Exception as exc:  # noqa: BLE001
+            async with lock:
+                run.probe_failed += 1
             run.log(f"筛题探针失败 {c['id']}: {type(exc).__name__}: {exc}")
             return
         s = row.get("score")
-        if isinstance(s, (int, float)):
-            async with lock:
+        async with lock:
+            run.probe_done += 1
+            if isinstance(s, (int, float)):
                 out[c["id"]] = float(s)
 
     await asyncio.gather(*(asyncio.create_task(one(c)) for c in cases))
+    run.probe_scores = dict(out)
+    # 单独落一个文件，**绝不写进 results.jsonl**：
+    # 那个文件被 variance_decomp / case_outliers / check_contrib 按 (variant, case) 读，
+    # 探针的 variant 也是 baseline，混进去就会被当成基线臂的又一次重复 ——
+    # 于是"用于选题的那次测量"悄悄流进"用于算分的那批数据"，正是设计上要避开的选择偏差。
+    store.write_json(
+        store.run_dir(run.run_id) / "probe.json",
+        {
+            "purpose": "筛题探针：逐题基线分，用于判断题目还有多少可涨空间",
+            "rep": PROBE_REP,
+            "independent_of_scoring": True,
+            "note": "与评分采样相互独立（缓存键含 rep），不可与 results.jsonl 混用",
+            "scores": out,
+            "failed": run.probe_failed,
+        },
+    )
     return out
 
 
@@ -886,9 +914,16 @@ def write_report(run: Run) -> None:
         "performance": {
             "llm": llm,
             "evals": {"done": run.eval_done, "failed": run.eval_failed, "total": run.eval_total},
+            # 探针分开报，但**必须进单位成本的分母**：它消耗 token 却不参与冠军对比，
+            # 只算 eval_done 会把探针的 token 摊到评测头上，tokens_per_eval 凭空变大。
+            "probes": {"done": run.probe_done, "failed": run.probe_failed},
             "api_calls_per_second": round(llm.get("api_calls", 0) / wall, 2) if wall > 0 else None,
-            "evals_per_minute": round(run.eval_done / wall * 60, 1) if wall > 0 else None,
-            "tokens_per_eval": round(llm.get("total_tokens", 0) / run.eval_done) if run.eval_done else None,
+            "evals_per_minute": round((run.eval_done + run.probe_done) / wall * 60, 1) if wall > 0 else None,
+            "tokens_per_eval": (
+                round(llm.get("total_tokens", 0) / (run.eval_done + run.probe_done))
+                if (run.eval_done + run.probe_done)
+                else None
+            ),
             "phase_seconds": run.phase_seconds,
             "parallel": parallel_profile(run, llm, wall),
         },
@@ -902,6 +937,8 @@ def write_report(run: Run) -> None:
             # 扔了哪些题、为什么扔。少了题却查不到原因，就是下一个静默错误。
             "dropped_saturated": run.dropped_saturated,
             "headroom_ceiling": float(run.params.get("headroom_ceiling") or 0) or None,
+            # 逐题探针分（全部题）：留下来的题为什么留，也要能复查。明细另存 probe.json。
+            "probe_baseline": run.probe_scores or None,
         },
         "bank": run.bank,
         "scoring": scoring_summary(run),
@@ -954,6 +991,14 @@ def write_report(run: Run) -> None:
         report["caveats"].append(
             f"长尾对冲：补发 {llm['hedges']} 次、其中 {llm.get('hedge_wins') or 0} 次由补发先返回；"
             "被丢弃那份的服务端 token 未计入本地计量，实际用量略高于报告值。"
+        )
+    if run.probe_failed:
+        # 探针失败的题按「最难」处理而被保留 —— 方向是保守的（不误杀），
+        # 但意味着可能有天花板题因为探不到分而留在了 holdout 里。
+        report["caveats"].insert(
+            0,
+            f"⚠ 筛题探针有 {run.probe_failed} 道题失败：这些题按「最难」处理而被保留，"
+            "所以 holdout 里可能仍混有基线贴满分、量不出提升的题（方向保守，不会误杀好题）。",
         )
     if run.eval_failed:
         # 单点失败不拖垮整批（设计如此），但失败的那几条不会进 aggregate ——

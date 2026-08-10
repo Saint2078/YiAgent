@@ -246,6 +246,118 @@ class ProbeIndependenceTests(unittest.TestCase):
         for r in range(8):
             self.assertNotEqual(probe, f"baseline|case1|rep{r}")
 
+class ProbeBookkeepingTests(unittest.TestCase):
+    """探针的记账：真跑一遍 `probe_baseline`（judge 打桩，不发请求），看它到底写了什么。
+
+    这里刻意不用"读源码找字符串"那种测法 —— 第一版就是那么写的，结果被注释里
+    解释「绝不写进 results.jsonl」的那句话本身给判失败了。**测行为，别测措辞。**
+    """
+
+    def _run_probe(self, scores, fail_ids=()):
+        import asyncio
+        import shutil
+
+        from app import judge, pipeline, store
+
+        cases = [case(cid) for cid in scores]
+        rid = "test-probe-" + str(abs(hash(tuple(scores.items()))) % 10**8)
+        d = store.run_dir(rid)
+        shutil.rmtree(d, ignore_errors=True)
+
+        run = pipeline.Run(run_id=rid, role="测试", params={"scoring_mode": "objective"})
+
+        async def fake_eval_one(session, variant, c, *, rep, mode="judge", shadow_judge=False):
+            self.assertEqual(rep, pipeline.PROBE_REP, "探针没用独立的 rep")
+            if c["id"] in fail_ids:
+                raise RuntimeError("boom")
+            return {"variant": variant["id"], "case": c["id"], "score": scores[c["id"]]}
+
+        orig = judge.eval_one
+        judge.eval_one = fake_eval_one
+        try:
+            out = asyncio.run(pipeline.probe_baseline(run, None, cases))
+        finally:
+            judge.eval_one = orig
+        return run, out, d
+
+    def test_probe_writes_probe_json_and_not_results_jsonl(self):
+        """探针数据**绝不能**进 results.jsonl —— 这条比它看起来重要得多。
+
+        `variance_decomp` / `case_outliers` / `check_contrib` 都按 (variant, case) 读
+        `results.jsonl`，而探针的 variant 同样是 baseline。混进去就会被当成基线臂的
+        又一次重复，于是"用于选题的那次测量"悄悄流进"用于算分的那批数据"——
+        正是这套设计要避开的选择偏差，而且**不会报错**。
+        """
+        import json as _json
+        import shutil
+
+        run, out, d = self._run_probe({"a": 60.0, "b": 100.0})
+        try:
+            self.assertFalse(
+                (d / "results.jsonl").exists(),
+                "探针把数据写进了 results.jsonl，会污染方差/离群工具",
+            )
+            p = d / "probe.json"
+            self.assertTrue(p.is_file(), "探针分数没单独落盘，门槛的决策就不可复查")
+            saved = _json.loads(p.read_text(encoding="utf-8"))
+            self.assertEqual(saved["rep"], -1)
+            self.assertEqual(saved["scores"], {"a": 60.0, "b": 100.0})
+            self.assertEqual(out, {"a": 60.0, "b": 100.0})
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def test_all_probed_cases_are_recorded_not_only_dropped(self):
+        """留下来的题为什么留，也要能复查 —— 只记被扔的等于只留半张账。"""
+        import shutil
+
+        run, _, d = self._run_probe({"a": 60.0, "b": 100.0, "c": 70.0})
+        try:
+            self.assertEqual(set(run.probe_scores), {"a", "b", "c"})
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def test_probe_failure_counted_separately_from_eval_failed(self):
+        """探针失败不许计进 `eval_failed`：那会误触"复核失败就不写结果"的防线。"""
+        import shutil
+
+        run, out, d = self._run_probe({"a": 60.0, "b": 100.0}, fail_ids={"b"})
+        try:
+            self.assertEqual(run.probe_failed, 1)
+            self.assertEqual(run.probe_done, 1)
+            self.assertEqual(run.eval_failed, 0, "探针失败被记进了 eval_failed")
+            self.assertEqual(run.eval_done, 0)
+            # 探不到分的题不进 scores → drop_saturated 按「最难」处理 → 保留（不误杀）
+            self.assertNotIn("b", out)
+            keep, dropped = roles.drop_saturated(
+                [case("a"), case("b")], out, ceiling=90.0, reserve_per_dim=1
+            )
+            self.assertIn("b", [c["id"] for c in keep])
+            self.assertEqual(dropped, [])
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def test_probe_counts_land_in_cost_denominator(self):
+        """探针消耗 token 却不参与冠军对比：只算 eval_done 会让 tokens_per_eval 凭空变大。
+
+        直接按报告里的算法核对：96 次探针 + 180 次评测、共 276k token，
+        分母漏掉探针就会把 1000 报成 1533（高估 53%）。
+        """
+        toks, evals, probes = 276_000, 180, 96
+        wrong = round(toks / evals)
+        right = round(toks / (evals + probes))
+        self.assertEqual(wrong, 1533)
+        self.assertEqual(right, 1000)
+
+        import inspect
+
+        from app import pipeline
+
+        self.assertIn(
+            "run.eval_done + run.probe_done",
+            inspect.getsource(pipeline.write_report),
+            "单位成本的分母没算上探针，tokens_per_eval 会被高估",
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
