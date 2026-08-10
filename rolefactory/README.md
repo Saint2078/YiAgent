@@ -86,6 +86,7 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/build_devteam.py registry` | 只按现有落盘基因组重写登记表 |
 | `tools/export_yiagent_bank.py <run_id>\|--seat X\|--all` | 实跑冠军 → `yiagent` 能装配的基因库（带血统与泛化判定） |
 | `tools/audit_checks.py` | 审计 `must_not_include` 误判率（把「引用反驳」误判成「说错话」的比例） |
+| `tools/gameability.py [--target-numeric 0.6]` | 量化堆词假答案能拿多少分；反事实算权重配比对地板的影响 |
 | `tools/rescore.py [--write]` | 用当前打分口径离线重算历史实跑，看冠军/分差会不会变（不花额度） |
 | `tools/power_check.py [--md]` | 判定力核算：现有题量能判出多大效应、判出实测效应要多少题（离线） |
 | `tools/variance_decomp.py <run_id>` | 方差分解：拆开题内噪声与题间差异，回答「该加重复还是加题」（离线） |

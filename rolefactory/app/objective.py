@@ -408,6 +408,16 @@ def verify_case(case: dict[str, Any]) -> tuple[bool, list[str]]:
     wsum = sum(float(c.get("weight") or 0) for c in checks)
     if wsum <= 0:
         problems.append("权重和为 0")
+    else:
+        # numeric 权重占比是**尺子的分辨率**：堆词假答案在 numeric 上恒得 0 分，
+        # 其余断言它几乎全拿。实测（tools/gameability.py）旧配比下假答案能拿真实基线的
+        # 81%，八成分数不区分好坏。提示词已要求 55–80，这里兜一道硬下限，
+        # 低于 45 的题直接打回重生成（一题多花一次调用，比拿钝尺子量一整轮划算）。
+        share = sum(float(c.get("weight") or 0) for c in checks if str(c.get("type")) == "numeric")
+        if share / wsum < 0.45:
+            problems.append(
+                f"numeric 权重占比 {share / wsum:.0%} < 45%：尺子分辨率不足（堆词即可拿高分）"
+            )
 
     for c in checks:
         if str(c.get("type")) != "numeric":

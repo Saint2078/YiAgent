@@ -93,5 +93,54 @@ class ScoreAnswerIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(got["total"], 62.5, places=1)
 
 
+class NumericShareGateTests(unittest.TestCase):
+    """出题自校必须挡住「尺子分辨率不足」的题（numeric 权重占比过低）。
+
+    这条门禁的代价是被打回的题要重生成（多花一次调用），所以边界要钉死：
+    45% 以下打回，45% 及以上放行。
+    """
+
+    def _case(self, numeric_w: float, other_w: float) -> dict:
+        return {
+            "id": "t01",
+            "messages": [{"role": "user", "content": "数据：100、200、300，求增长率"}],
+            "checks": [
+                {
+                    "type": "numeric",
+                    "id": "n1",
+                    "weight": numeric_w,
+                    "target": 100.0,
+                    "computation": "(200-100)/100*100",
+                },
+                {
+                    "type": "must_include",
+                    "id": "m1",
+                    "weight": other_w,
+                    "groups": [{"label": "口径", "any": ["口径"]}],
+                },
+                SPEC,
+            ],
+        }
+
+    def test_low_numeric_share_rejected(self):
+        from app.objective import verify_case  # noqa: PLC0415
+
+        ok, problems = verify_case(self._case(30, 55))  # 30/100 = 30%
+        self.assertFalse(ok)
+        self.assertTrue(any("分辨率" in p for p in problems), problems)
+
+    def test_sufficient_numeric_share_passes(self):
+        from app.objective import verify_case  # noqa: PLC0415
+
+        ok, problems = verify_case(self._case(60, 25))  # 60/100 = 60%
+        self.assertTrue(ok, problems)
+
+    def test_boundary_45_percent_passes(self):
+        from app.objective import verify_case  # noqa: PLC0415
+
+        ok, problems = verify_case(self._case(45, 40))
+        self.assertTrue(ok, problems)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
