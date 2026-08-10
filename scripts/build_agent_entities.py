@@ -69,15 +69,26 @@ def ensure_bank(seat: str, refresh: bool) -> Path | None:
     path = BANK_DIR / f"{seat}.bank.json"
     if path.is_file() and not refresh:
         return path
+    # 显式给 --out，并核对文件真的被重写了。
+    # 起因是一次静默失效：导出器 --seat 曾把文件写进 run 目录，而这里只检查
+    # yiagent_banks/ 下**存在**同名文件 —— 于是 --refresh 跑完，旧基因库继续被装配，
+    # 判定还是复核前的「reps=1 判不了」，全程零报错（verify_chain 才把它抓出来）。
+    before = path.stat().st_mtime_ns if path.is_file() else 0
     r = subprocess.run(
-        [sys.executable, str(EXPORTER), "--seat", seat],
+        [sys.executable, str(EXPORTER), "--seat", seat, "--out", str(path)],
         cwd=str(REPO / "rolefactory"), capture_output=True, text=True,
         encoding="utf-8", errors="replace",
     )
     if r.returncode != 0:
         print(f"  {seat}: 导出基因库失败 — {(r.stderr or r.stdout or '').strip()[-300:]}")
         return None
-    return path if path.is_file() else None
+    if not path.is_file():
+        print(f"  {seat}: 导出器没有写出 {path}")
+        return None
+    if refresh and path.stat().st_mtime_ns == before:
+        print(f"  {seat}: 基因库未被重写（仍是旧文件），拒绝拿它装配：{path}")
+        return None
+    return path
 
 
 def build_one(seat: str, *, refresh: bool, check_only: bool) -> dict[str, Any] | None:

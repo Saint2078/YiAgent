@@ -1,6 +1,6 @@
 {
   "schema": "yiagent.rolefactory.genome_card/1",
-  "generated_at": "2026-08-10T19:11:16.049586+00:00",
+  "generated_at": "2026-08-10T21:37:54.322932+00:00",
   "run_id": "20260810-181341-bbaec2",
   "role": "评测工程师",
   "role_id": "role_b2267ae0",
@@ -105,25 +105,36 @@
       "worst": 0.0,
       "best": 17.5
     },
-    "holdout_champion_weighted": 92.04,
-    "holdout_baseline_weighted": 90.28,
-    "holdout_delta_weighted": 1.76,
+    "holdout_champion_weighted": 96.51,
+    "holdout_baseline_weighted": 94.87,
+    "holdout_delta_weighted": 1.64,
     "holdout_paired": {
       "cases": 6,
-      "mean_delta": 1.62,
-      "improved": 2,
+      "mean_delta": 1.71,
+      "improved": 4,
       "regressed": 2,
-      "worst": -10.0,
-      "best": 20.0
+      "worst": -2.22,
+      "best": 4.85,
+      "sd_delta": 3.09,
+      "mean_delta_ci95": [
+        -0.58,
+        3.83
+      ],
+      "significant": false
     },
     "generalization_gap": -1.04,
-    "holdout_source": "run",
-    "holdout_in_run": null
+    "holdout_source": "reholdout",
+    "holdout_in_run": {
+      "reps": 1,
+      "delta_weighted": 1.76
+    },
+    "scorer_version_train": 1,
+    "scorer_version_holdout": 3
   },
   "verdict": {
     "generalizes": null,
-    "label": "reps=1 判不了（待复核）",
-    "reason": "holdout Δ=+1.76，配对 2 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+    "label": "判不了（区间跨 0）",
+    "reason": "配对Δ均值=+1.71 95%CI[-0.58, +3.83]（n=6 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
   },
   "ablation": {
     "available": true,

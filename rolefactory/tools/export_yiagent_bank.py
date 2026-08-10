@@ -239,7 +239,13 @@ def main() -> int:
     if not run_id:
         ap.error("给 run_id，或用 --seat / --all")
     bank = build_bank(run_id)
-    out = args.out or (RUNS / run_id / "yiagent_bank.json")
+    # --seat 的默认落点与 --all 一致：席位的基因库属于**席位**，不属于某个 run 目录。
+    # 先前 --seat 落在 run 目录，而 scripts/build_agent_entities.py 读的是 yiagent_banks/，
+    # 于是「刷新」跑完了、旧文件还在原地被继续使用 —— 断了且不报错。
+    out = args.out or (
+        ROOT / "data" / "yiagent_banks" / f"{args.seat}.bank.json" if args.seat
+        else RUNS / run_id / "yiagent_bank.json"
+    )
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(bank, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     pr = bank["meta"]["provenance"]

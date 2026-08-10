@@ -160,6 +160,7 @@ def report_to_genome(seat: str, meta: dict, report: dict) -> dict[str, Any]:
     labels = cg.get("labels") or {}
     scores = report.get("scores") or {}
     champ = scores.get("champion_train") or {}
+    hold, hold_source = _effective_holdout(str(report.get("run_id") or ""), scores)
     slots: dict[str, Any] = {}
     for slot, (key, label) in SLOT_META.items():
         text, alabel = allele_text(bank, slot, choice.get(slot))
@@ -200,7 +201,10 @@ def report_to_genome(seat: str, meta: dict, report: dict) -> dict[str, Any]:
             "champion_weighted": champ.get("weighted"),
             "baseline_weighted": (scores.get("baseline_no_genes") or {}).get("weighted"),
             "delta_train_weighted": scores.get("delta_train_weighted"),
-            "holdout": scores.get("holdout"),
+            # 有 holdout 复核就用复核（采样更足、带区间）。必须与基因组卡同源，
+            # 否则复核跑完后登记表还写着旧 Δ 与「reps=1 判不了」，而卡片已换成区间判定。
+            "holdout": hold,
+            "holdout_source": hold_source,
             "built_at": _now(),
             "params": report.get("params"),
         },
@@ -208,7 +212,7 @@ def report_to_genome(seat: str, meta: dict, report: dict) -> dict[str, Any]:
     # 血统写进落盘文件本身：任何消费方（bridge / 控制台 / 人）不必翻 run 目录，
     # 就能看出这份基因来自哪次实跑、内容哈希是多少、有没有通过泛化鉴定。
     genome["source"]["genome_hash"] = _genome_hash(genome)
-    genome["source"]["verdict"] = _verdict(scores)
+    genome["source"]["verdict"] = _verdict({**scores, "holdout": hold})
     return genome
 
 
@@ -268,6 +272,17 @@ def _verdict(scores: dict) -> dict:
         return verdict(scores, scores.get("holdout") or {})
     except Exception:  # noqa: BLE001
         return {}
+
+
+def _effective_holdout(run_id: str, scores: dict) -> tuple[dict, str]:
+    """同样复用 genome_card：有复核用复核，没有用原报告。"""
+    try:
+        from genome_card import effective_holdout  # 同目录
+
+        hold, source, _ = effective_holdout(run_id, scores)
+        return hold, source
+    except Exception:  # noqa: BLE001 读不到复核不该让构建失败
+        return (scores.get("holdout") or {}), "run"
 
 
 def write_registry(rows: list[dict]) -> None:

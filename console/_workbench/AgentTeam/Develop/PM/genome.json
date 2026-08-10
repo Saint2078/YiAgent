@@ -141,7 +141,8 @@
       "generalization_gap": 1.83,
       "seconds": 90.2
     },
-    "built_at": "2026-08-10T19:02:20.544403+00:00",
+    "holdout_source": "run",
+    "built_at": "2026-08-10T21:34:57.790014+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",

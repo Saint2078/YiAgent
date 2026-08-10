@@ -63,78 +63,86 @@
         "role_b2267ae0_trap_identification_in_evaluation_design_medium_02"
       ],
       "champion": {
-        "n": 6,
+        "n": 18,
         "cases": 6,
-        "mean": 91.96,
-        "weighted": 92.04,
-        "std": 7.96,
-        "composite": 88.06,
+        "mean": 96.49,
+        "weighted": 96.51,
+        "std": 3.01,
+        "composite": 95.01,
         "by_dimension": {
-          "test_oracle_and_regression_awareness": 97.5,
-          "metric_correctness_and_statistical_rigor": 100.0,
-          "trap_identification_in_evaluation_design": 85.5,
+          "closed_form_answer_grading_and_format_compliance": 93.7,
           "gaming_and_overfitting_to_benchmark_resistance": 100.0,
-          "closed_form_answer_grading_and_format_compliance": 78.75,
-          "long_horizon_task_decomposition_and_threshold_calibration": 90.0
+          "long_horizon_task_decomposition_and_threshold_calibration": 93.33,
+          "metric_correctness_and_statistical_rigor": 100.0,
+          "test_oracle_and_regression_awareness": 98.33,
+          "trap_identification_in_evaluation_design": 93.55
         },
         "by_case": {
-          "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 97.5,
-          "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
-          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 85.5,
+          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 93.7,
           "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 100.0,
-          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 78.75,
-          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 90.0
+          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 93.33,
+          "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
+          "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 98.33,
+          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 93.55
         },
-        "trap_rate": 0.667,
-        "min_case": 78.75,
+        "trap_rate": 0.833,
+        "min_case": 93.33,
         "max_case": 100.0,
-        "spread": 21.25,
-        "check_pass_rate": 0.833,
+        "spread": 6.67,
+        "check_pass_rate": 0.896,
         "judge_shadow": null
       },
       "baseline": {
-        "n": 6,
+        "n": 18,
         "cases": 6,
-        "mean": 90.33,
-        "weighted": 90.28,
-        "std": 9.92,
-        "composite": 85.32,
+        "mean": 94.77,
+        "weighted": 94.87,
+        "std": 2.35,
+        "composite": 93.7,
         "by_dimension": {
-          "test_oracle_and_regression_awareness": 77.5,
-          "closed_form_answer_grading_and_format_compliance": 85.0,
-          "metric_correctness_and_statistical_rigor": 100.0,
-          "gaming_and_overfitting_to_benchmark_resistance": 100.0,
-          "trap_identification_in_evaluation_design": 79.5,
-          "long_horizon_task_decomposition_and_threshold_calibration": 100.0
+          "closed_form_answer_grading_and_format_compliance": 95.56,
+          "gaming_and_overfitting_to_benchmark_resistance": 95.15,
+          "long_horizon_task_decomposition_and_threshold_calibration": 95.55,
+          "metric_correctness_and_statistical_rigor": 98.15,
+          "test_oracle_and_regression_awareness": 93.89,
+          "trap_identification_in_evaluation_design": 90.33
         },
         "by_case": {
-          "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 77.5,
-          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 85.0,
-          "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
-          "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 100.0,
-          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 79.5,
-          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 100.0
+          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 95.56,
+          "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 95.15,
+          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 95.55,
+          "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 98.15,
+          "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 93.89,
+          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 90.33
         },
-        "trap_rate": 0.833,
-        "min_case": 77.5,
-        "max_case": 100.0,
-        "spread": 22.5,
-        "check_pass_rate": 0.863,
+        "trap_rate": 0.722,
+        "min_case": 90.33,
+        "max_case": 98.15,
+        "spread": 7.82,
+        "check_pass_rate": 0.847,
         "judge_shadow": null
       },
-      "delta_weighted": 1.76,
+      "delta_weighted": 1.64,
       "paired": {
         "cases": 6,
-        "mean_delta": 1.62,
-        "improved": 2,
+        "mean_delta": 1.71,
+        "improved": 4,
         "regressed": 2,
-        "worst": -10.0,
-        "best": 20.0
+        "worst": -2.22,
+        "best": 4.85,
+        "sd_delta": 3.09,
+        "mean_delta_ci95": [
+          -0.58,
+          3.83
+        ],
+        "significant": false
       },
       "generalization_gap": -1.04,
-      "seconds": 108.2
+      "seconds": 108.2,
+      "reps": 3
     },
-    "built_at": "2026-08-10T19:42:41.239534+00:00",
+    "holdout_source": "reholdout",
+    "built_at": "2026-08-10T21:34:58.390622+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -155,8 +163,8 @@
     "genome_hash": "fcd551a11a53be8f82cbec9b891e0b5b51e1e55a96302ccd0150baa0173a839a",
     "verdict": {
       "generalizes": null,
-      "label": "reps=1 判不了（待复核）",
-      "reason": "holdout Δ=+1.76，配对 2 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+      "label": "判不了（区间跨 0）",
+      "reason": "配对Δ均值=+1.71 95%CI[-0.58, +3.83]（n=6 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
     }
   }
 }

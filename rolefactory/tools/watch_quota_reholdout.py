@@ -191,10 +191,13 @@ def do_seat(seat: str, reps: int) -> str:
         f"  {seat}: 复核完成 Δ={body.get('delta_weighted')} "
         f"CI95={paired.get('mean_delta_ci95')} significant={paired.get('significant')}"
     )
-    # 复核结果要进落盘基因组与登记表，否则判定只活在 run 目录里
+    # 复核结果要传导到**每一处**引用它的产物，否则判定只活在 run 目录里。
+    # 少一步就断链：卡片忘了重生成，`verify_chain` 会报「genome_card 判定不一致」
+    # （实测过一次：五席全断，因为卡片还是复核前那份）。
+    _tool(str(HERE / "genome_card.py"), run_id)  # 卡片：holdout 换成复核那份
     if not _tool(str(HERE / "build_devteam.py"), "adopt", seat, run_id):
         return "fail"
-    _tool(str(HERE / "export_yiagent_bank.py"), "--seat", seat)
+    _tool(str(HERE / "export_yiagent_bank.py"), "--seat", seat)  # 席位基因库（→ yiagent_banks/）
     return "done"
 
 

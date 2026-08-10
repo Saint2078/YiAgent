@@ -62,74 +62,82 @@
         "devops_slo_error_budget_math_medium_02"
       ],
       "champion": {
-        "n": 5,
+        "n": 15,
         "cases": 5,
-        "mean": 77.17,
-        "weighted": 77.23,
-        "std": 24.91,
-        "composite": 64.78,
+        "mean": 69.72,
+        "weighted": 69.47,
+        "std": 25.0,
+        "composite": 56.97,
         "by_dimension": {
-          "incident_causal_discipline": 93.75,
-          "pipeline_iac_safety_review": 28.75,
-          "slo_error_budget_math": 95.0,
-          "deployment_blast_radius_quantification": 78.33,
-          "observability_alert_design_trap": 90.0
+          "deployment_blast_radius_quantification": 57.78,
+          "incident_causal_discipline": 91.67,
+          "observability_alert_design_trap": 86.66,
+          "pipeline_iac_safety_review": 25.83,
+          "slo_error_budget_math": 86.67
         },
         "by_case": {
-          "devops_incident_causal_discipline_medium_02": 93.75,
-          "devops_pipeline_iac_safety_review_medium_02": 28.75,
-          "devops_slo_error_budget_math_medium_02": 95.0,
-          "devops_deployment_blast_radius_quantification_medium_02": 78.33,
-          "devops_observability_alert_design_trap_medium_02": 90.0
+          "devops_deployment_blast_radius_quantification_medium_02": 57.78,
+          "devops_incident_causal_discipline_medium_02": 91.67,
+          "devops_observability_alert_design_trap_medium_02": 86.66,
+          "devops_pipeline_iac_safety_review_medium_02": 25.83,
+          "devops_slo_error_budget_math_medium_02": 86.67
         },
         "trap_rate": 0.2,
-        "min_case": 28.75,
-        "max_case": 95.0,
-        "spread": 66.25,
-        "check_pass_rate": 0.648,
+        "min_case": 25.83,
+        "max_case": 91.67,
+        "spread": 65.84,
+        "check_pass_rate": 0.619,
         "judge_shadow": null
       },
       "baseline": {
-        "n": 5,
+        "n": 15,
         "cases": 5,
-        "mean": 69.29,
-        "weighted": 70.42,
-        "std": 23.21,
-        "composite": 58.81,
+        "mean": 69.35,
+        "weighted": 69.35,
+        "std": 25.04,
+        "composite": 56.83,
         "by_dimension": {
-          "incident_causal_discipline": 72.5,
-          "deployment_blast_radius_quantification": 78.33,
-          "slo_error_budget_math": 95.0,
-          "observability_alert_design_trap": 75.0,
-          "pipeline_iac_safety_review": 25.62
+          "deployment_blast_radius_quantification": 75.24,
+          "incident_causal_discipline": 91.67,
+          "observability_alert_design_trap": 64.44,
+          "pipeline_iac_safety_review": 23.75,
+          "slo_error_budget_math": 91.67
         },
         "by_case": {
-          "devops_incident_causal_discipline_medium_02": 72.5,
-          "devops_deployment_blast_radius_quantification_medium_02": 78.33,
-          "devops_slo_error_budget_math_medium_02": 95.0,
-          "devops_observability_alert_design_trap_medium_02": 75.0,
-          "devops_pipeline_iac_safety_review_medium_02": 25.62
+          "devops_deployment_blast_radius_quantification_medium_02": 75.24,
+          "devops_incident_causal_discipline_medium_02": 91.67,
+          "devops_observability_alert_design_trap_medium_02": 64.44,
+          "devops_pipeline_iac_safety_review_medium_02": 23.75,
+          "devops_slo_error_budget_math_medium_02": 91.67
         },
-        "trap_rate": 0.2,
-        "min_case": 25.62,
-        "max_case": 95.0,
-        "spread": 69.38,
-        "check_pass_rate": 0.558,
+        "trap_rate": 0.133,
+        "min_case": 23.75,
+        "max_case": 91.67,
+        "spread": 67.92,
+        "check_pass_rate": 0.632,
         "judge_shadow": null
       },
-      "delta_weighted": 6.81,
+      "delta_weighted": 0.12,
       "paired": {
         "cases": 5,
-        "mean_delta": 7.88,
-        "improved": 3,
-        "regressed": 0,
-        "worst": 0.0,
-        "best": 21.25
+        "mean_delta": 0.37,
+        "improved": 2,
+        "regressed": 2,
+        "worst": -17.46,
+        "best": 22.22,
+        "sd_delta": 14.38,
+        "mean_delta_ci95": [
+          -10.06,
+          12.33
+        ],
+        "significant": false
       },
       "generalization_gap": 15.32,
-      "seconds": 106.5
+      "seconds": 106.5,
+      "reps": 3
     },
-    "built_at": "2026-08-10T19:42:41.094421+00:00",
+    "holdout_source": "reholdout",
+    "built_at": "2026-08-10T21:34:58.251867+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -150,8 +158,8 @@
     "genome_hash": "623dfa11cb6e5accc6f5b13e06831eabb81b7ce6b3002b990ea6e24ab23f35f6",
     "verdict": {
       "generalizes": null,
-      "label": "reps=1 判不了（待复核）",
-      "reason": "holdout Δ=+6.81，配对 3 升 / 0 降（n=5 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+      "label": "判不了（区间跨 0）",
+      "reason": "配对Δ均值=+0.37 95%CI[-10.06, +12.33]（n=5 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
     }
   }
 }

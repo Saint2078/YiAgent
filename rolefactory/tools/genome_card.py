@@ -204,6 +204,22 @@ def _read_reholdout(run_id: str) -> dict[str, Any] | None:
         return None
 
 
+def effective_holdout(run_id: str, scores: dict[str, Any]) -> tuple[dict[str, Any], str, dict | None]:
+    """该 run 当前**该用哪份 holdout**：有复核就用复核，否则用原报告。
+
+    单独抽出来是因为消费方不止卡片：`build_devteam.report_to_genome`（落盘基因组 +
+    登记表）也要用同一口径。先前它只读原报告，于是复核跑完后登记表还写着旧 Δ 与
+    「reps=1 判不了」，而卡片已经换成区间判定 —— 同一件事两个说法，`verify_chain` 会报错。
+    """
+    hold = scores.get("holdout") or {}
+    recheck = _read_reholdout(run_id)
+    if recheck and recheck.get("delta_weighted") is not None:
+        # 复核采样更足：泛化判定与 holdout 分数都以它为准，原报告的数留在 holdout_in_run
+        keys = ("reps", "champion", "baseline", "delta_weighted", "paired")
+        return {**hold, **{k: recheck[k] for k in keys if k in recheck}}, "reholdout", recheck
+    return hold, "run", None
+
+
 def build_card(run_id: str) -> dict[str, Any]:
     report = _read_report(run_id)
     role_id = str(report.get("role_id") or "")
@@ -212,13 +228,7 @@ def build_card(run_id: str) -> dict[str, Any]:
     champ = scores.get("champion_train") or {}
     base = scores.get("baseline_no_genes") or {}
     weak = scores.get("all_weak_genes") or {}
-    hold = scores.get("holdout") or {}
-    recheck = _read_reholdout(run_id)
-    hold_source = "run"
-    if recheck and recheck.get("delta_weighted") is not None:
-        # 复核采样更足：泛化判定与 holdout 分数都以它为准，原报告的数留在 holdout_in_run
-        hold = {**hold, **{k: recheck[k] for k in ("reps", "champion", "baseline", "delta_weighted", "paired")}}
-        hold_source = "reholdout"
+    hold, hold_source, recheck = effective_holdout(run_id, scores)
     perf = report.get("performance") or {}
     params = report.get("params") or {}
     missing = [s for s in SLOTS if not slots[s]["text"]]

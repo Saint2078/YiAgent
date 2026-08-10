@@ -152,22 +152,28 @@
       "baseline_weighted": 71.77,
       "delta_train_weighted": 17.9,
       "holdout": {
-        "source": "run",
+        "source": "reholdout",
         "reps": 1,
-        "delta_weighted": -2.5,
+        "delta_weighted": -3.16,
         "paired": {
           "cases": 5,
-          "mean_delta": -2.5,
-          "improved": 0,
-          "regressed": 2,
-          "worst": -10.0,
-          "best": 0.0
+          "mean_delta": -3.42,
+          "improved": 1,
+          "regressed": 3,
+          "worst": -18.89,
+          "best": 10.91,
+          "sd_delta": 10.73,
+          "mean_delta_ci95": [
+            -12.4,
+            4.72
+          ],
+          "significant": false
         }
       },
       "verdict": {
         "generalizes": null,
-        "label": "reps=1 判不了（待复核）",
-        "reason": "holdout Δ=-2.5，配对 0 升 / 2 降（n=5 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+        "label": "判不了（区间跨 0）",
+        "reason": "配对Δ均值=-3.42 95%CI[-12.4, +4.72]（n=5 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
       },
       "claim": "不得称更强：holdout 未能判定（区间跨 0 或采样不足）。可称『由实跑冠军基因装配』，不可称『已验证更强』",
       "report": "rolefactory/data/runs/20260809-194427-8cfdb4/report.json",

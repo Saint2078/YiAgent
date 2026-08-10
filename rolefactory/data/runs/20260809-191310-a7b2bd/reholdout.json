@@ -1,0 +1,134 @@
+{
+ "schema": "yiagent.rolefactory.reholdout/1",
+ "run_id": "20260809-191310-a7b2bd",
+ "role": "产品经理",
+ "checked_at": "2026-08-10T21:21:07+0000",
+ "cases": [
+  "role_775f14fc_experiment_stats_trap_medium_02",
+  "role_775f14fc_funnel_diagnosis_rootcause_medium_02",
+  "role_775f14fc_metric_definition_guardrails_medium_02",
+  "role_775f14fc_prioritization_expected_value_medium_02",
+  "role_775f14fc_requirement_acceptance_spec_medium_02"
+ ],
+ "reps": 3,
+ "scorer_version": 3,
+ "previous": {
+  "reps": 1,
+  "delta_weighted": -11.43,
+  "scorer_version": null
+ },
+ "champion": {
+  "n": 15,
+  "cases": 5,
+  "mean": 80.43,
+  "weighted": 80.24,
+  "std": 9.27,
+  "composite": 75.6,
+  "by_dimension": {
+   "experiment_stats_trap": 80.0,
+   "funnel_diagnosis_rootcause": 62.97,
+   "metric_definition_guardrails": 85.46,
+   "prioritization_expected_value": 84.0,
+   "requirement_acceptance_spec": 89.74
+  },
+  "by_case": {
+   "role_775f14fc_experiment_stats_trap_medium_02": 80.0,
+   "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 62.97,
+   "role_775f14fc_metric_definition_guardrails_medium_02": 85.46,
+   "role_775f14fc_prioritization_expected_value_medium_02": 84.0,
+   "role_775f14fc_requirement_acceptance_spec_medium_02": 89.74
+  },
+  "trap_rate": 0.6,
+  "min_case": 62.97,
+  "max_case": 89.74,
+  "spread": 26.78,
+  "check_pass_rate": 0.722,
+  "judge_shadow": null
+ },
+ "baseline": {
+  "n": 15,
+  "cases": 5,
+  "mean": 74.36,
+  "weighted": 75.51,
+  "std": 26.47,
+  "composite": 62.28,
+  "by_dimension": {
+   "experiment_stats_trap": 80.0,
+   "funnel_diagnosis_rootcause": 88.89,
+   "metric_definition_guardrails": 96.36,
+   "prioritization_expected_value": 84.0,
+   "requirement_acceptance_spec": 22.57
+  },
+  "by_case": {
+   "role_775f14fc_experiment_stats_trap_medium_02": 80.0,
+   "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 88.89,
+   "role_775f14fc_metric_definition_guardrails_medium_02": 96.36,
+   "role_775f14fc_prioritization_expected_value_medium_02": 84.0,
+   "role_775f14fc_requirement_acceptance_spec_medium_02": 22.57
+  },
+  "trap_rate": 0.6,
+  "min_case": 22.57,
+  "max_case": 96.36,
+  "spread": 73.8,
+  "check_pass_rate": 0.773,
+  "judge_shadow": null
+ },
+ "delta_weighted": 4.73,
+ "paired": {
+  "cases": 5,
+  "mean_delta": 6.07,
+  "improved": 1,
+  "regressed": 2,
+  "worst": -25.92,
+  "best": 67.17,
+  "sd_delta": 35.77,
+  "mean_delta_ci95": [
+   -15.55,
+   38.12
+  ],
+  "significant": false
+ },
+ "evals": {
+  "done": 30,
+  "failed": 0,
+  "total": 30
+ },
+ "seconds": 271.7,
+ "tokens": 117355,
+ "logs": [
+  "[21:16:36] 评测进度 5/30｜tokens=21827",
+  "[21:16:36] 评测进度 10/30｜tokens=41499",
+  "[21:15:50] 评测进度 15/30｜tokens=52977",
+  "[21:17:49] 评测进度 20/30｜tokens=68213",
+  "[21:18:18] 评测进度 25/30｜tokens=88482",
+  "[21:21:07] 评测进度 30/30｜tokens=117355"
+ ],
+ "llm": {
+  "calls": 31,
+  "api_calls": 21,
+  "cache_hits": 10,
+  "cache_hit_rate": 0.3226,
+  "retries": 1,
+  "errors": 0,
+  "prompt_tokens": 23697,
+  "completion_tokens": 93658,
+  "total_tokens": 117355,
+  "api_seconds_sum": 1580.9,
+  "queue_seconds_sum": 165.5,
+  "inflight_peak": 16,
+  "hedges": 0,
+  "hedge_wins": 0,
+  "latency_p50": 72.82,
+  "latency_p90": 116.24,
+  "latency_p99": 161.92,
+  "latency_max": 161.92,
+  "by_purpose": {
+   "answer": {
+    "calls": 31,
+    "cache_hits": 10,
+    "tokens": 117355,
+    "seconds": 1580.9
+   }
+  }
+ }
+}

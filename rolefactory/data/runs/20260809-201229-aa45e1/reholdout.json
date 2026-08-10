@@ -1,0 +1,141 @@
+{
+ "schema": "yiagent.rolefactory.reholdout/1",
+ "run_id": "20260809-201229-aa45e1",
+ "role": "软件开发工程师",
+ "checked_at": "2026-08-10T21:25:40+0000",
+ "cases": [
+  "role_cbf11840_boundary_numeric_traps_medium_02",
+  "role_cbf11840_code_defect_localization_medium_02",
+  "role_cbf11840_complexity_capacity_estimation_medium_02",
+  "role_cbf11840_counterintuitive_concurrency_semantics_medium_02",
+  "role_cbf11840_data_statistical_reasoning_medium_02",
+  "role_cbf11840_test_reasoning_oracle_medium_02"
+ ],
+ "reps": 3,
+ "scorer_version": 3,
+ "previous": {
+  "reps": 1,
+  "delta_weighted": -3.12,
+  "scorer_version": null
+ },
+ "champion": {
+  "n": 18,
+  "cases": 6,
+  "mean": 93.99,
+  "weighted": 94.38,
+  "std": 5.35,
+  "composite": 91.7,
+  "by_dimension": {
+   "boundary_numeric_traps": 89.09,
+   "code_defect_localization": 100.0,
+   "complexity_capacity_estimation": 95.96,
+   "counterintuitive_concurrency_semantics": 93.33,
+   "data_statistical_reasoning": 100.0,
+   "test_reasoning_oracle": 85.56
+  },
+  "by_case": {
+   "role_cbf11840_boundary_numeric_traps_medium_02": 89.09,
+   "role_cbf11840_code_defect_localization_medium_02": 100.0,
+   "role_cbf11840_complexity_capacity_estimation_medium_02": 95.96,
+   "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 93.33,
+   "role_cbf11840_data_statistical_reasoning_medium_02": 100.0,
+   "role_cbf11840_test_reasoning_oracle_medium_02": 85.56
+  },
+  "trap_rate": 0.722,
+  "min_case": 85.56,
+  "max_case": 100.0,
+  "spread": 14.44,
+  "check_pass_rate": 0.887,
+  "judge_shadow": null
+ },
+ "baseline": {
+  "n": 18,
+  "cases": 6,
+  "mean": 94.86,
+  "weighted": 95.34,
+  "std": 3.93,
+  "composite": 93.38,
+  "by_dimension": {
+   "boundary_numeric_traps": 92.73,
+   "code_defect_localization": 100.0,
+   "complexity_capacity_estimation": 95.96,
+   "counterintuitive_concurrency_semantics": 93.33,
+   "data_statistical_reasoning": 98.79,
+   "test_reasoning_oracle": 88.34
+  },
+  "by_case": {
+   "role_cbf11840_boundary_numeric_traps_medium_02": 92.73,
+   "role_cbf11840_code_defect_localization_medium_02": 100.0,
+   "role_cbf11840_complexity_capacity_estimation_medium_02": 95.96,
+   "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 93.33,
+   "role_cbf11840_data_statistical_reasoning_medium_02": 98.79,
+   "role_cbf11840_test_reasoning_oracle_medium_02": 88.34
+  },
+  "trap_rate": 0.722,
+  "min_case": 88.34,
+  "max_case": 100.0,
+  "spread": 11.66,
+  "check_pass_rate": 0.885,
+  "judge_shadow": null
+ },
+ "delta_weighted": -0.96,
+ "paired": {
+  "cases": 6,
+  "mean_delta": -0.87,
+  "improved": 1,
+  "regressed": 2,
+  "worst": -3.64,
+  "best": 1.21,
+  "sd_delta": 1.89,
+  "mean_delta_ci95": [
+   -2.28,
+   0.4
+  ],
+  "significant": false
+ },
+ "evals": {
+  "done": 36,
+  "failed": 0,
+  "total": 36
+ },
+ "seconds": 99.1,
+ "tokens": 79136,
+ "logs": [
+  "[21:22:27] 评测进度 5/36｜tokens=12883",
+  "[21:22:27] 评测进度 10/36｜tokens=24152",
+  "[21:22:54] 评测进度 15/36｜tokens=30658",
+  "[21:24:41] 评测进度 20/36｜tokens=40665",
+  "[21:23:16] 评测进度 25/36｜tokens=50924",
+  "[21:23:26] 评测进度 30/36｜tokens=61214",
+  "[21:23:53] 评测进度 35/36｜tokens=74730",
+  "[21:25:40] 评测进度 36/36｜tokens=79136"
+ ],
+ "llm": {
+  "calls": 36,
+  "api_calls": 24,
+  "cache_hits": 12,
+  "cache_hit_rate": 0.3333,
+  "retries": 0,
+  "errors": 0,
+  "prompt_tokens": 20256,
+  "completion_tokens": 58880,
+  "total_tokens": 79136,
+  "api_seconds_sum": 983.8,
+  "queue_seconds_sum": 242.9,
+  "inflight_peak": 16,
+  "hedges": 0,
+  "hedge_wins": 0,
+  "latency_p50": 42.25,
+  "latency_p90": 58.58,
+  "latency_p99": 98.95,
+  "latency_max": 98.95,
+  "by_purpose": {
+   "answer": {
+    "calls": 36,
+    "cache_hits": 12,
+    "tokens": 79136,
+    "seconds": 983.8
+   }
+  }
+ }
+}

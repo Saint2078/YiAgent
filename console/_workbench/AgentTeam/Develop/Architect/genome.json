@@ -62,74 +62,82 @@
         "ai_slo_constrained_tradeoff_medium_02"
       ],
       "champion": {
-        "n": 5,
+        "n": 15,
         "cases": 5,
-        "mean": 95.0,
-        "weighted": 95.0,
-        "std": 6.32,
-        "composite": 91.84,
+        "mean": 90.45,
+        "weighted": 90.72,
+        "std": 11.56,
+        "composite": 84.94,
         "by_dimension": {
           "capacity_cost_arithmetic": 100.0,
-          "risk_boundary_and_compliance": 100.0,
-          "slo_constrained_tradeoff": 90.0,
-          "distributed_failure_semantics": 85.0,
-          "evaluation_leakage_trap": 100.0
+          "distributed_failure_semantics": 68.33,
+          "evaluation_leakage_trap": 98.79,
+          "risk_boundary_and_compliance": 94.67,
+          "slo_constrained_tradeoff": 90.48
         },
         "by_case": {
           "ai_capacity_cost_arithmetic_medium_02": 100.0,
-          "ai_risk_boundary_and_compliance_medium_02": 100.0,
-          "ai_slo_constrained_tradeoff_medium_02": 90.0,
-          "ai_distributed_failure_semantics_medium_02": 85.0,
-          "ai_evaluation_leakage_trap_medium_02": 100.0
+          "ai_distributed_failure_semantics_medium_02": 68.33,
+          "ai_evaluation_leakage_trap_medium_02": 98.79,
+          "ai_risk_boundary_and_compliance_medium_02": 94.67,
+          "ai_slo_constrained_tradeoff_medium_02": 90.48
         },
         "trap_rate": 0.6,
-        "min_case": 85.0,
+        "min_case": 68.33,
         "max_case": 100.0,
-        "spread": 15.0,
-        "check_pass_rate": 0.867,
+        "spread": 31.67,
+        "check_pass_rate": 0.835,
         "judge_shadow": null
       },
       "baseline": {
-        "n": 5,
+        "n": 15,
         "cases": 5,
-        "mean": 97.5,
-        "weighted": 97.5,
-        "std": 5.0,
-        "composite": 95.0,
+        "mean": 93.88,
+        "weighted": 93.88,
+        "std": 5.57,
+        "composite": 91.09,
         "by_dimension": {
-          "slo_constrained_tradeoff": 100.0,
-          "risk_boundary_and_compliance": 100.0,
           "capacity_cost_arithmetic": 100.0,
-          "evaluation_leakage_trap": 100.0,
-          "distributed_failure_semantics": 87.5
+          "distributed_failure_semantics": 87.22,
+          "evaluation_leakage_trap": 87.88,
+          "risk_boundary_and_compliance": 100.0,
+          "slo_constrained_tradeoff": 94.29
         },
         "by_case": {
-          "ai_slo_constrained_tradeoff_medium_02": 100.0,
-          "ai_risk_boundary_and_compliance_medium_02": 100.0,
           "ai_capacity_cost_arithmetic_medium_02": 100.0,
-          "ai_evaluation_leakage_trap_medium_02": 100.0,
-          "ai_distributed_failure_semantics_medium_02": 87.5
+          "ai_distributed_failure_semantics_medium_02": 87.22,
+          "ai_evaluation_leakage_trap_medium_02": 87.88,
+          "ai_risk_boundary_and_compliance_medium_02": 100.0,
+          "ai_slo_constrained_tradeoff_medium_02": 94.29
         },
-        "trap_rate": 0.8,
-        "min_case": 87.5,
+        "trap_rate": 0.467,
+        "min_case": 87.22,
         "max_case": 100.0,
-        "spread": 12.5,
-        "check_pass_rate": 0.967,
+        "spread": 12.78,
+        "check_pass_rate": 0.873,
         "judge_shadow": null
       },
-      "delta_weighted": -2.5,
+      "delta_weighted": -3.16,
       "paired": {
         "cases": 5,
-        "mean_delta": -2.5,
-        "improved": 0,
-        "regressed": 2,
-        "worst": -10.0,
-        "best": 0.0
+        "mean_delta": -3.42,
+        "improved": 1,
+        "regressed": 3,
+        "worst": -18.89,
+        "best": 10.91,
+        "sd_delta": 10.73,
+        "mean_delta_ci95": [
+          -12.4,
+          4.72
+        ],
+        "significant": false
       },
       "generalization_gap": -5.33,
-      "seconds": 62.9
+      "seconds": 62.9,
+      "reps": 3
     },
-    "built_at": "2026-08-10T19:42:40.804779+00:00",
+    "holdout_source": "reholdout",
+    "built_at": "2026-08-10T21:34:57.954015+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -150,8 +158,8 @@
     "genome_hash": "435555e306d5a33612eb1eeb920e97d31a503bb28e413fc282365b8a07e4025c",
     "verdict": {
       "generalizes": null,
-      "label": "reps=1 判不了（待复核）",
-      "reason": "holdout Δ=-2.5，配对 0 升 / 2 降（n=5 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+      "label": "判不了（区间跨 0）",
+      "reason": "配对Δ均值=-3.42 95%CI[-12.4, +4.72]（n=5 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
     }
   }
 }

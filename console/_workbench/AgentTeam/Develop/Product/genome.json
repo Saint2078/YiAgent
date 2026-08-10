@@ -62,74 +62,82 @@
         "role_775f14fc_requirement_acceptance_spec_medium_02"
       ],
       "champion": {
-        "n": 5,
+        "n": 15,
         "cases": 5,
-        "mean": 70.69,
-        "weighted": 71.07,
-        "std": 27.92,
-        "composite": 57.11,
+        "mean": 80.43,
+        "weighted": 80.24,
+        "std": 9.27,
+        "composite": 75.6,
         "by_dimension": {
-          "metric_definition_guardrails": 75.0,
-          "prioritization_expected_value": 80.0,
-          "experiment_stats_trap": 100.0,
-          "funnel_diagnosis_rootcause": 17.5,
-          "requirement_acceptance_spec": 80.95
+          "experiment_stats_trap": 80.0,
+          "funnel_diagnosis_rootcause": 62.97,
+          "metric_definition_guardrails": 85.46,
+          "prioritization_expected_value": 84.0,
+          "requirement_acceptance_spec": 89.74
         },
         "by_case": {
-          "role_775f14fc_metric_definition_guardrails_medium_02": 75.0,
-          "role_775f14fc_prioritization_expected_value_medium_02": 80.0,
-          "role_775f14fc_experiment_stats_trap_medium_02": 100.0,
-          "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 17.5,
-          "role_775f14fc_requirement_acceptance_spec_medium_02": 80.95
+          "role_775f14fc_experiment_stats_trap_medium_02": 80.0,
+          "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 62.97,
+          "role_775f14fc_metric_definition_guardrails_medium_02": 85.46,
+          "role_775f14fc_prioritization_expected_value_medium_02": 84.0,
+          "role_775f14fc_requirement_acceptance_spec_medium_02": 89.74
         },
         "trap_rate": 0.6,
-        "min_case": 17.5,
-        "max_case": 100.0,
-        "spread": 82.5,
-        "check_pass_rate": 0.616,
+        "min_case": 62.97,
+        "max_case": 89.74,
+        "spread": 26.78,
+        "check_pass_rate": 0.722,
         "judge_shadow": null
       },
       "baseline": {
-        "n": 5,
+        "n": 15,
         "cases": 5,
-        "mean": 81.17,
-        "weighted": 82.5,
-        "std": 25.01,
-        "composite": 70.0,
+        "mean": 74.36,
+        "weighted": 75.51,
+        "std": 26.47,
+        "composite": 62.28,
         "by_dimension": {
-          "experiment_stats_trap": 100.0,
-          "metric_definition_guardrails": 100.0,
-          "funnel_diagnosis_rootcause": 92.5,
-          "requirement_acceptance_spec": 33.33,
-          "prioritization_expected_value": 80.0
+          "experiment_stats_trap": 80.0,
+          "funnel_diagnosis_rootcause": 88.89,
+          "metric_definition_guardrails": 96.36,
+          "prioritization_expected_value": 84.0,
+          "requirement_acceptance_spec": 22.57
         },
         "by_case": {
-          "role_775f14fc_experiment_stats_trap_medium_02": 100.0,
-          "role_775f14fc_metric_definition_guardrails_medium_02": 100.0,
-          "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 92.5,
-          "role_775f14fc_requirement_acceptance_spec_medium_02": 33.33,
-          "role_775f14fc_prioritization_expected_value_medium_02": 80.0
+          "role_775f14fc_experiment_stats_trap_medium_02": 80.0,
+          "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 88.89,
+          "role_775f14fc_metric_definition_guardrails_medium_02": 96.36,
+          "role_775f14fc_prioritization_expected_value_medium_02": 84.0,
+          "role_775f14fc_requirement_acceptance_spec_medium_02": 22.57
         },
         "trap_rate": 0.6,
-        "min_case": 33.33,
-        "max_case": 100.0,
-        "spread": 66.67,
-        "check_pass_rate": 0.803,
+        "min_case": 22.57,
+        "max_case": 96.36,
+        "spread": 73.8,
+        "check_pass_rate": 0.773,
         "judge_shadow": null
       },
-      "delta_weighted": -11.43,
+      "delta_weighted": 4.73,
       "paired": {
         "cases": 5,
-        "mean_delta": -10.48,
+        "mean_delta": 6.07,
         "improved": 1,
         "regressed": 2,
-        "worst": -75.0,
-        "best": 47.62
+        "worst": -25.92,
+        "best": 67.17,
+        "sd_delta": 35.77,
+        "mean_delta_ci95": [
+          -15.55,
+          38.12
+        ],
+        "significant": false
       },
       "generalization_gap": 17.43,
-      "seconds": 124.4
+      "seconds": 124.4,
+      "reps": 3
     },
-    "built_at": "2026-08-10T19:42:40.637792+00:00",
+    "holdout_source": "reholdout",
+    "built_at": "2026-08-10T21:34:57.565014+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -150,8 +158,8 @@
     "genome_hash": "452af10b6da6baa5c34c5ce53d874f33423097c9de9d6ed7d6f08ce85b61ca72",
     "verdict": {
       "generalizes": null,
-      "label": "reps=1 判不了（待复核）",
-      "reason": "holdout Δ=-11.43，配对 1 升 / 2 降（n=5 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+      "label": "判不了（区间跨 0）",
+      "reason": "配对Δ均值=+6.07 95%CI[-15.55, +38.12]（n=5 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
     }
   }
 }

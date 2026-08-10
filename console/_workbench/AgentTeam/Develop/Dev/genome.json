@@ -63,78 +63,86 @@
         "role_cbf11840_test_reasoning_oracle_medium_02"
       ],
       "champion": {
-        "n": 6,
+        "n": 18,
         "cases": 6,
-        "mean": 89.44,
-        "weighted": 90.5,
-        "std": 8.91,
-        "composite": 86.05,
+        "mean": 93.99,
+        "weighted": 94.38,
+        "std": 5.35,
+        "composite": 91.7,
         "by_dimension": {
+          "boundary_numeric_traps": 89.09,
           "code_defect_localization": 100.0,
-          "boundary_numeric_traps": 85.0,
-          "test_reasoning_oracle": 75.0,
+          "complexity_capacity_estimation": 95.96,
+          "counterintuitive_concurrency_semantics": 93.33,
           "data_statistical_reasoning": 100.0,
-          "complexity_capacity_estimation": 91.67,
-          "counterintuitive_concurrency_semantics": 85.0
+          "test_reasoning_oracle": 85.56
         },
         "by_case": {
+          "role_cbf11840_boundary_numeric_traps_medium_02": 89.09,
           "role_cbf11840_code_defect_localization_medium_02": 100.0,
-          "role_cbf11840_boundary_numeric_traps_medium_02": 85.0,
-          "role_cbf11840_test_reasoning_oracle_medium_02": 75.0,
+          "role_cbf11840_complexity_capacity_estimation_medium_02": 95.96,
+          "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 93.33,
           "role_cbf11840_data_statistical_reasoning_medium_02": 100.0,
-          "role_cbf11840_complexity_capacity_estimation_medium_02": 91.67,
-          "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 85.0
+          "role_cbf11840_test_reasoning_oracle_medium_02": 85.56
         },
-        "trap_rate": 0.667,
-        "min_case": 75.0,
+        "trap_rate": 0.722,
+        "min_case": 85.56,
         "max_case": 100.0,
-        "spread": 25.0,
-        "check_pass_rate": 0.878,
+        "spread": 14.44,
+        "check_pass_rate": 0.887,
         "judge_shadow": null
       },
       "baseline": {
-        "n": 6,
+        "n": 18,
         "cases": 6,
-        "mean": 92.92,
-        "weighted": 93.62,
-        "std": 7.13,
-        "composite": 90.06,
+        "mean": 94.86,
+        "weighted": 95.34,
+        "std": 3.93,
+        "composite": 93.38,
         "by_dimension": {
-          "test_reasoning_oracle": 87.5,
-          "boundary_numeric_traps": 85.0,
+          "boundary_numeric_traps": 92.73,
           "code_defect_localization": 100.0,
-          "data_statistical_reasoning": 100.0,
-          "counterintuitive_concurrency_semantics": 85.0,
-          "complexity_capacity_estimation": 100.0
+          "complexity_capacity_estimation": 95.96,
+          "counterintuitive_concurrency_semantics": 93.33,
+          "data_statistical_reasoning": 98.79,
+          "test_reasoning_oracle": 88.34
         },
         "by_case": {
-          "role_cbf11840_test_reasoning_oracle_medium_02": 87.5,
-          "role_cbf11840_boundary_numeric_traps_medium_02": 85.0,
+          "role_cbf11840_boundary_numeric_traps_medium_02": 92.73,
           "role_cbf11840_code_defect_localization_medium_02": 100.0,
-          "role_cbf11840_data_statistical_reasoning_medium_02": 100.0,
-          "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 85.0,
-          "role_cbf11840_complexity_capacity_estimation_medium_02": 100.0
+          "role_cbf11840_complexity_capacity_estimation_medium_02": 95.96,
+          "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 93.33,
+          "role_cbf11840_data_statistical_reasoning_medium_02": 98.79,
+          "role_cbf11840_test_reasoning_oracle_medium_02": 88.34
         },
-        "trap_rate": 0.833,
-        "min_case": 85.0,
+        "trap_rate": 0.722,
+        "min_case": 88.34,
         "max_case": 100.0,
-        "spread": 15.0,
-        "check_pass_rate": 0.911,
+        "spread": 11.66,
+        "check_pass_rate": 0.885,
         "judge_shadow": null
       },
-      "delta_weighted": -3.12,
+      "delta_weighted": -0.96,
       "paired": {
         "cases": 6,
-        "mean_delta": -3.47,
-        "improved": 0,
+        "mean_delta": -0.87,
+        "improved": 1,
         "regressed": 2,
-        "worst": -12.5,
-        "best": 0.0
+        "worst": -3.64,
+        "best": 1.21,
+        "sd_delta": 1.89,
+        "mean_delta_ci95": [
+          -2.28,
+          0.4
+        ],
+        "significant": false
       },
       "generalization_gap": 2.62,
-      "seconds": 64.1
+      "seconds": 64.1,
+      "reps": 3
     },
-    "built_at": "2026-08-10T19:42:40.951283+00:00",
+    "holdout_source": "reholdout",
+    "built_at": "2026-08-10T21:34:58.104211+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -155,8 +163,8 @@
     "genome_hash": "eb8422af9b560b6cad4e9e34574c0e2df6acd73cff2d5c7404446139bbda67cc",
     "verdict": {
       "generalizes": null,
-      "label": "reps=1 判不了（待复核）",
-      "reason": "holdout Δ=-3.12，配对 0 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+      "label": "判不了（区间跨 0）",
+      "reason": "配对Δ均值=-0.87 95%CI[-2.28, +0.4]（n=6 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
     }
   }
 }

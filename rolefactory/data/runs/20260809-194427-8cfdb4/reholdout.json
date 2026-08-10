@@ -1,0 +1,134 @@
+{
+ "schema": "yiagent.rolefactory.reholdout/1",
+ "run_id": "20260809-194427-8cfdb4",
+ "role": "AI软件架构师",
+ "checked_at": "2026-08-10T21:22:26+0000",
+ "cases": [
+  "ai_capacity_cost_arithmetic_medium_02",
+  "ai_distributed_failure_semantics_medium_02",
+  "ai_evaluation_leakage_trap_medium_02",
+  "ai_risk_boundary_and_compliance_medium_02",
+  "ai_slo_constrained_tradeoff_medium_02"
+ ],
+ "reps": 3,
+ "scorer_version": 3,
+ "previous": {
+  "reps": 1,
+  "delta_weighted": -2.5,
+  "scorer_version": null
+ },
+ "champion": {
+  "n": 15,
+  "cases": 5,
+  "mean": 90.45,
+  "weighted": 90.72,
+  "std": 11.56,
+  "composite": 84.94,
+  "by_dimension": {
+   "capacity_cost_arithmetic": 100.0,
+   "distributed_failure_semantics": 68.33,
+   "evaluation_leakage_trap": 98.79,
+   "risk_boundary_and_compliance": 94.67,
+   "slo_constrained_tradeoff": 90.48
+  },
+  "by_case": {
+   "ai_capacity_cost_arithmetic_medium_02": 100.0,
+   "ai_distributed_failure_semantics_medium_02": 68.33,
+   "ai_evaluation_leakage_trap_medium_02": 98.79,
+   "ai_risk_boundary_and_compliance_medium_02": 94.67,
+   "ai_slo_constrained_tradeoff_medium_02": 90.48
+  },
+  "trap_rate": 0.6,
+  "min_case": 68.33,
+  "max_case": 100.0,
+  "spread": 31.67,
+  "check_pass_rate": 0.835,
+  "judge_shadow": null
+ },
+ "baseline": {
+  "n": 15,
+  "cases": 5,
+  "mean": 93.88,
+  "weighted": 93.88,
+  "std": 5.57,
+  "composite": 91.09,
+  "by_dimension": {
+   "capacity_cost_arithmetic": 100.0,
+   "distributed_failure_semantics": 87.22,
+   "evaluation_leakage_trap": 87.88,
+   "risk_boundary_and_compliance": 100.0,
+   "slo_constrained_tradeoff": 94.29
+  },
+  "by_case": {
+   "ai_capacity_cost_arithmetic_medium_02": 100.0,
+   "ai_distributed_failure_semantics_medium_02": 87.22,
+   "ai_evaluation_leakage_trap_medium_02": 87.88,
+   "ai_risk_boundary_and_compliance_medium_02": 100.0,
+   "ai_slo_constrained_tradeoff_medium_02": 94.29
+  },
+  "trap_rate": 0.467,
+  "min_case": 87.22,
+  "max_case": 100.0,
+  "spread": 12.78,
+  "check_pass_rate": 0.873,
+  "judge_shadow": null
+ },
+ "delta_weighted": -3.16,
+ "paired": {
+  "cases": 5,
+  "mean_delta": -3.42,
+  "improved": 1,
+  "regressed": 3,
+  "worst": -18.89,
+  "best": 10.91,
+  "sd_delta": 10.73,
+  "mean_delta_ci95": [
+   -12.4,
+   4.72
+  ],
+  "significant": false
+ },
+ "evals": {
+  "done": 30,
+  "failed": 0,
+  "total": 30
+ },
+ "seconds": 173.1,
+ "tokens": 116717,
+ "logs": [
+  "[21:21:08] 评测进度 5/30｜tokens=18693",
+  "[21:21:08] 评测进度 10/30｜tokens=36898",
+  "[21:22:17] 评测进度 15/30｜tokens=53980",
+  "[21:22:44] 评测进度 20/30｜tokens=72030",
+  "[21:23:13] 评测进度 25/30｜tokens=96483",
+  "[21:22:26] 评测进度 30/30｜tokens=116717"
+ ],
+ "llm": {
+  "calls": 31,
+  "api_calls": 21,
+  "cache_hits": 10,
+  "cache_hit_rate": 0.3226,
+  "retries": 1,
+  "errors": 0,
+  "prompt_tokens": 22596,
+  "completion_tokens": 94121,
+  "total_tokens": 116717,
+  "api_seconds_sum": 1740.5,
+  "queue_seconds_sum": 253.1,
+  "inflight_peak": 16,
+  "hedges": 0,
+  "hedge_wins": 0,
+  "latency_p50": 76.41,
+  "latency_p90": 104.96,
+  "latency_p99": 129.43,
+  "latency_max": 129.43,
+  "by_purpose": {
+   "answer": {
+    "calls": 31,
+    "cache_hits": 10,
+    "tokens": 116717,
+    "seconds": 1740.5
+   }
+  }
+ }
+}

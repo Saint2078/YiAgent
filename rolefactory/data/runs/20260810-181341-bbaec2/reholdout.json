@@ -1,0 +1,141 @@
+{
+ "schema": "yiagent.rolefactory.reholdout/1",
+ "run_id": "20260810-181341-bbaec2",
+ "role": "评测工程师",
+ "checked_at": "2026-08-10T21:32:43+0000",
+ "cases": [
+  "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02",
+  "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02",
+  "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02",
+  "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02",
+  "role_b2267ae0_test_oracle_and_regression_awareness_medium_02",
+  "role_b2267ae0_trap_identification_in_evaluation_design_medium_02"
+ ],
+ "reps": 3,
+ "scorer_version": 3,
+ "previous": {
+  "reps": 1,
+  "delta_weighted": 1.76,
+  "scorer_version": null
+ },
+ "champion": {
+  "n": 18,
+  "cases": 6,
+  "mean": 96.49,
+  "weighted": 96.51,
+  "std": 3.01,
+  "composite": 95.01,
+  "by_dimension": {
+   "closed_form_answer_grading_and_format_compliance": 93.7,
+   "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+   "long_horizon_task_decomposition_and_threshold_calibration": 93.33,
+   "metric_correctness_and_statistical_rigor": 100.0,
+   "test_oracle_and_regression_awareness": 98.33,
+   "trap_identification_in_evaluation_design": 93.55
+  },
+  "by_case": {
+   "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 93.7,
+   "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 100.0,
+   "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 93.33,
+   "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
+   "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 98.33,
+   "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 93.55
+  },
+  "trap_rate": 0.833,
+  "min_case": 93.33,
+  "max_case": 100.0,
+  "spread": 6.67,
+  "check_pass_rate": 0.896,
+  "judge_shadow": null
+ },
+ "baseline": {
+  "n": 18,
+  "cases": 6,
+  "mean": 94.77,
+  "weighted": 94.87,
+  "std": 2.35,
+  "composite": 93.7,
+  "by_dimension": {
+   "closed_form_answer_grading_and_format_compliance": 95.56,
+   "gaming_and_overfitting_to_benchmark_resistance": 95.15,
+   "long_horizon_task_decomposition_and_threshold_calibration": 95.55,
+   "metric_correctness_and_statistical_rigor": 98.15,
+   "test_oracle_and_regression_awareness": 93.89,
+   "trap_identification_in_evaluation_design": 90.33
+  },
+  "by_case": {
+   "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 95.56,
+   "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 95.15,
+   "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 95.55,
+   "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 98.15,
+   "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 93.89,
+   "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 90.33
+  },
+  "trap_rate": 0.722,
+  "min_case": 90.33,
+  "max_case": 98.15,
+  "spread": 7.82,
+  "check_pass_rate": 0.847,
+  "judge_shadow": null
+ },
+ "delta_weighted": 1.64,
+ "paired": {
+  "cases": 6,
+  "mean_delta": 1.71,
+  "improved": 4,
+  "regressed": 2,
+  "worst": -2.22,
+  "best": 4.85,
+  "sd_delta": 3.09,
+  "mean_delta_ci95": [
+   -0.58,
+   3.83
+  ],
+  "significant": false
+ },
+ "evals": {
+  "done": 36,
+  "failed": 0,
+  "total": 36
+ },
+ "seconds": 200.3,
+ "tokens": 120467,
+ "logs": [
+  "[21:27:48] 评测进度 5/36｜tokens=19923",
+  "[21:27:48] 评测进度 10/36｜tokens=36016",
+  "[21:28:17] 评测进度 15/36｜tokens=44108",
+  "[21:28:27] 评测进度 20/36｜tokens=55313",
+  "[21:28:54] 评测进度 25/36｜tokens=69951",
+  "[21:29:27] 评测进度 30/36｜tokens=87235",
+  "[21:29:50] 评测进度 35/36｜tokens=114451",
+  "[21:32:43] 评测进度 36/36｜tokens=120467"
+ ],
+ "llm": {
+  "calls": 37,
+  "api_calls": 25,
+  "cache_hits": 12,
+  "cache_hit_rate": 0.3243,
+  "retries": 1,
+  "errors": 0,
+  "prompt_tokens": 28525,
+  "completion_tokens": 91942,
+  "total_tokens": 120467,
+  "api_seconds_sum": 1670.1,
+  "queue_seconds_sum": 0.0,
+  "inflight_peak": 24,
+  "hedges": 0,
+  "hedge_wins": 0,
+  "latency_p50": 65.2,
+  "latency_p90": 113.17,
+  "latency_p99": 121.18,
+  "latency_max": 121.18,
+  "by_purpose": {
+   "answer": {
+    "calls": 37,
+    "cache_hits": 12,
+    "tokens": 120467,
+    "seconds": 1670.1
+   }
+  }
+ }
+}

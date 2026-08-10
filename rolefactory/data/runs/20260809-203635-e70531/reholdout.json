@@ -1,0 +1,134 @@
+{
+ "schema": "yiagent.rolefactory.reholdout/1",
+ "run_id": "20260809-203635-e70531",
+ "role": "DevOps工程师",
+ "checked_at": "2026-08-10T21:27:48+0000",
+ "cases": [
+  "devops_deployment_blast_radius_quantification_medium_02",
+  "devops_incident_causal_discipline_medium_02",
+  "devops_observability_alert_design_trap_medium_02",
+  "devops_pipeline_iac_safety_review_medium_02",
+  "devops_slo_error_budget_math_medium_02"
+ ],
+ "reps": 3,
+ "scorer_version": 3,
+ "previous": {
+  "reps": 1,
+  "delta_weighted": 6.81,
+  "scorer_version": null
+ },
+ "champion": {
+  "n": 15,
+  "cases": 5,
+  "mean": 69.72,
+  "weighted": 69.47,
+  "std": 25.0,
+  "composite": 56.97,
+  "by_dimension": {
+   "deployment_blast_radius_quantification": 57.78,
+   "incident_causal_discipline": 91.67,
+   "observability_alert_design_trap": 86.66,
+   "pipeline_iac_safety_review": 25.83,
+   "slo_error_budget_math": 86.67
+  },
+  "by_case": {
+   "devops_deployment_blast_radius_quantification_medium_02": 57.78,
+   "devops_incident_causal_discipline_medium_02": 91.67,
+   "devops_observability_alert_design_trap_medium_02": 86.66,
+   "devops_pipeline_iac_safety_review_medium_02": 25.83,
+   "devops_slo_error_budget_math_medium_02": 86.67
+  },
+  "trap_rate": 0.2,
+  "min_case": 25.83,
+  "max_case": 91.67,
+  "spread": 65.84,
+  "check_pass_rate": 0.619,
+  "judge_shadow": null
+ },
+ "baseline": {
+  "n": 15,
+  "cases": 5,
+  "mean": 69.35,
+  "weighted": 69.35,
+  "std": 25.04,
+  "composite": 56.83,
+  "by_dimension": {
+   "deployment_blast_radius_quantification": 75.24,
+   "incident_causal_discipline": 91.67,
+   "observability_alert_design_trap": 64.44,
+   "pipeline_iac_safety_review": 23.75,
+   "slo_error_budget_math": 91.67
+  },
+  "by_case": {
+   "devops_deployment_blast_radius_quantification_medium_02": 75.24,
+   "devops_incident_causal_discipline_medium_02": 91.67,
+   "devops_observability_alert_design_trap_medium_02": 64.44,
+   "devops_pipeline_iac_safety_review_medium_02": 23.75,
+   "devops_slo_error_budget_math_medium_02": 91.67
+  },
+  "trap_rate": 0.133,
+  "min_case": 23.75,
+  "max_case": 91.67,
+  "spread": 67.92,
+  "check_pass_rate": 0.632,
+  "judge_shadow": null
+ },
+ "delta_weighted": 0.12,
+ "paired": {
+  "cases": 5,
+  "mean_delta": 0.37,
+  "improved": 2,
+  "regressed": 2,
+  "worst": -17.46,
+  "best": 22.22,
+  "sd_delta": 14.38,
+  "mean_delta_ci95": [
+   -10.06,
+   12.33
+  ],
+  "significant": false
+ },
+ "evals": {
+  "done": 30,
+  "failed": 0,
+  "total": 30
+ },
+ "seconds": 222.2,
+ "tokens": 120210,
+ "logs": [
+  "[21:25:41] 评测进度 5/30｜tokens=18945",
+  "[21:25:41] 评测进度 10/30｜tokens=34568",
+  "[21:26:47] 评测进度 15/30｜tokens=49161",
+  "[21:27:13] 评测进度 20/30｜tokens=65309",
+  "[21:27:43] 评测进度 25/30｜tokens=98418",
+  "[21:27:48] 评测进度 30/30｜tokens=120210"
+ ],
+ "llm": {
+  "calls": 32,
+  "api_calls": 22,
+  "cache_hits": 10,
+  "cache_hit_rate": 0.3125,
+  "retries": 2,
+  "errors": 0,
+  "prompt_tokens": 22909,
+  "completion_tokens": 97301,
+  "total_tokens": 120210,
+  "api_seconds_sum": 1895.0,
+  "queue_seconds_sum": 191.5,
+  "inflight_peak": 16,
+  "hedges": 0,
+  "hedge_wins": 0,
+  "latency_p50": 92.01,
+  "latency_p90": 121.76,
+  "latency_p99": 132.63,
+  "latency_max": 132.63,
+  "by_purpose": {
+   "answer": {
+    "calls": 32,
+    "cache_hits": 10,
+    "tokens": 120210,
+    "seconds": 1895.0
+   }
+  }
+ }
+}
