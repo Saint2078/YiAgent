@@ -59,6 +59,22 @@ def tool(*argv: str) -> bool:
     return r.returncode == 0
 
 
+def archive_prev_detail(run_id: str) -> str | None:
+    """把上一次复核的逐条明细挪走，别和这次的混在一个文件里。
+
+    `reholdout` 是以 `<run_id>-reholdout` 当 run id 跑的，逐条明细走 `append_jsonl`
+    —— 同一个 run 复核两次，reps=3 那批和 reps=9 那批会**追加进同一个文件**。
+    混了之后方差分解会看到每格 12 次并当成一批同质数据，而 `reholdout.json` 写着 9；
+    这正是今晚修了三遍的那类「数字不同源」。所以重跑前先归档。
+    """
+    d = ROOT / "data" / "runs" / f"{run_id}-reholdout"
+    if not (d / "results.jsonl").is_file():
+        return None
+    dest = d.with_name(f"{d.name}-{time.strftime('%Y%m%d-%H%M%S')}")
+    d.rename(dest)
+    return dest.name
+
+
 def wait_for_quota(every: int) -> bool:
     """探到额度可用才返回 True。
 
@@ -97,6 +113,10 @@ def main() -> int:
 
     if args.wait_quota and not wait_for_quota(args.probe_every):
         return 2
+
+    moved = archive_prev_detail(args.run_id)
+    if moved:
+        log(f"上次复核的逐条明细已归档到 {moved}（避免两批 reps 混进同一个文件）")
 
     log(f"复核开始 run={args.run_id} reps={args.reps}")
     t0 = time.monotonic()

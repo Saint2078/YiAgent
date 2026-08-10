@@ -91,8 +91,11 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/check_contrib.py [run_id...]` | 把「冠军−基线」分差拆到每类断言，看谁在区分强弱、谁只是送分 |
 | `tools/rescore.py [--write]` | 用当前打分口径离线重算历史实跑，看冠军/分差会不会变（不花额度） |
 | `tools/power_check.py [--md]` | 判定力核算：现有题量能判出多大效应、判出实测效应要多少题（离线） |
-| `tools/variance_decomp.py <run_id>` | 方差分解：拆开题内噪声与题间差异，回答「该加重复还是加题」（离线；需 reps≥2） |
-| `tools/run_reholdout.py <run_id> [--reps 3] [--seat PM]` | 单独重跑某 run 的 holdout（**要额度**），跑完打方差分解；给 `--seat` 就顺带传导到下游四处 |
+| `tools/variance_decomp.py <run_id> [--source auto\|run\|reholdout]` | 方差分解：拆开题内噪声与题间差异（离线；需 reps≥2，会自动去 `<run>-reholdout/` 找） |
+| `tools/decomp_table.py [--md]` | 六席处方表：每席该加重复 / 该加题 / 判不了，并给「不出新题只加重复」的配法（离线） |
+| `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
+| `tools/run_reholdout.py <run_id> [--reps 3] [--seat PM] [--wait-quota]` | 单独重跑某 run 的 holdout（**要额度**），跑完打方差分解；给 `--seat` 就顺带传导到下游四处 |
+| `tools/queue_decisive.py` | 等额度，按「最便宜的可判席位」顺序跑高重复复核（顺序由 `decomp_table` 算出） |
 | `tools/holdout_table.py [--md]` | 六席 holdout 判定汇总（两个 Δ 分列 + 区间归属，有复核就用复核；离线） |
 | `tools/quota_probe.py` | 一次请求探上游额度是否可用（用服务端密钥，退出码 0=可用） |
 | `tools/watch_quota_reholdout.py [--pilot 席位]` | 额度封顶时等待；恢复即补齐 holdout 复核，可再跑一次**只跑不采纳**的 v3 试跑 |

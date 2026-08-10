@@ -154,7 +154,7 @@ class HoldoutSelectionTests(unittest.TestCase):
         self.addCleanup(lambda: setattr(vd, "RUNS", self._orig_runs))
 
     def test_uses_report_case_list_not_suffix(self):
-        cells, champ, base, origin = load_cells("rid", "medium_02")
+        cells, champ, base, origin, _ = load_cells("rid", "medium_02")
         self.assertEqual(origin, "report.json")
         self.assertEqual(champ, "champ")
         self.assertEqual({c for _, c in cells}, {"h0", "h1", "h2"})
@@ -167,9 +167,96 @@ class HoldoutSelectionTests(unittest.TestCase):
         (vd.RUNS / "rid" / "report.json").write_text(
             json.dumps({"scores": {"holdout": {}}}), encoding="utf-8"
         )
-        cells, _, _, origin = load_cells("rid", "medium_02")
+        cells, _, _, origin, _ = load_cells("rid", "medium_02")
         self.assertIn("后缀", origin)  # 退路必须自报身份，别让人以为读的是名单
         self.assertEqual({c for _, c in cells}, {"t_medium_02"})
+
+
+class DecompPlanTests(unittest.TestCase):
+    """处方表的两条硬规则。这张表决定额度往哪花，算错就是白烧。"""
+
+    def setUp(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+        from decomp_table import cheapest_plan, plan_with_existing_cases
+
+        self.cheapest = cheapest_plan
+        self.existing = plan_with_existing_cases
+
+    def test_never_proposes_fewer_cases_than_current(self):
+        # 题间差异为 0 时，公式允许「1 道题 × 很多次重复」—— 但区间是对**题**重采样的
+        # 自助区间，1 道题没有可重采样的变异，那是公式产物不是方案。
+        plan = self.cheapest(var_b=0.0, var_w=20.0, delta=1.71, min_n=6)
+        self.assertIsNotNone(plan)
+        _, _, need_n = plan
+        self.assertGreaterEqual(need_n, 6, "提出了比现有题数更少的题量")
+
+    def test_existing_cases_plan_none_when_floor_too_high(self):
+        # 题间差异撑起的下限已高于 |Δ|：重复多少次都不够，必须加题
+        self.assertIsNone(self.existing(var_b=10.0, var_w=5.0, delta=0.5, n=6))
+
+    def test_existing_cases_plan_found_when_no_between_variance(self):
+        got = self.existing(var_b=0.0, var_w=20.0, delta=1.71, n=6)
+        self.assertIsNotNone(got)
+        evals, reps = got
+        self.assertEqual(evals, 2 * 6 * reps)
+        # 评测数必须真的能把半宽压下去
+        from decomp_table import half_width
+
+        self.assertLess(half_width(0.0, 20.0, 6, reps), 1.71)
+        self.assertGreaterEqual(half_width(0.0, 20.0, 6, reps - 1), 1.71)
+
+
+class ReholdoutDetailTests(unittest.TestCase):
+    """逐次分数要能在 `<run>-reholdout/` 里找到。
+
+    复核以 `<run_id>-reholdout` 当 run id 跑，明细落隔壁目录。只看原 run 目录会得出
+    「同题同臂只有 1 次、分解不了」，而 reps=3 的数据一直在盘上（PERF.md §17）。
+    """
+
+    def setUp(self):
+        import tempfile
+
+        import variance_decomp as vd
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name)
+        (root / "rid").mkdir()
+        (root / "rid" / "report.json").write_text(
+            json.dumps({"scores": {"holdout": {"cases": ["h0", "h1"]}}}), encoding="utf-8"
+        )
+        # 原 run：每格 1 次
+        self._write(root / "rid" / "results.jsonl", reps=1, base=80.0)
+        # 复核目录：每格 3 次
+        (root / "rid-reholdout").mkdir()
+        self._write(root / "rid-reholdout" / "results.jsonl", reps=3, base=90.0)
+
+        self._orig = vd.RUNS
+        vd.RUNS = root
+        self.addCleanup(lambda: setattr(vd, "RUNS", self._orig))
+
+    def _write(self, path: Path, *, reps: int, base: float) -> None:
+        rows = []
+        for case in ("h0", "h1"):
+            for arm in ("baseline", "champ"):
+                for i in range(reps):
+                    rows.append({"case": case, "variant": arm, "rep": i,
+                                 "score": base + i + (2.0 if arm == "champ" else 0.0)})
+        path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+
+    def test_prefers_reholdout_detail_when_it_has_more_reps(self):
+        from variance_decomp import load_cells
+
+        cells, champ, _, _, detail = load_cells("rid", "medium_02")
+        self.assertIn("复核", detail)
+        self.assertEqual(len(cells[(champ, "h0")]), 3)
+
+    def test_source_run_forces_original_detail(self):
+        from variance_decomp import load_cells
+
+        cells, champ, _, _, detail = load_cells("rid", "medium_02", source="run")
+        self.assertIn("原 run", detail)
+        self.assertEqual(len(cells[(champ, "h0")]), 1)
 
 
 class DeriveSdTests(unittest.TestCase):
