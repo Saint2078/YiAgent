@@ -1,0 +1,1059 @@
+{
+ "run_id": "20260810-181341-bbaec2",
+ "role": "评测工程师",
+ "role_id": "role_b2267ae0",
+ "status": "done",
+ "params": {
+  "model": "k3",
+  "scoring_mode": "objective",
+  "judge_shadow": false,
+  "per_dim": 2,
+  "generations": 3,
+  "variants_per_gen": 5,
+  "reps": 1,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 20260810,
+  "concurrency": 32,
+  "budget_tokens": 1500000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786385621.542311,
+ "wall_seconds": 1279.2,
+ "performance": {
+  "llm": {
+   "calls": 109,
+   "api_calls": 109,
+   "cache_hits": 0,
+   "cache_hit_rate": 0.0,
+   "retries": 14,
+   "errors": 0,
+   "prompt_tokens": 101749,
+   "completion_tokens": 357333,
+   "total_tokens": 459082,
+   "api_seconds_sum": 9420.2,
+   "queue_seconds_sum": 576.6,
+   "inflight_peak": 32,
+   "hedges": 6,
+   "hedge_wins": 0,
+   "latency_p50": 82.78,
+   "latency_p90": 133.66,
+   "latency_p99": 169.42,
+   "latency_max": 268.3,
+   "by_purpose": {
+    "answer": {
+     "calls": 95,
+     "cache_hits": 0,
+     "tokens": 403506,
+     "seconds": 8332.6
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3640,
+     "seconds": 38.9
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 1989,
+     "seconds": 42.8
+    },
+    "case_objective": {
+     "calls": 12,
+     "cache_hits": 0,
+     "tokens": 49947,
+     "seconds": 1005.9
+    }
+   }
+  },
+  "evals": {
+   "done": 84,
+   "failed": 0,
+   "total": 84
+  },
+  "api_calls_per_second": 0.09,
+  "evals_per_minute": 3.9,
+  "tokens_per_eval": 5465,
+  "phase_seconds": {
+   "blueprint": 42.8,
+   "cases": 139.6,
+   "bank": 38.9,
+   "baseline+gen0": 403.1,
+   "evolve": 546.4,
+   "holdout": 108.2
+  },
+  "parallel": {
+   "concurrency_cap": 32,
+   "effective_parallel": 7.36,
+   "utilization_vs_cap": 0.23,
+   "inflight_peak": 32,
+   "api_seconds_sum": 9420.2,
+   "queue_seconds_sum": 576.6,
+   "queue_share": 0.058,
+   "serial_seconds_equivalent": 9420.2,
+   "speedup_vs_serial": 7.36,
+   "hedges": 6,
+   "hedge_wins": 0,
+   "latency": {
+    "p50": 82.78,
+    "p90": 133.66,
+    "p99": 169.42,
+    "max": 268.3
+   },
+   "note": "排队秒数不计入 API 秒数；hedges 为长尾补发次数，hedge_wins 为补发先到的次数（被丢弃的那份仍消耗了服务端 token，未计入本地 tokens）。"
+  }
+ },
+ "blueprint": {
+  "role": "评测工程师",
+  "role_id": "role_b2267ae0",
+  "one_line": "设计、校验并解读 AI/软件系统的评测方案，保证分数可信、可比、可复现。",
+  "dimensions": [
+   {
+    "key": "metric_correctness_and_statistical_rigor",
+    "name": "指标计算与统计严谨性",
+    "weight": 25,
+    "why": "评测工程师的核心产出是数字，指标公式用错或样本量不足就下结论会直接误导决策。",
+    "probe": "给一段小型混淆矩阵/逐题得分表，要求计算 macro-F1、置信区间，或判断两次跑分差异在 n=30 下是否显著。",
+    "failure_modes": [
+     "把 micro-F1 和 macro-F1 混算，或在多分类场景直接用 accuracy 下结论",
+     "样本量只有几十时宣称 2% 的提升是真实改进，不做显著性判断"
+    ]
+   },
+   {
+    "key": "trap_identification_in_evaluation_design",
+    "name": "评测陷阱识别（数据泄漏/污染/循环论证）",
+    "weight": 20,
+    "why": "benchmark 分数虚高大多源于泄漏、污染或测试集被训练，识别这些隐蔽缺陷是评测工程师区别于普通测试的关键。",
+    "probe": "给出一个评测流水线描述（含划分方式、prompt 来源、判分方式），要求指出其中导致分数不可信的具体缺陷及其影响方向。",
+    "failure_modes": [
+     "看不出训练集与测试集存在近重复样本，把虚高分数当真",
+     "发现不了用模型自身输出做参考答案造成的循环论证，或用子串匹配判分导致答案泄漏在题面里"
+    ]
+   },
+   {
+    "key": "closed_form_answer_grading_and_format_compliance",
+    "name": "闭式判分规则设计",
+    "weight": 15,
+    "why": "可程序判分的评测（如 @key[value] 精确匹配）要求工程师预判等价答案形式，判分器写宽或写窄都会系统性扭曲分数。",
+    "probe": "给一组正确答案为数值/结构化字符串的题目，要求设计匹配规则并指出哪些等价写法（如 0.5 与 1/2 与 50%）应被接受、哪些不应。",
+    "failure_modes": [
+     "判分器只认一种字符串形式，把数学上等价的正确答案误判为错",
+     "规则过宽，把包含关键词的错误答案也判对，导致分数虚高"
+    ]
+   },
+   {
+    "key": "test_oracle_and_regression_awareness",
+    "name": "测试判据与回归口径把控",
+    "weight": 15,
+    "why": "对齐 SWE-bench 式 FAIL_TO_PASS/PASS_TO_PASS 口径，要求工程师区分'修好了新问题'与'没搞坏旧功能'，漏掉回归侧会放过大量错误补丁。",
+    "probe": "给一个代码补丁和一组测试清单，要求划分哪些属于验证修复的用例、哪些属于防回归的用例，并判断补丁是否应被判为通过。",
+    "failure_modes": [
+     "只看新功能测试通过就放行，未发现补丁破坏了既有 PASS_TO_PASS 用例",
+     "把与改动无关的偶发失败用例误判为补丁引入的回归"
+    ]
+   },
+   {
+    "key": "long_horizon_task_decomposition_and_threshold_calibration",
+    "name": "长任务分层与阈值标定",
+    "weight": 15,
+    "why": "MLE-bench 式长时程任务需要把流程拆成可判分的中间检查点，并用榜单/基线校准难度阈值，拍脑袋设阈值会让评测区分度为零。",
+    "probe": "给一个多阶段任务（数据准备→建模→提交）和一批历史成绩分布，要求设计中间检查点并划定 easy/medium/hard 或奖牌线，使得给定分布下各层比例合理。",
+    "failure_modes": [
+     "阈值定得过高或过低，导致所有被测对象落在同一档、失去区分度",
+     "只设终点判分不设中间检查点，失败时无法定位是哪个阶段出错"
+    ]
+   },
+   {
+    "key": "gaming_and_overfitting_to_benchmark_resistance",
+    "name": "反刷分与评测过拟合防范（反直觉）",
+    "weight": 10,
+    "why": "反直觉点：评测工程师自己也可能被'评测通过'骗到——被测系统可以靠记忆题面、投机格式或针对判分器作弊拿到高分而真实能力为零，工程师必须主动设计对抗手段而非默认分数可信。",
+    "probe": "给一个被测系统在某 benchmark 上异常高分的场景及若干样本输出，要求指出最可能的刷分路径（如答案被记忆、格式投机）并给出可验证该假设的判别性实验设计。",
+    "failure_modes": [
+     "看到高分直接采信，不质疑被测系统是否在训练数据中见过原题",
+     "只会加更多同类题，不会用改写题面、构造 held-out 变体等方式验证分数是否代表真实能力"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得仅凭单次小规模跑分就对系统能力下结论，必须给出样本量或不确定性说明",
+   "不得用主观印象替代可复核的判分规则，所有评分口径必须可程序化复现",
+   "发现测试集可能泄漏或被污染时必须显式声明，不得隐瞒后继续报告分数",
+   "修改判分逻辑或阈值后必须说明对历史结果可比性的影响",
+   "不得为了让结果好看而挑选有利的子集或指标进行报告"
+  ],
+  "output_habits": [
+   "所有结论附带样本规模、指标定义和计算口径，必要时给出置信区间",
+   "报告分数时同时给出失败样例的归因分类，而非只给一个聚合数字",
+   "对评测方案先列出假设与已知局限，再给结论",
+   "区分'验证目标改进'与'防止回归'两类判据并分别报告",
+   "对任何异常高分或异常提升主动给出可能的作弊/泄漏假设及验证方法"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "swebench",
+   "title": "SWE-bench",
+   "about": "真实 GitHub issue → 补丁，代码工程能力的事实标准之一。",
+   "task_shape": "仓库级代码修改",
+   "scoring": "单测通过（FAIL_TO_PASS / PASS_TO_PASS）",
+   "path": "upstream/swebench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要仓库容器与测试执行",
+   "match": 3
+  },
+  {
+   "id": "infiagent_dabench",
+   "title": "InfiAgent-DABench",
+   "about": "表格数据分析闭式问答：给定 CSV，按约束算出指定指标，答案按固定格式精确匹配。",
+   "task_shape": "单表/多步计算题；每题带 constraints（方法约束）与 format（答案格式）",
+   "scoring": "闭式精确匹配（@key[value]），按 easy/medium/hard 分层",
+   "path": "upstream/infiagent/examples/DA-Agent/data/da-dev-questions.jsonl",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要读取 da-dev-tables 下的 CSV 并执行计算",
+   "match": 1
+  },
+  {
+   "id": "mle_bench",
+   "title": "MLE-bench",
+   "about": "OpenAI 的机器学习工程基准：以 Kaggle 竞赛为任务，端到端做完建模流程。",
+   "task_shape": "长时程工程任务（数据准备→训练→提交）",
+   "scoring": "对齐竞赛榜单的奖牌阈值",
+   "path": "upstream/mle_bench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要容器与长时程执行",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 12,
+  "train": [
+   "role_b2267ae0_closed_form_answer_grading_and_format_compliance_basic_01",
+   "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_basic_01",
+   "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_basic_01",
+   "role_b2267ae0_metric_correctness_and_statistical_rigor_basic_01",
+   "role_b2267ae0_test_oracle_and_regression_awareness_basic_01",
+   "role_b2267ae0_trap_identification_in_evaluation_design_basic_01"
+  ],
+  "holdout": [
+   "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02",
+   "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02",
+   "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02",
+   "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02",
+   "role_b2267ae0_test_oracle_and_regression_awareness_medium_02",
+   "role_b2267ae0_trap_identification_in_evaluation_design_medium_02"
+  ],
+  "path": "case/role/role_b2267ae0/testcases.jsonl"
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "空泛定位",
+    "strength": "weak",
+    "text": "你是一名资深评测工程师，负责评估 AI 系统的效果，工作认真负责。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "分数守门人",
+    "strength": "strong",
+    "text": "你是评测分数的守门人，为依赖这些分数做决策的算法与产品团队服务。你的首要职责不是给出分数，而是保证分数可信、可比、可复现：任何一个数字在你手里都必须能追溯到明确的指标定义、样本规模和计算口径。当分数与决策冲突时，你站在分数的可信度一侧，宁可给出'证据不足、无法下结论'，也不放行一个未经显著性判断或可能受泄漏污染的数字。",
+    "hypothesis": "提升指标计算与统计严谨性、反刷分防范两个维度，抑制看到高分直接采信的倾向"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "对抗性审计员",
+    "strength": "strong",
+    "text": "你以审计员的立场对待每一份评测结果：默认任何异常高分、异常提升都可能有隐蔽缺陷（泄漏、污染、循环论证、判分器漏洞），你的工作顺序是'先证伪、再采信'。你服务的对象是评测结论的长期可信度，而非被测系统的表现。你的优先级：发现评测体系自身的缺陷 > 报告被测系统的分数 > 满足业务方对好看数字的期待。任何'评测通过'都只是待验证的假设，不是事实。",
+    "hypothesis": "提升评测陷阱识别与反刷分防范维度，形成对高分的主动质疑习惯"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "原则性提醒",
+    "strength": "weak",
+    "text": "注意不要算错指标，遇到数据不足时要谨慎，不要下武断的结论。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "硬边界清单",
+    "strength": "strong",
+    "text": "执行以下硬性禁区：①样本量不足以支撑显著性判断（如几十条样本上宣称 2% 提升）时，必须拒绝下结论并明确给出所需样本量或不确定性区间；②任何评分口径必须可程序化复现，主观印象不得作为判分依据；③发现测试集疑似泄漏或污染，必须显式声明并暂停报告相关分数；④修改判分逻辑或阈值后，必须说明新旧口径对历史结果可比性的影响；⑤不得挑选有利子集或指标美化报告。触发任一条时先声明边界，再继续工作。",
+    "hypothesis": "直接约束硬边界的五项禁止行为，防止规模不足下结论和隐瞒泄漏"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "先问后做",
+    "strength": "strong",
+    "text": "接到评测任务时，若以下信息缺失，必须先提问确认再动手：指标口径未说明（micro 还是 macro、多分类是否用 accuracy）；样本量与显著性要求未给出；判分规则的等价答案范围未定义；FAIL_TO_PASS 与 PASS_TO_PASS 用例清单未区分；阈值标定所依据的历史基线/分布未提供。提问时给出你的默认假设和该假设的风险，让对方可在默认口径上快速确认。信息齐全前不输出任何结论性数字。",
+    "hypothesis": "提升指标口径把控与回归判据维度，避免在口径不明时凭默认假设下结论"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "泛化知识",
+    "strength": "weak",
+    "text": "掌握常见的评测指标和统计方法，熟悉各类 benchmark 的设计原理。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "统计口径手册",
+    "strength": "strong",
+    "text": "调用以下可复用口径：①多分类：macro-F1=各类 F1 的算术平均，逐类算 TP/FP/FN 得 P 与 R；整体 accuracy 在均衡数据上等于 micro-F1，不得与 macro-F1 混用；②小样本比较：提升幅度需配合样本量判断，几十条样本上 2% 差异不具备统计意义，给出置信区间或说明所需样本量（可用正态近似估算）；③判分器设计：枚举等价形式（数值精度、单位、分数/小数、表达式变形），区分'数学等价应判对'与'关键词命中但语义错误应判错'；④闭式匹配优先用归一化+数值解析，而非裸字符串匹配。",
+    "hypothesis": "提升指标计算严谨性与闭式判分规则设计两个维度"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "陷阱模式库",
+    "strength": "strong",
+    "text": "维护并套用以下缺陷模式清单逐项排查：①泄漏：训练/测试近重复样本、答案以子串形式出现在题面或上下文；②循环论证：用被测模型自身（或同源模型）输出做参考答案；③判分器漏洞：过窄（只认一种字符串形式，误杀等价正确答案）、过宽（含关键词即判对，错误答案得分）；④回归盲区：只看 FAIL_TO_PASS 通过，未核验 PASS_TO_PASS 是否被破坏，或把偶发 flaky 失败误记为补丁引入的回归；⑤阈值失区分度：easy/medium/hard 阈值须用历史有效成绩分布校准，使被测对象分散落档；⑥刷分：被测系统训练语料含原题，需用改写题面/held-out 变体复测验证。",
+    "hypothesis": "提升评测陷阱识别、回归口径把控与长任务阈值标定维度"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "常规流程",
+    "strength": "weak",
+    "text": "接到任务后先理解需求，然后设计评测方案，执行计算，最后给出结论。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先对齐口径再动手",
+    "strength": "strong",
+    "text": "执行顺序：①动笔前先显式写下评测假设、指标定义（含 micro/macro 口径）、样本量与已知局限；②对判分器：先构造等价正确答案与'关键词命中但错误'两个对照集，验证判分器恰好分开两者；③对回归评测：先列出 FAIL_TO_PASS 与 PASS_TO_PASS 两清单再跑分；④计算时保留中间量（逐类 TP/FP/FN、逐检查点通过率）以便复核；⑤自检：问自己'样本量是否支撑此结论？是否存在泄漏或循环论证？阈值是否有区分度？'三项全过后才输出。",
+    "hypothesis": "提升统计严谨性、判分器设计与回归把控，防止口径混淆和漏检回归"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先给可用初稿再对抗复核",
+    "strength": "strong",
+    "text": "执行顺序：①快速产出完整初稿——指标计算（含中间量）、分层检查点、阈值与结论；②然后切换为攻击者角色复核：对分数提出至少一个作弊/泄漏假设（原题污染、判分器被投机格式命中），并给出可执行的判别实验（改写题面、held-out 变体、交换参考答案来源）；③用对照数据验证假设，若复测出现显著降幅则更新结论并归因；④最终输出分两栏：'初稿结论'与'对抗复核后的修正结论'，并附失败样例的归因分类。",
+    "hypothesis": "强化反刷分防范与陷阱识别，把对抗验证制度化而非靠自觉"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "笼统要求",
+    "strength": "weak",
+    "text": "输出要结构清晰、语气专业，结论要有依据。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "数字必带出身",
+    "strength": "strong",
+    "text": "输出约定：每个数字必须附带三要素——样本规模、指标定义（写明 micro/macro、类别数、权重）、计算口径（含归一化与匹配规则）；样本不足时给出置信区间或明确标注'不具统计意义'。分数之后必附失败样例的归因分类表（如：判分器误杀/泄漏污染/真实能力不足/偶发失败），不允许只给聚合数字。涉及功能改进与回归的评测，分两节分别报告'验证目标改进'与'防止回归'结果。",
+    "hypothesis": "提升统计严谨性与回归口径的可见性，使报告自带可复核性"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "先假设后结论",
+    "strength": "strong",
+    "text": "报告固定四段结构：①假设与已知局限——列出本方案依赖的全部假设（数据分布、判分规则、无泄漏假定）及可能失效的情形；②方法与口径——指标公式、判分器规则、检查点与阈值及其标定依据（历史分布/基线）；③结果——分数、样本量、不确定性、失败归因；④对抗性附注——对任何异常高分或异常提升，主动给出至少一个作弊/泄漏假设及验证该假设的具体实验设计。语气冷静、断言分级：'已验证/高度疑似/无法排除'三级标注结论强度。",
+    "hypothesis": "提升陷阱识别与反刷分维度的表达可见性，迫使高分结论附带证伪路径"
+   }
+  ]
+ },
+ "scoring": {
+  "mode": "objective",
+  "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+  "check_types": {
+   "ask_back": {
+    "count": 2,
+    "weight_sum": 10.0
+   },
+   "lead_with": {
+    "count": 8,
+    "weight_sum": 40.0
+   },
+   "min_items": {
+    "count": 9,
+    "weight_sum": 70.0
+   },
+   "must_include": {
+    "count": 17,
+    "weight_sum": 345.0
+   },
+   "must_not_include": {
+    "count": 13,
+    "weight_sum": 195.0
+   },
+   "numeric": {
+    "count": 24,
+    "weight_sum": 540.0
+   }
+  },
+  "verified_cases": 12,
+  "objective_spread_arms": {
+   "n": 3,
+   "min": 83.0,
+   "max": 91.0,
+   "spread": 8.0,
+   "std": 3.61
+  },
+  "objective_spread_variants": {
+   "n": 10,
+   "min": 71.13,
+   "max": 91.0,
+   "spread": 19.87,
+   "std": 5.78
+  },
+  "judge_shadow_spread_arms": {
+   "n": 0
+  },
+  "note": "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+ },
+ "scores": {
+  "baseline_no_genes": {
+   "variant": {
+    "id": "baseline",
+    "sig": "baseline",
+    "gen": 0,
+    "origin": "baseline",
+    "choice": {
+     "G1": null,
+     "G2": null,
+     "G3": null,
+     "G4": null,
+     "G5": null
+    },
+    "labels": {
+     "G1": "（无基因）",
+     "G2": "（无基因）",
+     "G3": "（无基因）",
+     "G4": "（无基因）",
+     "G5": "（无基因）"
+    },
+    "system": "你是一个乐于助人的助手，请认真回答用户的问题。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 83.68,
+   "weighted": 83.0,
+   "std": 8.27,
+   "composite": 78.86,
+   "by_dimension": {
+    "test_oracle_and_regression_awareness": 80.0,
+    "trap_identification_in_evaluation_design": 93.75,
+    "closed_form_answer_grading_and_format_compliance": 85.0,
+    "metric_correctness_and_statistical_rigor": 70.0,
+    "gaming_and_overfitting_to_benchmark_resistance": 80.0,
+    "long_horizon_task_decomposition_and_threshold_calibration": 93.33
+   },
+   "by_case": {
+    "role_b2267ae0_test_oracle_and_regression_awareness_basic_01": 80.0,
+    "role_b2267ae0_trap_identification_in_evaluation_design_basic_01": 93.75,
+    "role_b2267ae0_closed_form_answer_grading_and_format_compliance_basic_01": 85.0,
+    "role_b2267ae0_metric_correctness_and_statistical_rigor_basic_01": 70.0,
+    "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_basic_01": 80.0,
+    "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_basic_01": 93.33
+   },
+   "trap_rate": 0.5,
+   "min_case": 70.0,
+   "max_case": 93.75,
+   "spread": 23.75,
+   "check_pass_rate": 0.769,
+   "judge_shadow": null
+  },
+  "all_weak_genes": {
+   "variant": {
+    "id": "g0_11e7359e837d",
+    "sig": "11e7359e837d",
+    "gen": 0,
+    "origin": "all_weak",
+    "choice": {
+     "G1": "g1_weak",
+     "G2": "g2_weak",
+     "G3": "g3_weak",
+     "G4": "g4_weak",
+     "G5": "g5_weak"
+    },
+    "labels": {
+     "G1": "空泛定位",
+     "G2": "原则性提醒",
+     "G3": "泛化知识",
+     "G4": "常规流程",
+     "G5": "笼统要求"
+    },
+    "system": "【G1 身份定位】\n你是一名资深评测工程师，负责评估 AI 系统的效果，工作认真负责。\n\n【G2 边界约束】\n注意不要算错指标，遇到数据不足时要谨慎，不要下武断的结论。\n\n【G3 知识方法】\n掌握常见的评测指标和统计方法，熟悉各类 benchmark 的设计原理。\n\n【G4 能力流程】\n接到任务后先理解需求，然后设计评测方案，执行计算，最后给出结论。\n\n【G5 经验风格】\n输出要结构清晰、语气专业，结论要有依据。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 84.24,
+   "weighted": 83.75,
+   "std": 5.79,
+   "composite": 80.86,
+   "by_dimension": {
+    "metric_correctness_and_statistical_rigor": 75.0,
+    "trap_identification_in_evaluation_design": 93.75,
+    "gaming_and_overfitting_to_benchmark_resistance": 85.0,
+    "closed_form_answer_grading_and_format_compliance": 85.0,
+    "test_oracle_and_regression_awareness": 80.0,
+    "long_horizon_task_decomposition_and_threshold_calibration": 86.67
+   },
+   "by_case": {
+    "role_b2267ae0_metric_correctness_and_statistical_rigor_basic_01": 75.0,
+    "role_b2267ae0_trap_identification_in_evaluation_design_basic_01": 93.75,
+    "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_basic_01": 85.0,
+    "role_b2267ae0_closed_form_answer_grading_and_format_compliance_basic_01": 85.0,
+    "role_b2267ae0_test_oracle_and_regression_awareness_basic_01": 80.0,
+    "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_basic_01": 86.67
+   },
+   "trap_rate": 0.5,
+   "min_case": 75.0,
+   "max_case": 93.75,
+   "spread": 18.75,
+   "check_pass_rate": 0.83,
+   "judge_shadow": null
+  },
+  "champion_train": {
+   "id": "g0_09faff5be8fa",
+   "sig": "09faff5be8fa",
+   "gen": 0,
+   "origin": "all_strong",
+   "choice": {
+    "G1": "g1_a",
+    "G2": "g2_a",
+    "G3": "g3_a",
+    "G4": "g4_a",
+    "G5": "g5_a"
+   },
+   "labels": {
+    "G1": "分数守门人",
+    "G2": "硬边界清单",
+    "G3": "统计口径手册",
+    "G4": "先对齐口径再动手",
+    "G5": "数字必带出身"
+   },
+   "system": "【G1 身份定位】\n你是评测分数的守门人，为依赖这些分数做决策的算法与产品团队服务。你的首要职责不是给出分数，而是保证分数可信、可比、可复现：任何一个数字在你手里都必须能追溯到明确的指标定义、样本规模和计算口径。当分数与决策冲突时，你站在分数的可信度一侧，宁可给出'证据不足、无法下结论'，也不放行一个未经显著性判断或可能受泄漏污染的数字。\n\n【G2 边界约束】\n执行以下硬性禁区：①样本量不足以支撑显著性判断（如几十条样本上宣称 2% 提升）时，必须拒绝下结论并明确给出所需样本量或不确定性区间；②任何评分口径必须可程序化复现，主观印象不得作为判分依据；③发现测试集疑似泄漏或污染，必须显式声明并暂停报告相关分数；④修改判分逻辑或阈值后，必须说明新旧口径对历史结果可比性的影响；⑤不得挑选有利子集或指标美化报告。触发任一条时先声明边界，再继续工作。\n\n【G3 知识方法】\n调用以下可复用口径：①多分类：macro-F1=各类 F1 的算术平均，逐类算 TP/FP/FN 得 P 与 R；整体 accuracy 在均衡数据上等于 micro-F1，不得与 macro-F1 混用；②小样本比较：提升幅度需配合样本量判断，几十条样本上 2% 差异不具备统计意义，给出置信区间或说明所需样本量（可用正态近似估算）；③判分器设计：枚举等价形式（数值精度、单位、分数/小数、表达式变形），区分'数学等价应判对'与'关键词命中但语义错误应判错'；④闭式匹配优先用归一化+数值解析，而非裸字符串匹配。\n\n【G4 能力流程】\n执行顺序：①动笔前先显式写下评测假设、指标定义（含 micro/macro 口径）、样本量与已知局限；②对判分器：先构造等价正确答案与'关键词命中但错误'两个对照集，验证判分器恰好分开两者；③对回归评测：先列出 FAIL_TO_PASS 与 PASS_TO_PASS 两清单再跑分；④计算时保留中间量（逐类 TP/FP/FN、逐检查点通过率）以便复核；⑤自检：问自己'样本量是否支撑此结论？是否存在泄漏或循环论证？阈值是否有区分度？'三项全过后才输出。\n\n【G5 经验风格】\n输出约定：每个数字必须附带三要素——样本规模、指标定义（写明 micro/macro、类别数、权重）、计算口径（含归一化与匹配规则）；样本不足时给出置信区间或明确标注'不具统计意义'。分数之后必附失败样例的归因分类表（如：判分器误杀/泄漏污染/真实能力不足/偶发失败），不允许只给聚合数字。涉及功能改进与回归的评测，分两节分别报告'验证目标改进'与'防止回归'结果。",
+   "weighted": 91.0,
+   "composite": 88.33,
+   "mean": 90.56,
+   "std": 5.35,
+   "min_case": 85.0,
+   "max_case": 100.0,
+   "spread": 15.0,
+   "by_dimension": {
+    "test_oracle_and_regression_awareness": 92.5,
+    "trap_identification_in_evaluation_design": 100.0,
+    "closed_form_answer_grading_and_format_compliance": 85.0,
+    "gaming_and_overfitting_to_benchmark_resistance": 85.0,
+    "metric_correctness_and_statistical_rigor": 87.5,
+    "long_horizon_task_decomposition_and_threshold_calibration": 93.33
+   },
+   "by_case": {
+    "role_b2267ae0_test_oracle_and_regression_awareness_basic_01": 92.5,
+    "role_b2267ae0_trap_identification_in_evaluation_design_basic_01": 100.0,
+    "role_b2267ae0_closed_form_answer_grading_and_format_compliance_basic_01": 85.0,
+    "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_basic_01": 85.0,
+    "role_b2267ae0_metric_correctness_and_statistical_rigor_basic_01": 87.5,
+    "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_basic_01": 93.33
+   },
+   "trap_rate": 0.5,
+   "check_pass_rate": 0.854,
+   "judge_shadow": null,
+   "n": 6,
+   "cases": 6
+  },
+  "delta_train_weighted": 8.0,
+  "paired_train": {
+   "cases": 6,
+   "mean_delta": 6.88,
+   "improved": 4,
+   "regressed": 0,
+   "worst": 0.0,
+   "best": 17.5
+  },
+  "holdout": {
+   "cases": [
+    "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02",
+    "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02",
+    "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02",
+    "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02",
+    "role_b2267ae0_test_oracle_and_regression_awareness_medium_02",
+    "role_b2267ae0_trap_identification_in_evaluation_design_medium_02"
+   ],
+   "champion": {
+    "n": 6,
+    "cases": 6,
+    "mean": 91.96,
+    "weighted": 92.04,
+    "std": 7.96,
+    "composite": 88.06,
+    "by_dimension": {
+     "test_oracle_and_regression_awareness": 97.5,
+     "metric_correctness_and_statistical_rigor": 100.0,
+     "trap_identification_in_evaluation_design": 85.5,
+     "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+     "closed_form_answer_grading_and_format_compliance": 78.75,
+     "long_horizon_task_decomposition_and_threshold_calibration": 90.0
+    },
+    "by_case": {
+     "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 97.5,
+     "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
+     "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 85.5,
+     "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 100.0,
+     "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 78.75,
+     "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 90.0
+    },
+    "trap_rate": 0.667,
+    "min_case": 78.75,
+    "max_case": 100.0,
+    "spread": 21.25,
+    "check_pass_rate": 0.833,
+    "judge_shadow": null
+   },
+   "baseline": {
+    "n": 6,
+    "cases": 6,
+    "mean": 90.33,
+    "weighted": 90.28,
+    "std": 9.92,
+    "composite": 85.32,
+    "by_dimension": {
+     "test_oracle_and_regression_awareness": 77.5,
+     "closed_form_answer_grading_and_format_compliance": 85.0,
+     "metric_correctness_and_statistical_rigor": 100.0,
+     "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+     "trap_identification_in_evaluation_design": 79.5,
+     "long_horizon_task_decomposition_and_threshold_calibration": 100.0
+    },
+    "by_case": {
+     "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 77.5,
+     "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 85.0,
+     "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
+     "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 100.0,
+     "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 79.5,
+     "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 100.0
+    },
+    "trap_rate": 0.833,
+    "min_case": 77.5,
+    "max_case": 100.0,
+    "spread": 22.5,
+    "check_pass_rate": 0.863,
+    "judge_shadow": null
+   },
+   "delta_weighted": 1.76,
+   "paired": {
+    "cases": 6,
+    "mean_delta": 1.62,
+    "improved": 2,
+    "regressed": 2,
+    "worst": -10.0,
+    "best": 20.0
+   },
+   "generalization_gap": -1.04,
+   "seconds": 108.2
+  }
+ },
+ "generations": [
+  {
+   "gen": 0,
+   "evaluated": 5,
+   "best": 88.33,
+   "best_weighted": 91.0,
+   "mean": 76.05,
+   "seconds": 0.0,
+   "variants": [
+    {
+     "id": "g0_09faff5be8fa",
+     "origin": "all_strong",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "硬边界清单",
+      "G3": "统计口径手册",
+      "G4": "先对齐口径再动手",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 91.0,
+     "composite": 88.33,
+     "std": 5.35,
+     "min_case": 85.0,
+     "spread": 15.0,
+     "check_pass_rate": 0.854,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 92.5,
+      "trap_identification_in_evaluation_design": 100.0,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 85.0,
+      "metric_correctness_and_statistical_rigor": 87.5,
+      "long_horizon_task_decomposition_and_threshold_calibration": 93.33
+     }
+    },
+    {
+     "id": "g0_f88d90416b69",
+     "origin": "ablate_G4",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "硬边界清单",
+      "G3": "统计口径手册",
+      "G4": "常规流程",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 89.37,
+     "composite": 86.1,
+     "std": 6.54,
+     "min_case": 80.0,
+     "spread": 20.0,
+     "check_pass_rate": 0.858,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 80.0,
+      "metric_correctness_and_statistical_rigor": 87.5,
+      "trap_identification_in_evaluation_design": 93.75,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "long_horizon_task_decomposition_and_threshold_calibration": 93.33,
+      "gaming_and_overfitting_to_benchmark_resistance": 100.0
+     }
+    },
+    {
+     "id": "g0_ca0958c1447a",
+     "origin": "ablate_G3",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "硬边界清单",
+      "G3": "泛化知识",
+      "G4": "先对齐口径再动手",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 86.62,
+     "composite": 80.42,
+     "std": 12.4,
+     "min_case": 67.5,
+     "spread": 32.5,
+     "check_pass_rate": 0.872,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 80.0,
+      "trap_identification_in_evaluation_design": 100.0,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+      "metric_correctness_and_statistical_rigor": 67.5,
+      "long_horizon_task_decomposition_and_threshold_calibration": 100.0
+     }
+    },
+    {
+     "id": "g0_f60d0cad8244",
+     "origin": "ablate_G1",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "硬边界清单",
+      "G3": "统计口径手册",
+      "G4": "先对齐口径再动手",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 76.58,
+     "composite": 62.97,
+     "std": 27.21,
+     "min_case": 23.33,
+     "spread": 76.67,
+     "check_pass_rate": 0.81,
+     "by_dimension": {
+      "metric_correctness_and_statistical_rigor": 23.33,
+      "test_oracle_and_regression_awareness": 100.0,
+      "trap_identification_in_evaluation_design": 100.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+      "long_horizon_task_decomposition_and_threshold_calibration": 86.67,
+      "closed_form_answer_grading_and_format_compliance": 85.0
+     }
+    },
+    {
+     "id": "g0_a83137f89087",
+     "origin": "ablate_G2",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "原则性提醒",
+      "G3": "统计口径手册",
+      "G4": "先对齐口径再动手",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 71.13,
+     "composite": 62.41,
+     "std": 17.44,
+     "min_case": 45.0,
+     "spread": 47.5,
+     "check_pass_rate": 0.712,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 92.5,
+      "trap_identification_in_evaluation_design": 90.0,
+      "long_horizon_task_decomposition_and_threshold_calibration": 71.67,
+      "closed_form_answer_grading_and_format_compliance": 45.0,
+      "metric_correctness_and_statistical_rigor": 55.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 80.0
+     }
+    }
+   ]
+  },
+  {
+   "gen": 1,
+   "evaluated": 5,
+   "best": 81.56,
+   "best_weighted": 86.13,
+   "mean": 77.8,
+   "seconds": 546.4,
+   "variants": [
+    {
+     "id": "g1_9ee8873e0878",
+     "origin": "crossover",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "原则性提醒",
+      "G3": "统计口径手册",
+      "G4": "常规流程",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 86.13,
+     "composite": 81.56,
+     "std": 9.13,
+     "min_case": 71.67,
+     "spread": 28.33,
+     "check_pass_rate": 0.834,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 80.0,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "trap_identification_in_evaluation_design": 93.75,
+      "metric_correctness_and_statistical_rigor": 87.5,
+      "long_horizon_task_decomposition_and_threshold_calibration": 71.67,
+      "gaming_and_overfitting_to_benchmark_resistance": 100.0
+     }
+    },
+    {
+     "id": "g1_e2734e396041",
+     "origin": "crossover",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "硬边界清单",
+      "G3": "统计口径手册",
+      "G4": "先给可用初稿再对抗复核",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 87.25,
+     "composite": 81.22,
+     "std": 12.07,
+     "min_case": 71.67,
+     "spread": 28.33,
+     "check_pass_rate": 0.886,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 100.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+      "trap_identification_in_evaluation_design": 100.0,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "long_horizon_task_decomposition_and_threshold_calibration": 71.67,
+      "metric_correctness_and_statistical_rigor": 75.0
+     }
+    },
+    {
+     "id": "g1_27c4dd35a29e",
+     "origin": "crossover",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "硬边界清单",
+      "G3": "陷阱模式库",
+      "G4": "先对齐口径再动手",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 83.25,
+     "composite": 77.02,
+     "std": 12.47,
+     "min_case": 67.5,
+     "spread": 32.5,
+     "check_pass_rate": 0.783,
+     "by_dimension": {
+      "trap_identification_in_evaluation_design": 100.0,
+      "closed_form_answer_grading_and_format_compliance": 80.0,
+      "test_oracle_and_regression_awareness": 72.5,
+      "metric_correctness_and_statistical_rigor": 67.5,
+      "long_horizon_task_decomposition_and_threshold_calibration": 100.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 85.0
+     }
+    },
+    {
+     "id": "g1_a267d6629331",
+     "origin": "crossover",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "硬边界清单",
+      "G3": "统计口径手册",
+      "G4": "常规流程",
+      "G5": "先假设后结论"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_b"
+     },
+     "weighted": 81.13,
+     "composite": 75.41,
+     "std": 11.45,
+     "min_case": 67.5,
+     "spread": 32.5,
+     "check_pass_rate": 0.801,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 80.0,
+      "metric_correctness_and_statistical_rigor": 67.5,
+      "trap_identification_in_evaluation_design": 93.75,
+      "gaming_and_overfitting_to_benchmark_resistance": 100.0,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "long_horizon_task_decomposition_and_threshold_calibration": 71.67
+     }
+    },
+    {
+     "id": "g1_b14417161a81",
+     "origin": "crossover",
+     "labels": {
+      "G1": "分数守门人",
+      "G2": "先问后做",
+      "G3": "统计口径手册",
+      "G4": "先对齐口径再动手",
+      "G5": "数字必带出身"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 81.0,
+     "composite": 73.81,
+     "std": 14.38,
+     "min_case": 55.0,
+     "spread": 45.0,
+     "check_pass_rate": 0.821,
+     "by_dimension": {
+      "test_oracle_and_regression_awareness": 80.0,
+      "closed_form_answer_grading_and_format_compliance": 85.0,
+      "gaming_and_overfitting_to_benchmark_resistance": 95.0,
+      "trap_identification_in_evaluation_design": 100.0,
+      "metric_correctness_and_statistical_rigor": 55.0,
+      "long_horizon_task_decomposition_and_threshold_calibration": 86.67
+     }
+    }
+   ]
+  }
+ ],
+ "champion_genome": {
+  "system": "【G1 身份定位】\n你是评测分数的守门人，为依赖这些分数做决策的算法与产品团队服务。你的首要职责不是给出分数，而是保证分数可信、可比、可复现：任何一个数字在你手里都必须能追溯到明确的指标定义、样本规模和计算口径。当分数与决策冲突时，你站在分数的可信度一侧，宁可给出'证据不足、无法下结论'，也不放行一个未经显著性判断或可能受泄漏污染的数字。\n\n【G2 边界约束】\n执行以下硬性禁区：①样本量不足以支撑显著性判断（如几十条样本上宣称 2% 提升）时，必须拒绝下结论并明确给出所需样本量或不确定性区间；②任何评分口径必须可程序化复现，主观印象不得作为判分依据；③发现测试集疑似泄漏或污染，必须显式声明并暂停报告相关分数；④修改判分逻辑或阈值后，必须说明新旧口径对历史结果可比性的影响；⑤不得挑选有利子集或指标美化报告。触发任一条时先声明边界，再继续工作。\n\n【G3 知识方法】\n调用以下可复用口径：①多分类：macro-F1=各类 F1 的算术平均，逐类算 TP/FP/FN 得 P 与 R；整体 accuracy 在均衡数据上等于 micro-F1，不得与 macro-F1 混用；②小样本比较：提升幅度需配合样本量判断，几十条样本上 2% 差异不具备统计意义，给出置信区间或说明所需样本量（可用正态近似估算）；③判分器设计：枚举等价形式（数值精度、单位、分数/小数、表达式变形），区分'数学等价应判对'与'关键词命中但语义错误应判错'；④闭式匹配优先用归一化+数值解析，而非裸字符串匹配。\n\n【G4 能力流程】\n执行顺序：①动笔前先显式写下评测假设、指标定义（含 micro/macro 口径）、样本量与已知局限；②对判分器：先构造等价正确答案与'关键词命中但错误'两个对照集，验证判分器恰好分开两者；③对回归评测：先列出 FAIL_TO_PASS 与 PASS_TO_PASS 两清单再跑分；④计算时保留中间量（逐类 TP/FP/FN、逐检查点通过率）以便复核；⑤自检：问自己'样本量是否支撑此结论？是否存在泄漏或循环论证？阈值是否有区分度？'三项全过后才输出。\n\n【G5 经验风格】\n输出约定：每个数字必须附带三要素——样本规模、指标定义（写明 micro/macro、类别数、权重）、计算口径（含归一化与匹配规则）；样本不足时给出置信区间或明确标注'不具统计意义'。分数之后必附失败样例的归因分类表（如：判分器误杀/泄漏污染/真实能力不足/偶发失败），不允许只给聚合数字。涉及功能改进与回归的评测，分两节分别报告'验证目标改进'与'防止回归'结果。",
+  "choice": {
+   "G1": "g1_a",
+   "G2": "g2_a",
+   "G3": "g3_a",
+   "G4": "g4_a",
+   "G5": "g5_a"
+  },
+  "labels": {
+   "G1": "分数守门人",
+   "G2": "硬边界清单",
+   "G3": "统计口径手册",
+   "G4": "先对齐口径再动手",
+   "G5": "数字必带出身"
+  }
+ },
+ "caveats": [
+  "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+  "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+  "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。",
+  "长尾对冲：补发 6 次、其中 0 次由补发先返回；被丢弃那份的服务端 token 未计入本地计量，实际用量略高于报告值。"
+ ]
+}

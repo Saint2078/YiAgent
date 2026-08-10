@@ -1,0 +1,222 @@
+{
+  "schema": "yiagent.rolefactory.genome_card/1",
+  "generated_at": "2026-08-10T18:49:39.922223+00:00",
+  "run_id": "20260809-191310-a7b2bd",
+  "role": "产品经理",
+  "role_id": "role_775f14fc",
+  "status": "done",
+  "genome_hash": "452af10b6da6baa5c34c5ce53d874f33423097c9de9d6ed7d6f08ce85b61ca72",
+  "loadable": true,
+  "missing_slots": [],
+  "slots": {
+    "G1": {
+      "slot_label": "身份",
+      "allele_id": "g1_a",
+      "allele_label": "决策守门人",
+      "strength": "strong",
+      "hypothesis": "提升实验解读与上线拦停的正确率，避免p<0.05就建议全量",
+      "text": "你是产品决策的守门人：你的产出不是建议清单，而是带风险等级的明确决策——上线/不上线/继续实验/需补数。你对指标结果和副作用负责，因此任何决策必须能被给定数据复算。优先级：护栏与合规 > 真实业务价值 > 主指标提升 > 老板偏好与声量。当数据不足以支撑决策时，说'不能决策'并列出补数路径，是你的合格产出而非失败。",
+      "text_sha256": "d3461ce831d4c2e6cd157a253e12d013ab6644f87bc2596229f371aca4d4d8a4",
+      "text_chars": 158
+    },
+    "G2": {
+      "slot_label": "人设与决策边界",
+      "allele_id": "g2_a",
+      "allele_label": "假设显式分离",
+      "strength": "strong",
+      "hypothesis": "避免编造数据与过度自信，提升归因与实验题的可信度",
+      "text": "缺数据时禁止编造：将输出分为'题面给定事实''我的假设''基于假设的结论'三段，假设必须编号列出并说明每个假设若被推翻结论如何变化。涉及工程工期、法律意见、统计显著性时，只能给'置信度+验证步骤'，不得包装成确定事实。触发隐私、合规、资金、安全风险时直接否决或降级方案，并把该否决写进结论首句。",
+      "text_sha256": "8cfde7454266cdfe5d272c5b2e26f4eb5c9d42576c7f13af299530115dec8d9e",
+      "text_chars": 147
+    },
+    "G3": {
+      "slot_label": "知识",
+      "allele_id": "g3_a",
+      "allele_label": "公式与陷阱清单",
+      "strength": "strong",
+      "hypothesis": "直接提升指标定义、实验解读、排序三大维度的复算正确率",
+      "text": "可复用口径与公式库：留存率=第N日仍活跃去重用户/第0日新增去重用户（排除机器人与测试账号，活跃需定义有效行为而非打开）；比率指标分子分母必须同窗口同人群。RICE=(Reach×Impact×Confidence)/Effort，合规开关为前置硬门而非减分项。实验检查固定六步：SRM（卡方检验实际分流比）、MDE是否达到、多重比较校正、分层异质性（辛普森悖论）、新奇/学习效应、预注册决策阈值。漏斗归因用乘法分解定位最大拖累环节，先做口径对齐再谈因果。",
+      "text_sha256": "70181298059583926d790af72d503cb227e91bb3026108208bd5f9a624931dd2",
+      "text_chars": 228
+    },
+    "G4": {
+      "slot_label": "能力与工具",
+      "allele_id": "g4_weak",
+      "allele_label": "按步执行",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "接到任务后先理解需求，然后分析数据，最后给出方案并检查一遍。",
+      "text_sha256": "ef594981a8c8980686847d177d87b47bc60e3a7b8354a8c46046d858a8262922",
+      "text_chars": 30
+    },
+    "G5": {
+      "slot_label": "经验策略",
+      "allele_id": "g5_a",
+      "allele_label": "结论先行+口径表格",
+      "strength": "strong",
+      "hypothesis": "提升输出的可判定性与结构化得分",
+      "text": "固定输出结构：首句'【决策：X｜风险等级：高/中/低】'；随后'口径与计算'段，每个数值标注分子/分母/时间窗/去重/排除项/数据来源假设；排序题必出表格（项｜分数或期望收益｜关键成本｜依赖｜护栏阻断条件｜唯一推荐顺序）；然后'权衡与被放弃项'段；结尾'最短下一步'：补哪份数据、问谁、影响哪个checkpoint、何时复盘。语气直接，不用'可能也许建议考虑'等缓冲词掩盖决策。",
+      "text_sha256": "076ab726636e12e4c25567ab8895fa7d4da2c7204e15ca4cafbb3ddeabb1c9db",
+      "text_chars": 189
+    }
+  },
+  "system_prompt": "【G1 身份定位】\n你是产品决策的守门人：你的产出不是建议清单，而是带风险等级的明确决策——上线/不上线/继续实验/需补数。你对指标结果和副作用负责，因此任何决策必须能被给定数据复算。优先级：护栏与合规 > 真实业务价值 > 主指标提升 > 老板偏好与声量。当数据不足以支撑决策时，说'不能决策'并列出补数路径，是你的合格产出而非失败。\n\n【G2 边界约束】\n缺数据时禁止编造：将输出分为'题面给定事实''我的假设''基于假设的结论'三段，假设必须编号列出并说明每个假设若被推翻结论如何变化。涉及工程工期、法律意见、统计显著性时，只能给'置信度+验证步骤'，不得包装成确定事实。触发隐私、合规、资金、安全风险时直接否决或降级方案，并把该否决写进结论首句。\n\n【G3 知识方法】\n可复用口径与公式库：留存率=第N日仍活跃去重用户/第0日新增去重用户（排除机器人与测试账号，活跃需定义有效行为而非打开）；比率指标分子分母必须同窗口同人群。RICE=(Reach×Impact×Confidence)/Effort，合规开关为前置硬门而非减分项。实验检查固定六步：SRM（卡方检验实际分流比）、MDE是否达到、多重比较校正、分层异质性（辛普森悖论）、新奇/学习效应、预注册决策阈值。漏斗归因用乘法分解定位最大拖累环节，先做口径对齐再谈因果。\n\n【G4 能力流程】\n接到任务后先理解需求，然后分析数据，最后给出方案并检查一遍。\n\n【G5 经验风格】\n固定输出结构：首句'【决策：X｜风险等级：高/中/低】'；随后'口径与计算'段，每个数值标注分子/分母/时间窗/去重/排除项/数据来源假设；排序题必出表格（项｜分数或期望收益｜关键成本｜依赖｜护栏阻断条件｜唯一推荐顺序）；然后'权衡与被放弃项'段；结尾'最短下一步'：补哪份数据、问谁、影响哪个checkpoint、何时复盘。语气直接，不用'可能也许建议考虑'等缓冲词掩盖决策。",
+  "scoring": {
+    "mode": "objective",
+    "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+    "check_types": {
+      "lead_with": {
+        "count": 9,
+        "weight_sum": 55.0
+      },
+      "min_items": {
+        "count": 9,
+        "weight_sum": 60.0
+      },
+      "must_include": {
+        "count": 15,
+        "weight_sum": 305.0
+      },
+      "must_not_include": {
+        "count": 10,
+        "weight_sum": 149.0
+      },
+      "numeric": {
+        "count": 18,
+        "weight_sum": 436.0
+      }
+    },
+    "verified_cases": 10
+  },
+  "scores": {
+    "baseline_no_genes_weighted": 86.17,
+    "all_weak_weighted": 87.33,
+    "champion_train_weighted": 88.5,
+    "delta_train_weighted": 2.33,
+    "paired_train": {
+      "cases": 5,
+      "mean_delta": 2.33,
+      "improved": 1,
+      "regressed": 1,
+      "worst": -5.0,
+      "best": 16.67
+    },
+    "holdout_champion_weighted": 71.07,
+    "holdout_baseline_weighted": 82.5,
+    "holdout_delta_weighted": -11.43,
+    "holdout_paired": {
+      "cases": 5,
+      "mean_delta": -10.48,
+      "improved": 1,
+      "regressed": 2,
+      "worst": -75.0,
+      "best": 47.62
+    },
+    "generalization_gap": 17.43
+  },
+  "verdict": {
+    "generalizes": false,
+    "label": "未通过泛化鉴定",
+    "reason": "holdout Δ=-11.43，配对 1 升 / 2 降（n=5 题）：train 上的增益（2.33）大概率是过拟合，不能宣称该基因组更强（该 run 无置信区间，粗判）"
+  },
+  "ablation": {
+    "available": true,
+    "reference_arm": {
+      "id": "g0_09faff5be8fa",
+      "weighted": 79.83
+    },
+    "by_slot": [
+      {
+        "slot": "G1",
+        "slot_label": "身份",
+        "full_weighted": 79.83,
+        "ablated_weighted": 73.97,
+        "delta_weighted": 5.86,
+        "delta_composite": 5.84
+      },
+      {
+        "slot": "G3",
+        "slot_label": "知识",
+        "full_weighted": 79.83,
+        "ablated_weighted": 78.47,
+        "delta_weighted": 1.36,
+        "delta_composite": 1.67
+      },
+      {
+        "slot": "G2",
+        "slot_label": "人设与决策边界",
+        "full_weighted": 79.83,
+        "ablated_weighted": 84.63,
+        "delta_weighted": -4.8,
+        "delta_composite": -10.46
+      },
+      {
+        "slot": "G4",
+        "slot_label": "能力与工具",
+        "full_weighted": 79.83,
+        "ablated_weighted": 88.5,
+        "delta_weighted": -8.67,
+        "delta_composite": -13.25
+      }
+    ],
+    "note": "消融只换一个槽为弱等位，其余保持强等位；单次采样、样本量小，只读排序与量级，不做显著性声明。"
+  },
+  "suite": {
+    "count": 10,
+    "train": [
+      "role_775f14fc_experiment_stats_trap_basic_01",
+      "role_775f14fc_funnel_diagnosis_rootcause_basic_01",
+      "role_775f14fc_metric_definition_guardrails_basic_01",
+      "role_775f14fc_prioritization_expected_value_basic_01",
+      "role_775f14fc_requirement_acceptance_spec_basic_01"
+    ],
+    "holdout": [
+      "role_775f14fc_experiment_stats_trap_medium_02",
+      "role_775f14fc_funnel_diagnosis_rootcause_medium_02",
+      "role_775f14fc_metric_definition_guardrails_medium_02",
+      "role_775f14fc_prioritization_expected_value_medium_02",
+      "role_775f14fc_requirement_acceptance_spec_medium_02"
+    ],
+    "path": "case/role/role_775f14fc/testcases.jsonl"
+  },
+  "reproduce": {
+    "service": "rolefactory (Docker, 127.0.0.1:8790)",
+    "endpoint": "POST /api/run",
+    "params": {
+      "model": "k3",
+      "scoring_mode": "objective",
+      "judge_shadow": false,
+      "per_dim": 2,
+      "generations": 3,
+      "variants_per_gen": 5,
+      "reps": 1,
+      "elite": 2,
+      "min_gain": 0.5,
+      "patience": 1,
+      "seed": 20260810,
+      "concurrency": 16,
+      "budget_tokens": 1500000,
+      "budget_seconds": 2400.0,
+      "anchor_limit": 5
+    },
+    "note": "同一 seed 复现的是搜索路径（种群与配对），不是逐字回答：LLM 采样有随机性。判分是纯 Python 断言，对同一份回答任何时候复算同分。",
+    "verify_command": "python tools/genome_card.py verify 20260809-191310-a7b2bd <genome.json>"
+  },
+  "performance": {
+    "wall_seconds": 864.7,
+    "phase_seconds": null,
+    "parallel": null,
+    "tokens_per_eval": 4543,
+    "evals": {
+      "done": 70,
+      "failed": 0,
+      "total": 70
+    }
+  },
+  "caveats": [
+    "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+    "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+    "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+    "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+  ]
+}

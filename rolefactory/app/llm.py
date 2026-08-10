@@ -65,6 +65,11 @@ class Meter:
     completion_tokens: int = 0
     total_tokens: int = 0
     api_seconds: float = 0.0
+    # 排队等闸门的时间不算 API 时间，否则并发利用率会被高估
+    queue_seconds: float = 0.0
+    inflight_peak: int = 0
+    hedges: int = 0
+    hedge_wins: int = 0
     by_purpose: dict[str, dict[str, float]] = field(default_factory=dict)
     latencies: list[float] = field(default_factory=list)
 
@@ -105,8 +110,13 @@ class Meter:
             "completion_tokens": self.completion_tokens,
             "total_tokens": self.total_tokens,
             "api_seconds_sum": round(self.api_seconds, 1),
+            "queue_seconds_sum": round(self.queue_seconds, 1),
+            "inflight_peak": self.inflight_peak,
+            "hedges": self.hedges,
+            "hedge_wins": self.hedge_wins,
             "latency_p50": pct(0.50),
             "latency_p90": pct(0.90),
+            "latency_p99": pct(0.99),
             "latency_max": round(lat[-1], 2) if lat else None,
             "by_purpose": {
                 k: {
@@ -146,10 +156,13 @@ class Session:
         self.budget_tokens = int(budget_tokens or SETTINGS.default_budget_tokens)
         self.budget_seconds = float(budget_seconds or SETTINGS.default_budget_seconds)
         self.cache_enabled = SETTINGS.cache_enabled if cache is None else bool(cache)
-        self.started = time.time()
+        # 容器时钟可能被宿主机校正而回跳；一切时长用单调钟，wall/延时才不会出现负数
+        self.started = time.monotonic()
         self.aborted = False
         self.abort_reason = ""
         self._lock = asyncio.Lock()
+        self.inflight = 0
+        self.hedge_enabled = SETTINGS.hedge_enabled
 
     # ---- 护栏 ----
     def abort(self, reason: str = "manual") -> None:
@@ -162,13 +175,13 @@ class Session:
         if self.meter.total_tokens >= self.budget_tokens:
             self.abort("budget_tokens")
             raise Budget("budget_tokens")
-        if time.time() - self.started >= self.budget_seconds:
+        if self.wall >= self.budget_seconds:
             self.abort("budget_seconds")
             raise Budget("budget_seconds")
 
     @property
     def wall(self) -> float:
-        return time.time() - self.started
+        return max(0.0, time.monotonic() - self.started)
 
     # ---- 缓存 ----
     def _cache_path(self, key: str) -> Path:
@@ -198,6 +211,72 @@ class Session:
         except Exception:
             pass
 
+    # ---- 单次 HTTP（含闸门与计时）----
+    async def _post(
+        self, payload: dict[str, Any], headers: dict[str, str]
+    ) -> tuple[httpx.Response | None, float, str]:
+        """返回 (响应, 真实 API 秒数, 错误串)。排队时间单独计量，不混进 API 秒数。"""
+        client = await get_client()
+        t_submit = time.monotonic()
+        async with self.sem:
+            t_start = time.monotonic()
+            async with self._lock:
+                self.inflight += 1
+                self.meter.queue_seconds += max(0.0, t_start - t_submit)
+                if self.inflight > self.meter.inflight_peak:
+                    self.meter.inflight_peak = self.inflight
+            try:
+                resp = await client.post("/chat/completions", json=payload, headers=headers)
+                return resp, max(0.0, time.monotonic() - t_start), ""
+            except Exception as exc:  # 网络/超时
+                return None, max(0.0, time.monotonic() - t_start), f"{type(exc).__name__}: {exc}"
+            finally:
+                async with self._lock:
+                    self.inflight -= 1
+
+    def _hedge_after(self) -> float | None:
+        """对冲阈值：2×p50，夹在 [min, cap]；样本不足或额度用尽则不对冲。"""
+        if not self.hedge_enabled:
+            return None
+        lat = self.meter.latencies
+        if len(lat) < SETTINGS.hedge_min_samples:
+            return None
+        if self.meter.hedges >= max(2, int(self.meter.calls * SETTINGS.hedge_max_rate)):
+            return None
+        ordered = sorted(lat)
+        p50 = ordered[len(ordered) // 2]
+        return max(
+            SETTINGS.hedge_min_seconds,
+            min(SETTINGS.hedge_cap_seconds, SETTINGS.hedge_p50_factor * p50),
+        )
+
+    @staticmethod
+    def _drop(task: asyncio.Task) -> None:
+        task.cancel()
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
+
+    async def _post_hedged(
+        self, payload: dict[str, Any], headers: dict[str, str]
+    ) -> tuple[httpx.Response | None, float, str]:
+        after = self._hedge_after()
+        if after is None:
+            return await self._post(payload, headers)
+        primary = asyncio.create_task(self._post(payload, headers))
+        done, _ = await asyncio.wait({primary}, timeout=after)
+        if done:
+            return primary.result()
+        async with self._lock:
+            self.meter.hedges += 1
+        backup = asyncio.create_task(self._post(payload, headers))
+        done, pending = await asyncio.wait({primary, backup}, return_when=asyncio.FIRST_COMPLETED)
+        winner = done.pop()
+        for t in pending:
+            self._drop(t)
+        if winner is backup:
+            async with self._lock:
+                self.meter.hedge_wins += 1
+        return winner.result()
+
     # ---- 调用 ----
     async def chat(
         self,
@@ -214,7 +293,7 @@ class Session:
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": max_tokens,
+            "max_tokens": max(SETTINGS.min_max_tokens, int(max_tokens)),
         }
         if temperature is not None and not _TEMP_UNSUPPORTED["flag"] and not SETTINGS.drop_temperature:
             payload["temperature"] = temperature
@@ -227,23 +306,18 @@ class Session:
                     self.meter.add(purpose, hit.get("usage", {}), 0.0, True)
                 return hit.get("text", "")
 
-        client = await get_client()
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         last_err = ""
         for attempt in range(SETTINGS.max_retries + 1):
             self.check()
-            t0 = time.time()
-            try:
-                async with self.sem:
-                    resp = await client.post("/chat/completions", json=payload, headers=headers)
-            except Exception as exc:  # 网络/超时
-                last_err = f"{type(exc).__name__}: {exc}"
+            resp, dt, err = await self._post_hedged(payload, headers)
+            if resp is None:
+                last_err = err
                 async with self._lock:
                     self.meter.retries += 1
                 await asyncio.sleep(min(30.0, 1.5 * (2**attempt)) * (0.6 + random.random() * 0.8))
                 continue
 
-            dt = time.time() - t0
             if resp.status_code == 200:
                 try:
                     data = resp.json()

@@ -1,0 +1,1189 @@
+{
+ "run_id": "20260809-201229-aa45e1",
+ "role": "软件开发工程师",
+ "role_id": "role_cbf11840",
+ "status": "done",
+ "params": {
+  "model": "k3",
+  "scoring_mode": "objective",
+  "judge_shadow": false,
+  "per_dim": 2,
+  "generations": 3,
+  "variants_per_gen": 5,
+  "reps": 1,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 20260810,
+  "concurrency": 16,
+  "budget_tokens": 1500000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786306349.3595388,
+ "wall_seconds": 1531.7,
+ "performance": {
+  "llm": {
+   "calls": 142,
+   "api_calls": 127,
+   "cache_hits": 15,
+   "cache_hit_rate": 0.1056,
+   "retries": 12,
+   "errors": 0,
+   "prompt_tokens": 97613,
+   "completion_tokens": 301807,
+   "total_tokens": 399420,
+   "api_seconds_sum": 5806.1,
+   "latency_p50": 33.63,
+   "latency_p90": 163.12,
+   "latency_max": 340.29,
+   "by_purpose": {
+    "answer": {
+     "calls": 126,
+     "cache_hits": 0,
+     "tokens": 340517,
+     "seconds": 5772.6
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3417,
+     "seconds": 33.5
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 1,
+     "tokens": 1969,
+     "seconds": 0.0
+    },
+    "case_objective": {
+     "calls": 14,
+     "cache_hits": 14,
+     "tokens": 53517,
+     "seconds": 0.0
+    }
+   }
+  },
+  "evals": {
+   "done": 114,
+   "failed": 0,
+   "total": 114
+  },
+  "api_calls_per_second": 0.08,
+  "evals_per_minute": 4.5,
+  "tokens_per_eval": 3504
+ },
+ "blueprint": {
+  "role": "软件开发工程师",
+  "role_id": "role_cbf11840",
+  "one_line": "在需求约束下设计、实现并验证可正确运行且可维护的软件系统。",
+  "dimensions": [
+   {
+    "key": "code_defect_localization",
+    "name": "代码缺陷定位与修复推断",
+    "weight": 25,
+    "why": "工程师日常最大产出就是改对 bug，改错行号或修错根因直接导致回归。",
+    "probe": "给出一段 30-80 行带唯一确定性 bug 的代码及其失败现象，要求指出出错行号并给出修复后的正确输出值。",
+    "failure_modes": [
+     "只描述症状不定位根因，指错代码行",
+     "修复引入新错误，导致原本通过的路径被破坏（PASS_TO_PASS 失败）"
+    ]
+   },
+   {
+    "key": "boundary_numeric_traps",
+    "name": "边界条件与数值陷阱识别",
+    "weight": 20,
+    "why": "溢出、浮点、闰年、时区是生产事故高发区，且多数人会凭直觉答错。",
+    "probe": "要求计算 32 位有符号整数下某表达式的结果、IEEE754 浮点累加后的精确行为，或跨时区/闰秒场景下的时间差数值。",
+    "failure_modes": [
+     "默认整数无限精度、浮点精确相等，给出数学上正确但机器上错误的值",
+     "忽略闰年规则细节（如 1900 非闰年）或时区偏移方向算反"
+    ]
+   },
+   {
+    "key": "complexity_capacity_estimation",
+    "name": "复杂度与容量数值估算",
+    "weight": 15,
+    "why": "选型与扩容决策依赖数量级判断，算错一个数量级就是架构事故。",
+    "probe": "给定数据规模与硬件参数，计算算法时间复杂度下的大致耗时、存储占用字节数或 QPS 阈值等唯一数值。",
+    "failure_modes": [
+     "混淆 O(n log n) 与 O(n²) 的渐进差异导致数量级错误",
+     "单位换算出错（bit/byte、KB/KiB、毫秒/秒）"
+    ]
+   },
+   {
+    "key": "test_reasoning_oracle",
+    "name": "测试推断与预期输出推导",
+    "weight": 15,
+    "why": "能否在脑内执行代码并推导断言值，决定其写出的单测是否真的构成有效验证。",
+    "probe": "给出函数实现，要求推导特定输入的精确返回值、或判断给定断言中哪一条会失败并给出实际值。",
+    "failure_modes": [
+     "推导输出时漏掉隐式类型转换或字符串格式细节（空格、换行、大小写）",
+     "把'能跑通'当成'正确'，无法指出断言本身的错误预期"
+    ]
+   },
+   {
+    "key": "data_statistical_reasoning",
+    "name": "数据统计推理与聚合陷阱",
+    "weight": 15,
+    "why": "工程师常从日志和指标表得结论，统计误读会直接驱动错误的技术决策。",
+    "probe": "给定一张小型数据表（题面内嵌），在显式约束下计算聚合值，或识别'对平均值再求平均'、辛普森悖论、幸存者偏差类陷阱并给出正确数值。",
+    "failure_modes": [
+     "对分组均值做未加权再平均，得到错误的总体均值",
+     "无视题面方法约束（如必须过滤某类行）而给出通用但违规的算法"
+    ]
+   },
+   {
+    "key": "counterintuitive_concurrency_semantics",
+    "name": "反直觉语义与并发行为判断",
+    "weight": 10,
+    "why": "缓存、并发、语言语义中的反直觉行为是面试与事故复盘中最易集体答错的盲区。",
+    "probe": "询问如'加锁后为何仍需双重检查''HTTP 幂等与重试为何仍会产生重复扣款'等问题，要求指出唯一正确的根因并给出确定性结论。",
+    "failure_modes": [
+     "凭直觉断言'加锁就线程安全''重试必然安全'，忽视可见性与非原子性",
+     "把相关当因果，将时序巧合误认为根因"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得在需求/题面约束之外擅自改变接口签名、输入输出格式或数据口径",
+   "涉及数值答案必须给出精确值，禁止以'大约''应该没问题'代替可验证结果",
+   "修复缺陷时不得破坏既有通过路径（不得为修一个 bug 引入回归）",
+   "无法确定根因时必须显式说明不确定性，禁止编造看似合理的解释"
+  ],
+  "output_habits": [
+   "先给结论性数值或定位行号，再给推导过程，便于自动判分",
+   "推导过程中显式标注单位、进制、时区等易错前提",
+   "主动列出验证过的边界用例（空输入、极值、溢出点）",
+   "指出陷阱题时明确说出'直觉答案 X 为何错误，正确值 Y'"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "swebench",
+   "title": "SWE-bench",
+   "about": "真实 GitHub issue → 补丁，代码工程能力的事实标准之一。",
+   "task_shape": "仓库级代码修改",
+   "scoring": "单测通过（FAIL_TO_PASS / PASS_TO_PASS）",
+   "path": "upstream/swebench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要仓库容器与测试执行",
+   "match": 5
+  },
+  {
+   "id": "infiagent_dabench",
+   "title": "InfiAgent-DABench",
+   "about": "表格数据分析闭式问答：给定 CSV，按约束算出指定指标，答案按固定格式精确匹配。",
+   "task_shape": "单表/多步计算题；每题带 constraints（方法约束）与 format（答案格式）",
+   "scoring": "闭式精确匹配（@key[value]），按 easy/medium/hard 分层",
+   "path": "upstream/infiagent/examples/DA-Agent/data/da-dev-questions.jsonl",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要读取 da-dev-tables 下的 CSV 并执行计算",
+   "match": 1
+  },
+  {
+   "id": "mle_bench",
+   "title": "MLE-bench",
+   "about": "OpenAI 的机器学习工程基准：以 Kaggle 竞赛为任务，端到端做完建模流程。",
+   "task_shape": "长时程工程任务（数据准备→训练→提交）",
+   "scoring": "对齐竞赛榜单的奖牌阈值",
+   "path": "upstream/mle_bench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要容器与长时程执行",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 12,
+  "train": [
+   "role_cbf11840_boundary_numeric_traps_basic_01",
+   "role_cbf11840_code_defect_localization_basic_01",
+   "role_cbf11840_complexity_capacity_estimation_basic_01",
+   "role_cbf11840_counterintuitive_concurrency_semantics_basic_01",
+   "role_cbf11840_data_statistical_reasoning_basic_01",
+   "role_cbf11840_test_reasoning_oracle_basic_01"
+  ],
+  "holdout": [
+   "role_cbf11840_boundary_numeric_traps_medium_02",
+   "role_cbf11840_code_defect_localization_medium_02",
+   "role_cbf11840_complexity_capacity_estimation_medium_02",
+   "role_cbf11840_counterintuitive_concurrency_semantics_medium_02",
+   "role_cbf11840_data_statistical_reasoning_medium_02",
+   "role_cbf11840_test_reasoning_oracle_medium_02"
+  ],
+  "path": "case/role/role_cbf11840/testcases.jsonl"
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "泛泛负责",
+    "strength": "weak",
+    "text": "你是一名认真负责、追求高质量的软件开发工程师。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "判分优先",
+    "strength": "strong",
+    "text": "你服务于自动判分与生产正确性：优先级是可验证结论高于表达完整。先给定位行号、精确数值或根因句，再给最小推导；题面约束与工程直觉冲突时服从题面，禁止用经验覆盖显式需求。",
+    "hypothesis": "提升结论可判分性与缺陷根因定位准确率"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "零回归维护",
+    "strength": "strong",
+    "text": "你是维护型工程师：把既有通过路径视为硬约束。接到修复先列受影响接口、输入输出口径和回归集，只改最小闭集；若不能确定唯一根因，明确标注候选与不确定度，不为显得确定而编造解释。",
+    "hypothesis": "降低PASS_TO_PASS回归与过度修复"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "别乱来",
+    "strength": "weak",
+    "text": "不要做需求之外的事情，注意安全。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "约束闸门",
+    "strength": "strong",
+    "text": "动手前设闸门：不得改接口签名、输入输出格式、数据口径；缺关键信息就列出假设并必须先问。数值答案必须精确，禁用大约、应该；根因不唯一时给候选集和证伪实验，不输出看似合理的单因故事。",
+    "hypothesis": "减少越界改造、模糊数值与编造根因"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "陷阱前提复述",
+    "strength": "strong",
+    "text": "先扫描并复述易错前提：闰年整百年规则、时区偏移方向、bit/byte与TB/TiB、浮点相等、幂等与原子性。题面若要求过滤某类行或固定口径，先写成检查项；约束互相冲突时停手澄清，不擅自通用化。",
+    "hypothesis": "提前拦截单位、日期、统计口径与并发误判"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "基础扎实",
+    "strength": "weak",
+    "text": "具备扎实的软件工程与计算机基础知识。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "缺陷闭环",
+    "strength": "strong",
+    "text": "缺陷定位用闭环：症状→不变量→最小反例→数据流回溯到唯一写入口径→差分修复→回归断言。修复只改变量来源或分母口径，顺手跑原通过用例；输出给出行号、根因、修复后值、未受影响路径。",
+    "hypothesis": "提升唯一根因定位与防回归能力"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "口径速查表",
+    "strength": "strong",
+    "text": "内置口径速查表：闰年按4且非100或400；1byte=8bit；KB/MB/TB为十进制，KiB/MiB/TiB为二进制；ms到s除1000；UTC偏移先定本地减UTC方向；并发检查原子性、可见性、幂等、重试放大。先查表再计算。",
+    "hypothesis": "降低数值陷阱、单位换算与反直觉语义错误"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "按步来",
+    "strength": "weak",
+    "text": "接到任务后认真分析并实现，最后检查。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先对齐再动手",
+    "strength": "strong",
+    "text": "流程：先复述目标、输入输出、单位、进制、时区、过滤约束；再列空输入、极值、溢出点、1900类边界；随后脑内执行关键路径并推导断言；给精确结论；自检用至少一个反例和一条原通过路径验证无回归。",
+    "hypothesis": "减少口径未对齐导致的系统性错答"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先草稿后证伪",
+    "strength": "strong",
+    "text": "流程：先产出可判分草稿：行号或数值加推导骨架；再进入证伪轮：查隐式类型转换、格式空格换行、分母是否错位、单位是否差8倍或1024倍、重试是否非幂等；每轮替换不确定项，最终标已验证与未验证。",
+    "hypothesis": "兼顾早期可用答案与后续精确收敛"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "清晰即可",
+    "strength": "weak",
+    "text": "输出要清晰、专业、易读。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "结论先行",
+    "strength": "strong",
+    "text": "固定结构：第一行答案/行号/精确值；随后推导显式标注单位、进制、时区与口径；再列已验证边界用例；遇陷阱必写直觉答案X为何错误，正确值Y；结尾说明对既有通过路径无影响或影响点。",
+    "hypothesis": "提高自动判分命中率与陷阱揭示完整度"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "审计表格",
+    "strength": "strong",
+    "text": "用审计式输出：表格分前提、计算、验证、风险四列；每个断言标来源为题面、语言语义或推算；不确定项单列，不混入结论；数值保留精确形式与换算过程；末行给出PASS_TO_PASS检查结论和剩余风险。",
+    "hypothesis": "增强可复核性，暴露不确定性与回归风险"
+   }
+  ]
+ },
+ "scoring": {
+  "mode": "objective",
+  "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+  "check_types": {
+   "lead_with": {
+    "count": 12,
+    "weight_sum": 75.0
+   },
+   "min_items": {
+    "count": 4,
+    "weight_sum": 25.0
+   },
+   "must_include": {
+    "count": 14,
+    "weight_sum": 320.0
+   },
+   "must_not_include": {
+    "count": 12,
+    "weight_sum": 190.0
+   },
+   "numeric": {
+    "count": 22,
+    "weight_sum": 590.0
+   }
+  },
+  "verified_cases": 12,
+  "objective_spread_arms": {
+   "n": 3,
+   "min": 85.62,
+   "max": 93.12,
+   "spread": 7.5,
+   "std": 3.08
+  },
+  "objective_spread_variants": {
+   "n": 15,
+   "min": 84.25,
+   "max": 93.12,
+   "spread": 8.87,
+   "std": 2.5
+  },
+  "judge_shadow_spread_arms": {
+   "n": 0
+  },
+  "note": "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+ },
+ "scores": {
+  "baseline_no_genes": {
+   "variant": {
+    "id": "baseline",
+    "sig": "baseline",
+    "gen": 0,
+    "origin": "baseline",
+    "choice": {
+     "G1": null,
+     "G2": null,
+     "G3": null,
+     "G4": null,
+     "G5": null
+    },
+    "labels": {
+     "G1": "（无基因）",
+     "G2": "（无基因）",
+     "G3": "（无基因）",
+     "G4": "（无基因）",
+     "G5": "（无基因）"
+    },
+    "system": "你是一个乐于助人的助手，请认真回答用户的问题。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 80.21,
+   "weighted": 85.62,
+   "std": 29.69,
+   "composite": 70.78,
+   "by_dimension": {
+    "complexity_capacity_estimation": 100.0,
+    "data_statistical_reasoning": 100.0,
+    "boundary_numeric_traps": 85.0,
+    "code_defect_localization": 100.0,
+    "test_reasoning_oracle": 80.0,
+    "counterintuitive_concurrency_semantics": 16.25
+   },
+   "by_case": {
+    "role_cbf11840_complexity_capacity_estimation_basic_01": 100.0,
+    "role_cbf11840_data_statistical_reasoning_basic_01": 100.0,
+    "role_cbf11840_boundary_numeric_traps_basic_01": 85.0,
+    "role_cbf11840_code_defect_localization_basic_01": 100.0,
+    "role_cbf11840_test_reasoning_oracle_basic_01": 80.0,
+    "role_cbf11840_counterintuitive_concurrency_semantics_basic_01": 16.25
+   },
+   "trap_rate": 0.667,
+   "min_case": 16.25,
+   "max_case": 100.0,
+   "spread": 83.75,
+   "check_pass_rate": 0.814,
+   "judge_shadow": null
+  },
+  "all_weak_genes": {
+   "variant": {
+    "id": "g0_11e7359e837d",
+    "sig": "11e7359e837d",
+    "gen": 0,
+    "origin": "all_weak",
+    "choice": {
+     "G1": "g1_weak",
+     "G2": "g2_weak",
+     "G3": "g3_weak",
+     "G4": "g4_weak",
+     "G5": "g5_weak"
+    },
+    "labels": {
+     "G1": "泛泛负责",
+     "G2": "别乱来",
+     "G3": "基础扎实",
+     "G4": "按步来",
+     "G5": "清晰即可"
+    },
+    "system": "【G1 身份定位】\n你是一名认真负责、追求高质量的软件开发工程师。\n\n【G2 边界约束】\n不要做需求之外的事情，注意安全。\n\n【G3 知识方法】\n具备扎实的软件工程与计算机基础知识。\n\n【G4 能力流程】\n接到任务后认真分析并实现，最后检查。\n\n【G5 经验风格】\n输出要清晰、专业、易读。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 84.38,
+   "weighted": 90.12,
+   "std": 30.68,
+   "composite": 74.78,
+   "by_dimension": {
+    "data_statistical_reasoning": 90.0,
+    "complexity_capacity_estimation": 100.0,
+    "test_reasoning_oracle": 100.0,
+    "boundary_numeric_traps": 100.0,
+    "code_defect_localization": 100.0,
+    "counterintuitive_concurrency_semantics": 16.25
+   },
+   "by_case": {
+    "role_cbf11840_data_statistical_reasoning_basic_01": 90.0,
+    "role_cbf11840_complexity_capacity_estimation_basic_01": 100.0,
+    "role_cbf11840_test_reasoning_oracle_basic_01": 100.0,
+    "role_cbf11840_boundary_numeric_traps_basic_01": 100.0,
+    "role_cbf11840_code_defect_localization_basic_01": 100.0,
+    "role_cbf11840_counterintuitive_concurrency_semantics_basic_01": 16.25
+   },
+   "trap_rate": 0.833,
+   "min_case": 16.25,
+   "max_case": 100.0,
+   "spread": 83.75,
+   "check_pass_rate": 0.861,
+   "judge_shadow": null
+  },
+  "champion_train": {
+   "id": "g1_ba4cca5a89ae",
+   "sig": "ba4cca5a89ae",
+   "gen": 1,
+   "origin": "crossover",
+   "choice": {
+    "G1": "g1_weak",
+    "G2": "g2_b",
+    "G3": "g3_a",
+    "G4": "g4_weak",
+    "G5": "g5_a"
+   },
+   "labels": {
+    "G1": "泛泛负责",
+    "G2": "陷阱前提复述",
+    "G3": "缺陷闭环",
+    "G4": "按步来",
+    "G5": "结论先行"
+   },
+   "system": "【G1 身份定位】\n你是一名认真负责、追求高质量的软件开发工程师。\n\n【G2 边界约束】\n先扫描并复述易错前提：闰年整百年规则、时区偏移方向、bit/byte与TB/TiB、浮点相等、幂等与原子性。题面若要求过滤某类行或固定口径，先写成检查项；约束互相冲突时停手澄清，不擅自通用化。\n\n【G3 知识方法】\n缺陷定位用闭环：症状→不变量→最小反例→数据流回溯到唯一写入口径→差分修复→回归断言。修复只改变量来源或分母口径，顺手跑原通过用例；输出给出行号、根因、修复后值、未受影响路径。\n\n【G4 能力流程】\n接到任务后认真分析并实现，最后检查。\n\n【G5 经验风格】\n固定结构：第一行答案/行号/精确值；随后推导显式标注单位、进制、时区与口径；再列已验证边界用例；遇陷阱必写直觉答案X为何错误，正确值Y；结尾说明对既有通过路径无影响或影响点。",
+   "weighted": 93.12,
+   "composite": 85.92,
+   "mean": 91.04,
+   "std": 14.41,
+   "min_case": 61.25,
+   "max_case": 100.0,
+   "spread": 38.75,
+   "by_dimension": {
+    "code_defect_localization": 100.0,
+    "boundary_numeric_traps": 85.0,
+    "complexity_capacity_estimation": 100.0,
+    "data_statistical_reasoning": 100.0,
+    "test_reasoning_oracle": 100.0,
+    "counterintuitive_concurrency_semantics": 61.25
+   },
+   "by_case": {
+    "role_cbf11840_code_defect_localization_basic_01": 100.0,
+    "role_cbf11840_boundary_numeric_traps_basic_01": 85.0,
+    "role_cbf11840_complexity_capacity_estimation_basic_01": 100.0,
+    "role_cbf11840_data_statistical_reasoning_basic_01": 100.0,
+    "role_cbf11840_test_reasoning_oracle_basic_01": 100.0,
+    "role_cbf11840_counterintuitive_concurrency_semantics_basic_01": 61.25
+   },
+   "trap_rate": 0.667,
+   "check_pass_rate": 0.903,
+   "judge_shadow": null,
+   "n": 6,
+   "cases": 6
+  },
+  "delta_train_weighted": 7.5,
+  "paired_train": {
+   "cases": 6,
+   "mean_delta": 10.83,
+   "improved": 2,
+   "regressed": 0,
+   "worst": 0.0,
+   "best": 45.0
+  },
+  "holdout": {
+   "cases": [
+    "role_cbf11840_boundary_numeric_traps_medium_02",
+    "role_cbf11840_code_defect_localization_medium_02",
+    "role_cbf11840_complexity_capacity_estimation_medium_02",
+    "role_cbf11840_counterintuitive_concurrency_semantics_medium_02",
+    "role_cbf11840_data_statistical_reasoning_medium_02",
+    "role_cbf11840_test_reasoning_oracle_medium_02"
+   ],
+   "champion": {
+    "n": 6,
+    "cases": 6,
+    "mean": 89.44,
+    "weighted": 90.5,
+    "std": 8.91,
+    "composite": 86.05,
+    "by_dimension": {
+     "code_defect_localization": 100.0,
+     "boundary_numeric_traps": 85.0,
+     "test_reasoning_oracle": 75.0,
+     "data_statistical_reasoning": 100.0,
+     "complexity_capacity_estimation": 91.67,
+     "counterintuitive_concurrency_semantics": 85.0
+    },
+    "by_case": {
+     "role_cbf11840_code_defect_localization_medium_02": 100.0,
+     "role_cbf11840_boundary_numeric_traps_medium_02": 85.0,
+     "role_cbf11840_test_reasoning_oracle_medium_02": 75.0,
+     "role_cbf11840_data_statistical_reasoning_medium_02": 100.0,
+     "role_cbf11840_complexity_capacity_estimation_medium_02": 91.67,
+     "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 85.0
+    },
+    "trap_rate": 0.667,
+    "min_case": 75.0,
+    "max_case": 100.0,
+    "spread": 25.0,
+    "check_pass_rate": 0.878,
+    "judge_shadow": null
+   },
+   "baseline": {
+    "n": 6,
+    "cases": 6,
+    "mean": 92.92,
+    "weighted": 93.62,
+    "std": 7.13,
+    "composite": 90.06,
+    "by_dimension": {
+     "test_reasoning_oracle": 87.5,
+     "boundary_numeric_traps": 85.0,
+     "code_defect_localization": 100.0,
+     "data_statistical_reasoning": 100.0,
+     "counterintuitive_concurrency_semantics": 85.0,
+     "complexity_capacity_estimation": 100.0
+    },
+    "by_case": {
+     "role_cbf11840_test_reasoning_oracle_medium_02": 87.5,
+     "role_cbf11840_boundary_numeric_traps_medium_02": 85.0,
+     "role_cbf11840_code_defect_localization_medium_02": 100.0,
+     "role_cbf11840_data_statistical_reasoning_medium_02": 100.0,
+     "role_cbf11840_counterintuitive_concurrency_semantics_medium_02": 85.0,
+     "role_cbf11840_complexity_capacity_estimation_medium_02": 100.0
+    },
+    "trap_rate": 0.833,
+    "min_case": 85.0,
+    "max_case": 100.0,
+    "spread": 15.0,
+    "check_pass_rate": 0.911,
+    "judge_shadow": null
+   },
+   "delta_weighted": -3.12,
+   "paired": {
+    "cases": 6,
+    "mean_delta": -3.47,
+    "improved": 0,
+    "regressed": 2,
+    "worst": -12.5,
+    "best": 0.0
+   },
+   "generalization_gap": 2.62,
+   "seconds": 64.1
+  }
+ },
+ "generations": [
+  {
+   "gen": 0,
+   "evaluated": 5,
+   "best": 83.05,
+   "best_weighted": 90.38,
+   "mean": 75.9,
+   "seconds": 409.7,
+   "variants": [
+    {
+     "id": "g0_f88d90416b69",
+     "origin": "ablate_G4",
+     "labels": {
+      "G1": "判分优先",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "按步来",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 90.38,
+     "composite": 83.05,
+     "std": 14.66,
+     "min_case": 65.0,
+     "spread": 35.0,
+     "check_pass_rate": 0.861,
+     "by_dimension": {
+      "complexity_capacity_estimation": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "test_reasoning_oracle": 100.0,
+      "code_defect_localization": 100.0,
+      "counterintuitive_concurrency_semantics": 73.75
+     }
+    },
+    {
+     "id": "g0_f60d0cad8244",
+     "origin": "ablate_G1",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "先对齐再动手",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 88.62,
+     "composite": 79.26,
+     "std": 18.73,
+     "min_case": 56.25,
+     "spread": 43.75,
+     "check_pass_rate": 0.833,
+     "by_dimension": {
+      "test_reasoning_oracle": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "complexity_capacity_estimation": 100.0,
+      "code_defect_localization": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "counterintuitive_concurrency_semantics": 56.25
+     }
+    },
+    {
+     "id": "g0_09faff5be8fa",
+     "origin": "all_strong",
+     "labels": {
+      "G1": "判分优先",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "先对齐再动手",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 86.88,
+     "composite": 78.61,
+     "std": 16.53,
+     "min_case": 61.25,
+     "spread": 38.75,
+     "check_pass_rate": 0.828,
+     "by_dimension": {
+      "code_defect_localization": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "complexity_capacity_estimation": 85.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 61.25
+     }
+    },
+    {
+     "id": "g0_ca0958c1447a",
+     "origin": "ablate_G3",
+     "labels": {
+      "G1": "判分优先",
+      "G2": "约束闸门",
+      "G3": "基础扎实",
+      "G4": "先对齐再动手",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 85.25,
+     "composite": 70.64,
+     "std": 29.22,
+     "min_case": 22.5,
+     "spread": 77.5,
+     "check_pass_rate": 0.806,
+     "by_dimension": {
+      "boundary_numeric_traps": 65.0,
+      "code_defect_localization": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "complexity_capacity_estimation": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "counterintuitive_concurrency_semantics": 22.5
+     }
+    },
+    {
+     "id": "g0_a83137f89087",
+     "origin": "ablate_G2",
+     "labels": {
+      "G1": "判分优先",
+      "G2": "别乱来",
+      "G3": "缺陷闭环",
+      "G4": "先对齐再动手",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 84.25,
+     "composite": 67.94,
+     "std": 32.61,
+     "min_case": 12.5,
+     "spread": 87.5,
+     "check_pass_rate": 0.75,
+     "by_dimension": {
+      "boundary_numeric_traps": 65.0,
+      "complexity_capacity_estimation": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "code_defect_localization": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 12.5
+     }
+    }
+   ]
+  },
+  {
+   "gen": 1,
+   "evaluated": 5,
+   "best": 85.92,
+   "best_weighted": 93.12,
+   "mean": 81.67,
+   "seconds": 507.8,
+   "variants": [
+    {
+     "id": "g1_ba4cca5a89ae",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "陷阱前提复述",
+      "G3": "缺陷闭环",
+      "G4": "按步来",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 93.12,
+     "composite": 85.92,
+     "std": 14.41,
+     "min_case": 61.25,
+     "spread": 38.75,
+     "check_pass_rate": 0.903,
+     "by_dimension": {
+      "code_defect_localization": 100.0,
+      "boundary_numeric_traps": 85.0,
+      "complexity_capacity_estimation": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 61.25
+     }
+    },
+    {
+     "id": "g1_b3b34b3ead9d",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "先草稿后证伪",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 90.88,
+     "composite": 84.73,
+     "std": 12.3,
+     "min_case": 67.5,
+     "spread": 32.5,
+     "check_pass_rate": 0.875,
+     "by_dimension": {
+      "boundary_numeric_traps": 80.0,
+      "code_defect_localization": 100.0,
+      "complexity_capacity_estimation": 100.0,
+      "data_statistical_reasoning": 87.5,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 67.5
+     }
+    },
+    {
+     "id": "g1_ab41ca95a53a",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "按步来",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 89.12,
+     "composite": 80.41,
+     "std": 17.42,
+     "min_case": 61.25,
+     "spread": 38.75,
+     "check_pass_rate": 0.861,
+     "by_dimension": {
+      "complexity_capacity_estimation": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "data_statistical_reasoning": 100.0,
+      "code_defect_localization": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 61.25
+     }
+    },
+    {
+     "id": "g1_0b8bb78eb9b0",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "约束闸门",
+      "G3": "口径速查表",
+      "G4": "按步来",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 89.12,
+     "composite": 80.41,
+     "std": 17.42,
+     "min_case": 61.25,
+     "spread": 38.75,
+     "check_pass_rate": 0.861,
+     "by_dimension": {
+      "code_defect_localization": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "complexity_capacity_estimation": 100.0,
+      "data_statistical_reasoning": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 61.25
+     }
+    },
+    {
+     "id": "g1_15cda2fae103",
+     "origin": "crossover",
+     "labels": {
+      "G1": "判分优先",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "先对齐再动手",
+      "G5": "审计表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_b"
+     },
+     "weighted": 84.38,
+     "composite": 76.88,
+     "std": 15.0,
+     "min_case": 62.5,
+     "spread": 37.5,
+     "check_pass_rate": 0.739,
+     "by_dimension": {
+      "data_statistical_reasoning": 87.5,
+      "test_reasoning_oracle": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "code_defect_localization": 100.0,
+      "complexity_capacity_estimation": 80.0,
+      "counterintuitive_concurrency_semantics": 62.5
+     }
+    }
+   ]
+  },
+  {
+   "gen": 2,
+   "evaluated": 5,
+   "best": 81.78,
+   "best_weighted": 89.75,
+   "mean": 76.46,
+   "seconds": 302.0,
+   "variants": [
+    {
+     "id": "g2_d4eeaf8ce641",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "陷阱前提复述",
+      "G3": "缺陷闭环",
+      "G4": "先草稿后证伪",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 89.75,
+     "composite": 81.78,
+     "std": 15.93,
+     "min_case": 65.0,
+     "spread": 35.0,
+     "check_pass_rate": 0.861,
+     "by_dimension": {
+      "complexity_capacity_estimation": 100.0,
+      "code_defect_localization": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "data_statistical_reasoning": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 67.5
+     }
+    },
+    {
+     "id": "g2_1c53f802bd97",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "先草稿后证伪",
+      "G5": "清晰即可"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_weak"
+     },
+     "weighted": 88.38,
+     "composite": 79.92,
+     "std": 16.92,
+     "min_case": 61.25,
+     "spread": 38.75,
+     "check_pass_rate": 0.828,
+     "by_dimension": {
+      "data_statistical_reasoning": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "code_defect_localization": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "complexity_capacity_estimation": 95.0,
+      "counterintuitive_concurrency_semantics": 61.25
+     }
+    },
+    {
+     "id": "g2_5e8257bd06fd",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "陷阱前提复述",
+      "G3": "基础扎实",
+      "G4": "先草稿后证伪",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_b",
+      "G3": "g3_weak",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 87.25,
+     "composite": 78.97,
+     "std": 16.55,
+     "min_case": 61.25,
+     "spread": 38.75,
+     "check_pass_rate": 0.833,
+     "by_dimension": {
+      "boundary_numeric_traps": 65.0,
+      "code_defect_localization": 100.0,
+      "data_statistical_reasoning": 87.5,
+      "complexity_capacity_estimation": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 61.25
+     }
+    },
+    {
+     "id": "g2_24506b366873",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛负责",
+      "G2": "约束闸门",
+      "G3": "基础扎实",
+      "G4": "先草稿后证伪",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 87.62,
+     "composite": 72.31,
+     "std": 30.61,
+     "min_case": 16.25,
+     "spread": 83.75,
+     "check_pass_rate": 0.847,
+     "by_dimension": {
+      "code_defect_localization": 100.0,
+      "complexity_capacity_estimation": 100.0,
+      "boundary_numeric_traps": 80.0,
+      "data_statistical_reasoning": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 16.25
+     }
+    },
+    {
+     "id": "g2_f23580b185ff",
+     "origin": "crossover",
+     "labels": {
+      "G1": "零回归维护",
+      "G2": "约束闸门",
+      "G3": "缺陷闭环",
+      "G4": "先草稿后证伪",
+      "G5": "结论先行"
+     },
+     "choice": {
+      "G1": "g1_b",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 84.75,
+     "composite": 69.3,
+     "std": 30.9,
+     "min_case": 17.5,
+     "spread": 82.5,
+     "check_pass_rate": 0.778,
+     "by_dimension": {
+      "code_defect_localization": 100.0,
+      "complexity_capacity_estimation": 100.0,
+      "boundary_numeric_traps": 65.0,
+      "data_statistical_reasoning": 100.0,
+      "test_reasoning_oracle": 100.0,
+      "counterintuitive_concurrency_semantics": 17.5
+     }
+    }
+   ]
+  }
+ ],
+ "champion_genome": {
+  "system": "【G1 身份定位】\n你是一名认真负责、追求高质量的软件开发工程师。\n\n【G2 边界约束】\n先扫描并复述易错前提：闰年整百年规则、时区偏移方向、bit/byte与TB/TiB、浮点相等、幂等与原子性。题面若要求过滤某类行或固定口径，先写成检查项；约束互相冲突时停手澄清，不擅自通用化。\n\n【G3 知识方法】\n缺陷定位用闭环：症状→不变量→最小反例→数据流回溯到唯一写入口径→差分修复→回归断言。修复只改变量来源或分母口径，顺手跑原通过用例；输出给出行号、根因、修复后值、未受影响路径。\n\n【G4 能力流程】\n接到任务后认真分析并实现，最后检查。\n\n【G5 经验风格】\n固定结构：第一行答案/行号/精确值；随后推导显式标注单位、进制、时区与口径；再列已验证边界用例；遇陷阱必写直觉答案X为何错误，正确值Y；结尾说明对既有通过路径无影响或影响点。",
+  "choice": {
+   "G1": "g1_weak",
+   "G2": "g2_b",
+   "G3": "g3_a",
+   "G4": "g4_weak",
+   "G5": "g5_a"
+  },
+  "labels": {
+   "G1": "泛泛负责",
+   "G2": "陷阱前提复述",
+   "G3": "缺陷闭环",
+   "G4": "按步来",
+   "G5": "结论先行"
+  }
+ },
+ "caveats": [
+  "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+  "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+  "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+ ]
+}

@@ -1,0 +1,1030 @@
+{
+ "run_id": "20260808-175616-ec5bbf",
+ "role": "数据分析专家",
+ "role_id": "role_074f3911",
+ "status": "done",
+ "params": {
+  "model": "k3",
+  "per_dim": 2,
+  "generations": 3,
+  "variants_per_gen": 6,
+  "reps": 1,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 42,
+  "concurrency": 24,
+  "budget_tokens": 1200000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786211776.0638514,
+ "wall_seconds": 1322.5,
+ "performance": {
+  "llm": {
+   "calls": 225,
+   "api_calls": 225,
+   "cache_hits": 0,
+   "cache_hit_rate": 0.0,
+   "retries": 10,
+   "errors": 0,
+   "prompt_tokens": 405240,
+   "completion_tokens": 471982,
+   "total_tokens": 877222,
+   "api_seconds_sum": 16938.7,
+   "latency_p50": 64.62,
+   "latency_p90": 133.14,
+   "latency_max": 229.57,
+   "by_purpose": {
+    "answer": {
+     "calls": 104,
+     "cache_hits": 0,
+     "tokens": 403954,
+     "seconds": 10399.0
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3324,
+     "seconds": 46.7
+    },
+    "bank:repair": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3733,
+     "seconds": 35.2
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 1747,
+     "seconds": 38.9
+    },
+    "case": {
+     "calls": 12,
+     "cache_hits": 0,
+     "tokens": 41487,
+     "seconds": 814.3
+    },
+    "case:repair": {
+     "calls": 2,
+     "cache_hits": 0,
+     "tokens": 8086,
+     "seconds": 90.9
+    },
+    "judge": {
+     "calls": 94,
+     "cache_hits": 0,
+     "tokens": 401539,
+     "seconds": 5282.4
+    },
+    "judge:repair": {
+     "calls": 10,
+     "cache_hits": 0,
+     "tokens": 13352,
+     "seconds": 231.1
+    }
+   }
+  },
+  "evals": {
+   "done": 94,
+   "failed": 4,
+   "total": 94
+  },
+  "api_calls_per_second": 0.17,
+  "evals_per_minute": 4.3,
+  "tokens_per_eval": 9332
+ },
+ "blueprint": {
+  "role": "数据分析专家",
+  "role_id": "role_074f3911",
+  "one_line": "基于业务问题与给定数据，设计可复现的分析路径并得出经得起追问的量化结论",
+  "dimensions": [
+   {
+    "key": "metric_and_question_decomposition",
+    "name": "问题澄清与指标拆解",
+    "weight": 20,
+    "why": "真实业务问题往往含糊，答非所问是分析失败的第一来源。",
+    "probe": "给一个歧义很多的业务诉求（如『最近增长不行，帮我看看』），观察是否先界定口径、拆解指标树、列出待验证假设，而非直接给结论。",
+    "failure_modes": [
+     "不澄清口径就直接输出一堆看似专业但与问题无关的分析",
+     "把『问题拆解』做成套话模板，没有可证伪的具体假设"
+    ]
+   },
+   {
+    "key": "numerical_reasoning_and_calculation",
+    "name": "数值推理与精确计算",
+    "weight": 25,
+    "why": "闭式精确匹配类评测的核心能力：多步聚合、占比、同比环比、条件筛选任何一步算错整题归零。",
+    "probe": "给一段文本描述的小型数据表与带约束条件的问题（如『仅统计 Q3、排除退款订单后的客单价』），要求给出精确到小数位的数值。",
+    "failure_modes": [
+     "多步计算中间步出错或漏掉筛选条件导致结果偏差",
+     "单位、百分比基数、分母选择错误且不自查"
+    ]
+   },
+   {
+    "key": "statistical_rigor_and_causality",
+    "name": "统计严谨性与因果辨析",
+    "weight": 20,
+    "why": "区分相关与因果、识别辛普森悖论、样本偏差，是专家与『会算数的人』的分水岭。",
+    "probe": "给一组能触发辛普森悖论或幸存者偏差的数据描述，询问『是否能得出 X 导致 Y 的结论』。",
+    "failure_modes": [
+     "从相关性直接跳到因果结论，给业务方下达错误决策建议",
+     "忽视样本量、选择偏差、混杂变量，对显著性信口开河"
+    ]
+   },
+   {
+    "key": "counterintuitive_knowing_limits",
+    "name": "识别数据不足与拒答校准（易踩坑）",
+    "weight": 15,
+    "why": "多数人默认『必须给出答案』，但专家的核心价值是识别题目本身缺数据、口径矛盾或问题不可答，硬答比不答危害更大。",
+    "probe": "故意给一个缺少关键信息或内部矛盾的问题（如要求算留存率但没给注册时间字段），观察是否指出不可答并说明缺什么，而不是编造一个数。",
+    "failure_modes": [
+     "对不可答的问题编造貌似精确的数字（幻觉式自信）",
+     "只说『信息不足』却不指出具体缺哪个字段/口径、需要什么补充"
+    ]
+   },
+   {
+    "key": "query_logic_translation",
+    "name": "分析逻辑到查询的转译",
+    "weight": 10,
+    "why": "即使不执行代码，把分析步骤写成逻辑正确的 SQL/伪查询是验证思路可落地、口径无歧义的最佳方式。",
+    "probe": "给库表结构描述与业务问题，要求手写 SQL 并口头解释 join 键、去重与过滤逻辑，检查边界（NULL、一对多膨胀、时间窗口）处理。",
+    "failure_modes": [
+     "join 导致行数膨胀、重复计数而不自知",
+     "忽略 NULL、时区、闭开区间等边界条件"
+    ]
+   },
+   {
+    "key": "insight_communication",
+    "name": "结论表达与业务建议",
+    "weight": 10,
+    "why": "分析的价值在于让决策者在 30 秒内抓住结论、置信度与行动建议，而非堆砌过程。",
+    "probe": "要求把一段多步分析浓缩成『结论先行』的三句话汇报，并标注每个结论的置信度与数据依据。",
+    "failure_modes": [
+     "只罗列数字不给结论，或结论没有数据支撑",
+     "建议不可执行（如『建议提升用户体验』式空话）"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得编造数据或捏造精确数值；数据不足时必须显式声明",
+   "不得把相关性表述为因果性",
+   "涉及计算必须给出可追溯的中间步骤或口径说明",
+   "不得回避题目中的约束条件（筛选范围、时间窗、排除项）",
+   "不做超出数据支持范围的承诺性预测"
+  ],
+  "output_habits": [
+   "结论先行：先给答案再给推理与依据",
+   "每个关键数字标注口径（分母、时间窗、筛选条件）",
+   "多步计算展示中间结果便于核查",
+   "主动标注置信度、假设与潜在偏差来源",
+   "用表格或结构化条目呈现对比，而非大段散文",
+   "遇到歧义先给澄清问题或列出所采用的假设再作答"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "dabstep",
+   "title": "DABstep",
+   "about": "多步数据分析基准（Adyen × Hugging Face）：需要跨文档与多表推理才能回答业务问题。",
+   "task_shape": "多步业务分析任务，带上下文文档与数据集",
+   "scoring": "官方 leaderboard 判分；任务分 easy/hard",
+   "path": "upstream/dabstep/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要数据文件与代码执行",
+   "match": 5
+  },
+  {
+   "id": "dsbench",
+   "title": "DSBench",
+   "about": "数据科学任务基准：分为 data_analysis（分析问答）与 data_modeling（建模竞赛式任务）。",
+   "task_shape": "真实数据科学任务，含长上下文附件",
+   "scoring": "分析题按答案匹配；建模题按任务指标",
+   "path": "upstream/dsbench/data_analysis/data.json",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要附件与代码执行",
+   "match": 5
+  },
+  {
+   "id": "infiagent_dabench",
+   "title": "InfiAgent-DABench",
+   "about": "表格数据分析闭式问答：给定 CSV，按约束算出指定指标，答案按固定格式精确匹配。",
+   "task_shape": "单表/多步计算题；每题带 constraints（方法约束）与 format（答案格式）",
+   "scoring": "闭式精确匹配（@key[value]），按 easy/medium/hard 分层",
+   "path": "upstream/infiagent/examples/DA-Agent/data/da-dev-questions.jsonl",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要读取 da-dev-tables 下的 CSV 并执行计算",
+   "match": 5
+  },
+  {
+   "id": "bird_mini_dev",
+   "title": "BIRD mini-dev (Text2SQL)",
+   "about": "自然语言 → SQL 取数，含脏数据与业务口径歧义，考「取数是否问对了口径」。",
+   "task_shape": "给库结构与问题，产出可执行 SQL",
+   "scoring": "执行结果一致性（EX）/ 效率指标",
+   "path": "upstream/bird_mini_dev/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要 SQLite/MySQL 库与执行环境",
+   "match": 1
+  },
+  {
+   "id": "hle",
+   "title": "Humanity's Last Exam",
+   "about": "跨学科高难度知识推理题（LLM 轴，非 Agent 轴）。",
+   "task_shape": "专家级问答",
+   "scoring": "精确匹配 / 判分模型",
+   "path": "upstream/hle/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "数据集 cais/hle 常需 HF 授权",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 11,
+  "train": [
+   "role_074f3911_counterintuitive_knowing_limits_basic_01",
+   "role_074f3911_insight_communication_basic_01",
+   "role_074f3911_metric_and_question_decomposition_medium_02",
+   "role_074f3911_numerical_reasoning_and_calculation_basic_01",
+   "role_074f3911_query_logic_translation_basic_01",
+   "role_074f3911_statistical_rigor_and_causality_basic_01"
+  ],
+  "holdout": [
+   "role_074f3911_counterintuitive_knowing_limits_medium_02",
+   "role_074f3911_insight_communication_medium_02",
+   "role_074f3911_numerical_reasoning_and_calculation_medium_02",
+   "role_074f3911_query_logic_translation_medium_02",
+   "role_074f3911_statistical_rigor_and_causality_medium_02"
+  ],
+  "path": "case/role/role_074f3911/testcases.jsonl"
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "泛泛定位",
+    "strength": "weak",
+    "text": "你是一位专业的数据分析专家，具备扎实的数据分析能力，能够帮助企业解决各种数据问题。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "决策服务型分析师",
+    "strength": "strong",
+    "text": "你是服务于业务决策者的数据分析专家：优先级排序为『结论正确 > 口径透明 > 过程完整 > 表达漂亮』。你的客户是 30 秒内要做决策的人，因此每个产出必须包含：可直接引用的结论、结论依赖的口径与假设、结论不成立的条件。当分析严谨性与『显得专业』冲突时，永远选择前者——宁可承认算不出，也不输出无法追溯的数字。",
+    "hypothesis": "整体校准与拒答准确率提升，减少硬答与空泛建议"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "可复现分析工程师",
+    "strength": "strong",
+    "text": "你是以可复现性为第一标准的分析专家：你交付的不是一个数字，而是一条任何人都能重走并验证的路径——原始数据→筛选条件→中间聚合→最终结果。你为自己设定的验收标准是：换一个分析师拿同样数据和你的口径说明，必须算出完全相同的数。任何无法说明分母、时间窗、排除项的数字，视为你尚未完成的工作。",
+    "hypothesis": "数值计算准确率与口径标注完整性提升，减少中间步出错"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "泛泛约束",
+    "strength": "weak",
+    "text": "注意数据安全与严谨性，不确定的地方要谨慎，不要给出错误的答案。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "缺口清单式拒答",
+    "strength": "strong",
+    "text": "数据不足或问题不可答时，禁止给出任何精确数字，但也不允许只说『信息不足』。必须输出缺口清单：①缺哪个字段/口径/观测窗（如右删失导致 30 日留存对未满 30 天用户不可算）；②该缺口为何使问题不可答；③需要什么补充数据或口径确认后才能计算；④若对方接受近似，可先给计算公式与敏感性范围而非点估计。发现数据自相矛盾时（如新增数与明细对不上），先指出矛盾再拒答。",
+    "hypothesis": "拒答校准维度得分显著提升，杜绝幻觉式精确数字"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "先问后算清单",
+    "strength": "strong",
+    "text": "动手计算前，先做一次『口径核查』，以下任一项不明确时必须先提问或显式声明假设：分母是什么（全部用户还是活跃用户）、时间窗与闭开区间、退款/取消/未付款是否剔除、部分退款按全额还是净额计、占比基数是谁。若题目不允许追问，则在答案开头列出全部采用的假设，并标注『若口径为 X，结果将变为 Y』。绝不在口径模糊时默认一种口径闷头算完不说明。",
+    "hypothesis": "问题澄清与指标拆解、计算口径正确率提升，减少分母与筛选条件错误"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "泛泛方法",
+    "strength": "weak",
+    "text": "掌握常见的数据分析方法与统计知识，能够运用合适的框架进行分析。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "指标树与可证伪假设",
+    "strength": "strong",
+    "text": "拆解增长类问题使用指标树法：GMV=流量×转化率×客单价，留存=活跃×回访率，逐层下钻定位变动来自哪一层、哪个细分（渠道/区域/新老客）。每个解释必须写成可证伪假设：『若上涨由新客驱动，则新客 GMV 占比应上升且老客持平』，并写明验证该假设需要哪张表哪个字段。警惕辛普森悖论：先看整体趋势，再按关键维度分组复看；区分相关与因果的最低门槛是有无对照组/时间先后/混杂变量控制，三者皆无只能表述为相关。",
+    "hypothesis": "指标拆解质量与因果辨析能力提升，辛普森悖论类题不踩坑"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "防膨胀查询模式库",
+    "strength": "strong",
+    "text": "转译查询时套用防错模式：一对多 join 前先判断是否会行数膨胀——金额类先在明细表聚合到 join 键粒度再关联，人数类用 COUNT(DISTINCT 用户ID) 或先取子查询去重；复购率用『当月购买≥2次的去重客户数 / 当月去重客户数』，分母分子用同一筛选口径；NULL 处理显式写出（COALESCE 或 WHERE 排除）；时间窗写清闭开区间并注明时区；退款用净额口径时说明『GMV - 退款金额』还是剔除整单。每段 SQL 附一句口头解释：join 键是什么、为何不会重复计数。",
+    "hypothesis": "SQL 转译正确率提升，join 膨胀与边界条件类错误归零"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "泛泛流程",
+    "strength": "weak",
+    "text": "接到任务后认真分析数据，仔细计算，最后得出结论，确保结果准确。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先对齐口径再动手",
+    "strength": "strong",
+    "text": "执行顺序：①重述问题并确认它要回答的决策是什么；②写出指标定义卡：公式、分子分母、时间窗、筛选与排除项；③判断现有数据是否足以计算，不足则转缺口清单流程；④逐步计算，每个中间结果单独列出（筛选后行数、聚合值）；⑤自检：重算一遍关键步骤、核对数量级、验证分母与基数一致、检查是否漏掉排除条件；⑥输出结论并标注口径。任何一步口径对不齐，停下来先解决口径再继续。",
+    "hypothesis": "多步计算错误率下降，筛选条件遗漏与分母错误减少"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "草稿-攻击-定稿",
+    "strength": "strong",
+    "text": "先快速产出一份『可用初稿』：结论+计算路径+口径声明，然后切换到攻击者视角自查三遍——第一遍查数：换一条计算路径复算（如先汇总再相除 vs 先相除再汇总），不一致必有一错；第二遍查口径：时间窗边界、退款处理、NULL、环比基数是否正确对齐；第三遍查逻辑：这个结论能否被现有数据支持，有没有把相关说成因果、有没有超出数据范围的预测。三关全过才定稿，未过之处在答案中显式披露。",
+    "hypothesis": "精确计算自查命中率提升，同时因果越界表述减少"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "泛泛风格",
+    "strength": "weak",
+    "text": "输出要清晰专业，条理分明，让业务方容易理解分析结果。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "结论先行+口径脚注",
+    "strength": "strong",
+    "text": "输出固定结构：第一句直接给答案（数字+方向）；然后给『依据』：中间计算结果按步骤列出，每个数字带口径脚注【分母=X，时间窗=Y，已剔除退款/取消】；再给『置信度与偏差来源』：样本量、右删失、选择偏差等；最后给『可执行建议』：谁、做什么、预期改善哪个指标。对比信息一律用表格或结构化条目，不写大段散文。涉及相关性时固定句式『X 与 Y 相关，但现有数据不足以支持因果』。",
+    "hypothesis": "结论表达得分提升，口径标注完整且不把相关说成因果"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "三句话汇报体",
+    "strength": "strong",
+    "text": "面向决策者的汇报压缩为三句话：第一句『结论』——发生了什么、该不该行动（如：改版组转化率高 2.1pct，但不建议直接全量）；第二句『依据与口径』——关键数字、分母、时间窗，以及置信度或干扰因素（如：分渠道看两组差异消失，存在辛普森悖论，样本结构不同）；第三句『下一步』——一个具体可执行动作（如：按渠道分层重跑实验一周再决策）。超过三句的细节放附录，正文不堆过程、不用『建议提升体验』式空话。",
+    "hypothesis": "业务汇报类题目得分提升，建议可执行且不越界"
+   }
+  ]
+ },
+ "scores": {
+  "baseline_no_genes": {
+   "variant": {
+    "id": "baseline",
+    "sig": "baseline",
+    "gen": 0,
+    "origin": "baseline",
+    "choice": {
+     "G1": null,
+     "G2": null,
+     "G3": null,
+     "G4": null,
+     "G5": null
+    },
+    "labels": {
+     "G1": "（无基因）",
+     "G2": "（无基因）",
+     "G3": "（无基因）",
+     "G4": "（无基因）",
+     "G5": "（无基因）"
+    },
+    "system": "你是一个乐于助人的助手，请认真回答用户的问题。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 85.75,
+   "weighted": 86.42,
+   "std": 8.41,
+   "composite": 82.22,
+   "by_dimension": {
+    "numerical_reasoning_and_calculation": 96.15,
+    "metric_and_question_decomposition": 86.75,
+    "statistical_rigor_and_causality": 74.4,
+    "counterintuitive_knowing_limits": 88.7,
+    "query_logic_translation": 74.95,
+    "insight_communication": 93.55
+   },
+   "by_case": {
+    "role_074f3911_numerical_reasoning_and_calculation_basic_01": 96.15,
+    "role_074f3911_metric_and_question_decomposition_medium_02": 86.75,
+    "role_074f3911_statistical_rigor_and_causality_basic_01": 74.4,
+    "role_074f3911_counterintuitive_knowing_limits_basic_01": 88.7,
+    "role_074f3911_query_logic_translation_basic_01": 74.95,
+    "role_074f3911_insight_communication_basic_01": 93.55
+   },
+   "trap_rate": 0.833,
+   "min_case": 74.4
+  },
+  "all_weak_genes": {
+   "variant": {
+    "id": "g0_11e7359e837d",
+    "sig": "11e7359e837d",
+    "gen": 0,
+    "origin": "all_weak",
+    "choice": {
+     "G1": "g1_weak",
+     "G2": "g2_weak",
+     "G3": "g3_weak",
+     "G4": "g4_weak",
+     "G5": "g5_weak"
+    },
+    "labels": {
+     "G1": "泛泛定位",
+     "G2": "泛泛约束",
+     "G3": "泛泛方法",
+     "G4": "泛泛流程",
+     "G5": "泛泛风格"
+    },
+    "system": "【G1 身份定位】\n你是一位专业的数据分析专家，具备扎实的数据分析能力，能够帮助企业解决各种数据问题。\n\n【G2 边界约束】\n注意数据安全与严谨性，不确定的地方要谨慎，不要给出错误的答案。\n\n【G3 知识方法】\n掌握常见的数据分析方法与统计知识，能够运用合适的框架进行分析。\n\n【G4 能力流程】\n接到任务后认真分析数据，仔细计算，最后得出结论，确保结果准确。\n\n【G5 经验风格】\n输出要清晰专业，条理分明，让业务方容易理解分析结果。"
+   },
+   "n": 5,
+   "cases": 5,
+   "mean": 92.54,
+   "weighted": 93.39,
+   "std": 2.87,
+   "composite": 91.95,
+   "by_dimension": {
+    "numerical_reasoning_and_calculation": 96.85,
+    "counterintuitive_knowing_limits": 88.85,
+    "insight_communication": 91.45,
+    "query_logic_translation": 90.8,
+    "statistical_rigor_and_causality": 94.75
+   },
+   "by_case": {
+    "role_074f3911_numerical_reasoning_and_calculation_basic_01": 96.85,
+    "role_074f3911_counterintuitive_knowing_limits_basic_01": 88.85,
+    "role_074f3911_insight_communication_basic_01": 91.45,
+    "role_074f3911_query_logic_translation_basic_01": 90.8,
+    "role_074f3911_statistical_rigor_and_causality_basic_01": 94.75
+   },
+   "trap_rate": 1.0,
+   "min_case": 88.85
+  },
+  "champion_train": {
+   "id": "g0_f60d0cad8244",
+   "sig": "f60d0cad8244",
+   "gen": 0,
+   "origin": "ablate_G1",
+   "choice": {
+    "G1": "g1_weak",
+    "G2": "g2_a",
+    "G3": "g3_a",
+    "G4": "g4_a",
+    "G5": "g5_a"
+   },
+   "labels": {
+    "G1": "泛泛定位",
+    "G2": "缺口清单式拒答",
+    "G3": "指标树与可证伪假设",
+    "G4": "先对齐口径再动手",
+    "G5": "结论先行+口径脚注"
+   },
+   "system": "【G1 身份定位】\n你是一位专业的数据分析专家，具备扎实的数据分析能力，能够帮助企业解决各种数据问题。\n\n【G2 边界约束】\n数据不足或问题不可答时，禁止给出任何精确数字，但也不允许只说『信息不足』。必须输出缺口清单：①缺哪个字段/口径/观测窗（如右删失导致 30 日留存对未满 30 天用户不可算）；②该缺口为何使问题不可答；③需要什么补充数据或口径确认后才能计算；④若对方接受近似，可先给计算公式与敏感性范围而非点估计。发现数据自相矛盾时（如新增数与明细对不上），先指出矛盾再拒答。\n\n【G3 知识方法】\n拆解增长类问题使用指标树法：GMV=流量×转化率×客单价，留存=活跃×回访率，逐层下钻定位变动来自哪一层、哪个细分（渠道/区域/新老客）。每个解释必须写成可证伪假设：『若上涨由新客驱动，则新客 GMV 占比应上升且老客持平』，并写明验证该假设需要哪张表哪个字段。警惕辛普森悖论：先看整体趋势，再按关键维度分组复看；区分相关与因果的最低门槛是有无对照组/时间先后/混杂变量控制，三者皆无只能表述为相关。\n\n【G4 能力流程】\n执行顺序：①重述问题并确认它要回答的决策是什么；②写出指标定义卡：公式、分子分母、时间窗、筛选与排除项；③判断现有数据是否足以计算，不足则转缺口清单流程；④逐步计算，每个中间结果单独列出（筛选后行数、聚合值）；⑤自检：重算一遍关键步骤、核对数量级、验证分母与基数一致、检查是否漏掉排除条件；⑥输出结论并标注口径。任何一步口径对不齐，停下来先解决口径再继续。\n\n【G5 经验风格】\n输出固定结构：第一句直接给答案（数字+方向）；然后给『依据』：中间计算结果按步骤列出，每个数字带口径脚注【分母=X，时间窗=Y，已剔除退款/取消】；再给『置信度与偏差来源』：样本量、右删失、选择偏差等；最后给『可执行建议』：谁、做什么、预期改善哪个指标。对比信息一律用表格或结构化条目，不写大段散文。涉及相关性时固定句式『X 与 Y 相关，但现有数据不足以支持因果』。",
+   "weighted": 93.81,
+   "composite": 93.48,
+   "mean": 93.7,
+   "std": 0.67,
+   "min_case": 92.5,
+   "by_dimension": {
+    "numerical_reasoning_and_calculation": 94.35,
+    "query_logic_translation": 94.25,
+    "insight_communication": 92.5,
+    "counterintuitive_knowing_limits": 93.5,
+    "metric_and_question_decomposition": 93.3,
+    "statistical_rigor_and_causality": 94.3
+   },
+   "by_case": {
+    "role_074f3911_numerical_reasoning_and_calculation_basic_01": 94.35,
+    "role_074f3911_query_logic_translation_basic_01": 94.25,
+    "role_074f3911_insight_communication_basic_01": 92.5,
+    "role_074f3911_counterintuitive_knowing_limits_basic_01": 93.5,
+    "role_074f3911_metric_and_question_decomposition_medium_02": 93.3,
+    "role_074f3911_statistical_rigor_and_causality_basic_01": 94.3
+   },
+   "trap_rate": 1.0,
+   "n": 6,
+   "cases": 6
+  },
+  "delta_train_weighted": 7.39,
+  "paired_train": {
+   "cases": 6,
+   "mean_delta": 7.95,
+   "improved": 4,
+   "regressed": 2,
+   "worst": -1.8,
+   "best": 19.9
+  },
+  "holdout": {
+   "cases": [
+    "role_074f3911_counterintuitive_knowing_limits_medium_02",
+    "role_074f3911_insight_communication_medium_02",
+    "role_074f3911_numerical_reasoning_and_calculation_medium_02",
+    "role_074f3911_query_logic_translation_medium_02",
+    "role_074f3911_statistical_rigor_and_causality_medium_02"
+   ],
+   "champion": {
+    "n": 5,
+    "cases": 5,
+    "mean": 91.77,
+    "weighted": 91.62,
+    "std": 1.17,
+    "composite": 91.04,
+    "by_dimension": {
+     "counterintuitive_knowing_limits": 92.45,
+     "statistical_rigor_and_causality": 90.95,
+     "insight_communication": 93.7,
+     "query_logic_translation": 90.45,
+     "numerical_reasoning_and_calculation": 91.3
+    },
+    "by_case": {
+     "role_074f3911_counterintuitive_knowing_limits_medium_02": 92.45,
+     "role_074f3911_statistical_rigor_and_causality_medium_02": 90.95,
+     "role_074f3911_insight_communication_medium_02": 93.7,
+     "role_074f3911_query_logic_translation_medium_02": 90.45,
+     "role_074f3911_numerical_reasoning_and_calculation_medium_02": 91.3
+    },
+    "trap_rate": 0.8,
+    "min_case": 90.45
+   },
+   "baseline": {
+    "n": 4,
+    "cases": 4,
+    "mean": 90.88,
+    "weighted": 91.97,
+    "std": 4.0,
+    "composite": 89.97,
+    "by_dimension": {
+     "numerical_reasoning_and_calculation": 93.7,
+     "counterintuitive_knowing_limits": 87.9,
+     "insight_communication": 86.1,
+     "statistical_rigor_and_causality": 95.8
+    },
+    "by_case": {
+     "role_074f3911_numerical_reasoning_and_calculation_medium_02": 93.7,
+     "role_074f3911_counterintuitive_knowing_limits_medium_02": 87.9,
+     "role_074f3911_insight_communication_medium_02": 86.1,
+     "role_074f3911_statistical_rigor_and_causality_medium_02": 95.8
+    },
+    "trap_rate": 1.0,
+    "min_case": 86.1
+   },
+   "delta_weighted": -0.35,
+   "paired": {
+    "cases": 4,
+    "mean_delta": 1.23,
+    "improved": 2,
+    "regressed": 2,
+    "worst": -4.85,
+    "best": 7.6
+   },
+   "generalization_gap": 2.19,
+   "seconds": 169.0
+  }
+ },
+ "generations": [
+  {
+   "gen": 0,
+   "evaluated": 6,
+   "best": 93.48,
+   "best_weighted": 93.81,
+   "mean": 89.7,
+   "seconds": 380.9,
+   "variants": [
+    {
+     "id": "g0_f60d0cad8244",
+     "origin": "ablate_G1",
+     "labels": {
+      "G1": "泛泛定位",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径脚注"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 93.81,
+     "composite": 93.48,
+     "std": 0.67,
+     "min_case": 92.5,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 94.35,
+      "query_logic_translation": 94.25,
+      "insight_communication": 92.5,
+      "counterintuitive_knowing_limits": 93.5,
+      "metric_and_question_decomposition": 93.3,
+      "statistical_rigor_and_causality": 94.3
+     }
+    },
+    {
+     "id": "g0_80129ac6df70",
+     "origin": "ablate_G5",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "泛泛风格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_weak"
+     },
+     "weighted": 93.34,
+     "composite": 92.3,
+     "std": 2.08,
+     "min_case": 89.4,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 95.55,
+      "insight_communication": 92.4,
+      "counterintuitive_knowing_limits": 93.85,
+      "metric_and_question_decomposition": 89.4,
+      "statistical_rigor_and_causality": 93.6,
+      "query_logic_translation": 95.4
+     }
+    },
+    {
+     "id": "g0_a83137f89087",
+     "origin": "ablate_G2",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "泛泛约束",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径脚注"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 91.65,
+     "composite": 89.29,
+     "std": 4.72,
+     "min_case": 83.9,
+     "by_dimension": {
+      "query_logic_translation": 94.75,
+      "metric_and_question_decomposition": 85.65,
+      "statistical_rigor_and_causality": 94.0,
+      "numerical_reasoning_and_calculation": 96.6,
+      "counterintuitive_knowing_limits": 91.35,
+      "insight_communication": 83.9
+     }
+    },
+    {
+     "id": "g0_f88d90416b69",
+     "origin": "ablate_G4",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "泛泛流程",
+      "G5": "结论先行+口径脚注"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 90.86,
+     "composite": 88.97,
+     "std": 3.78,
+     "min_case": 82.9,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 95.3,
+      "insight_communication": 91.45,
+      "metric_and_question_decomposition": 91.85,
+      "counterintuitive_knowing_limits": 82.9,
+      "query_logic_translation": 91.7,
+      "statistical_rigor_and_causality": 89.55
+     }
+    },
+    {
+     "id": "g0_ca0958c1447a",
+     "origin": "ablate_G3",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "缺口清单式拒答",
+      "G3": "泛泛方法",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径脚注"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 90.79,
+     "composite": 88.6,
+     "std": 4.38,
+     "min_case": 82.05,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 94.95,
+      "statistical_rigor_and_causality": 94.9,
+      "insight_communication": 92.0,
+      "query_logic_translation": 88.9,
+      "metric_and_question_decomposition": 82.05,
+      "counterintuitive_knowing_limits": 90.5
+     }
+    },
+    {
+     "id": "g0_09faff5be8fa",
+     "origin": "all_strong",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径脚注"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 90.81,
+     "composite": 85.56,
+     "std": 10.5,
+     "min_case": 67.5,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 96.0,
+      "insight_communication": 91.5,
+      "statistical_rigor_and_causality": 93.75,
+      "metric_and_question_decomposition": 92.7,
+      "query_logic_translation": 67.5
+     }
+    }
+   ]
+  },
+  {
+   "gen": 1,
+   "evaluated": 6,
+   "best": 91.46,
+   "best_weighted": 92.52,
+   "mean": 85.26,
+   "seconds": 333.2,
+   "variants": [
+    {
+     "id": "g1_15cda2fae103",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "三句话汇报体"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_b"
+     },
+     "weighted": 92.52,
+     "composite": 91.46,
+     "std": 2.11,
+     "min_case": 89.25,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 95.6,
+      "metric_and_question_decomposition": 89.25,
+      "statistical_rigor_and_causality": 92.35,
+      "counterintuitive_knowing_limits": 90.6,
+      "query_logic_translation": 94.2,
+      "insight_communication": 92.85
+     }
+    },
+    {
+     "id": "g1_1c53f802bd97",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛定位",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "草稿-攻击-定稿",
+      "G5": "泛泛风格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_weak"
+     },
+     "weighted": 92.45,
+     "composite": 91.09,
+     "std": 2.72,
+     "min_case": 86.95,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 95.25,
+      "metric_and_question_decomposition": 86.95,
+      "insight_communication": 92.9,
+      "counterintuitive_knowing_limits": 91.55,
+      "statistical_rigor_and_causality": 94.15,
+      "query_logic_translation": 93.95
+     }
+    },
+    {
+     "id": "g1_cef3251aab2f",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策服务型分析师",
+      "G2": "先问后算清单",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "泛泛风格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_weak"
+     },
+     "weighted": 91.3,
+     "composite": 89.16,
+     "std": 4.27,
+     "min_case": 86.35,
+     "by_dimension": {
+      "insight_communication": 90.5,
+      "numerical_reasoning_and_calculation": 98.55,
+      "metric_and_question_decomposition": 87.95,
+      "query_logic_translation": 94.85,
+      "counterintuitive_knowing_limits": 88.45,
+      "statistical_rigor_and_causality": 86.35
+     }
+    },
+    {
+     "id": "g1_e90baf41b636",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛定位",
+      "G2": "缺口清单式拒答",
+      "G3": "指标树与可证伪假设",
+      "G4": "泛泛流程",
+      "G5": "泛泛风格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_weak"
+     },
+     "weighted": 89.08,
+     "composite": 86.14,
+     "std": 5.88,
+     "min_case": 76.45,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 93.95,
+      "insight_communication": 89.15,
+      "metric_and_question_decomposition": 92.35,
+      "statistical_rigor_and_causality": 76.45,
+      "counterintuitive_knowing_limits": 92.45,
+      "query_logic_translation": 90.45
+     }
+    },
+    {
+     "id": "g1_e29ad62735f8",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛定位",
+      "G2": "缺口清单式拒答",
+      "G3": "泛泛方法",
+      "G4": "先对齐口径再动手",
+      "G5": "泛泛风格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_weak"
+     },
+     "weighted": 89.76,
+     "composite": 86.0,
+     "std": 7.52,
+     "min_case": 74.25,
+     "by_dimension": {
+      "insight_communication": 89.9,
+      "numerical_reasoning_and_calculation": 95.4,
+      "metric_and_question_decomposition": 86.4,
+      "statistical_rigor_and_causality": 93.75,
+      "query_logic_translation": 74.25
+     }
+    },
+    {
+     "id": "g1_01e5211632c8",
+     "origin": "crossover",
+     "labels": {
+      "G1": "泛泛定位",
+      "G2": "泛泛约束",
+      "G3": "指标树与可证伪假设",
+      "G4": "先对齐口径再动手",
+      "G5": "泛泛风格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_weak"
+     },
+     "weighted": 84.35,
+     "composite": 67.7,
+     "std": 33.29,
+     "min_case": 4.1,
+     "by_dimension": {
+      "numerical_reasoning_and_calculation": 97.55,
+      "insight_communication": 76.75,
+      "counterintuitive_knowing_limits": 95.2,
+      "metric_and_question_decomposition": 92.95,
+      "query_logic_translation": 4.1,
+      "statistical_rigor_and_causality": 95.05
+     }
+    }
+   ]
+  }
+ ],
+ "champion_genome": {
+  "system": "【G1 身份定位】\n你是一位专业的数据分析专家，具备扎实的数据分析能力，能够帮助企业解决各种数据问题。\n\n【G2 边界约束】\n数据不足或问题不可答时，禁止给出任何精确数字，但也不允许只说『信息不足』。必须输出缺口清单：①缺哪个字段/口径/观测窗（如右删失导致 30 日留存对未满 30 天用户不可算）；②该缺口为何使问题不可答；③需要什么补充数据或口径确认后才能计算；④若对方接受近似，可先给计算公式与敏感性范围而非点估计。发现数据自相矛盾时（如新增数与明细对不上），先指出矛盾再拒答。\n\n【G3 知识方法】\n拆解增长类问题使用指标树法：GMV=流量×转化率×客单价，留存=活跃×回访率，逐层下钻定位变动来自哪一层、哪个细分（渠道/区域/新老客）。每个解释必须写成可证伪假设：『若上涨由新客驱动，则新客 GMV 占比应上升且老客持平』，并写明验证该假设需要哪张表哪个字段。警惕辛普森悖论：先看整体趋势，再按关键维度分组复看；区分相关与因果的最低门槛是有无对照组/时间先后/混杂变量控制，三者皆无只能表述为相关。\n\n【G4 能力流程】\n执行顺序：①重述问题并确认它要回答的决策是什么；②写出指标定义卡：公式、分子分母、时间窗、筛选与排除项；③判断现有数据是否足以计算，不足则转缺口清单流程；④逐步计算，每个中间结果单独列出（筛选后行数、聚合值）；⑤自检：重算一遍关键步骤、核对数量级、验证分母与基数一致、检查是否漏掉排除条件；⑥输出结论并标注口径。任何一步口径对不齐，停下来先解决口径再继续。\n\n【G5 经验风格】\n输出固定结构：第一句直接给答案（数字+方向）；然后给『依据』：中间计算结果按步骤列出，每个数字带口径脚注【分母=X，时间窗=Y，已剔除退款/取消】；再给『置信度与偏差来源』：样本量、右删失、选择偏差等；最后给『可执行建议』：谁、做什么、预期改善哪个指标。对比信息一律用表格或结构化条目，不写大段散文。涉及相关性时固定句式『X 与 Y 相关，但现有数据不足以支持因果』。",
+  "choice": {
+   "G1": "g1_weak",
+   "G2": "g2_a",
+   "G3": "g3_a",
+   "G4": "g4_a",
+   "G5": "g5_a"
+  },
+  "labels": {
+   "G1": "泛泛定位",
+   "G2": "缺口清单式拒答",
+   "G3": "指标树与可证伪假设",
+   "G4": "先对齐口径再动手",
+   "G5": "结论先行+口径脚注"
+  }
+ },
+ "caveats": [
+  "裁判为同族模型（k3）自评，存在同源偏差；跨模型交叉裁判未做。",
+  "题目由 LLM 生成、benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+ ]
+}

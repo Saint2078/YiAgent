@@ -59,6 +59,12 @@ TEAM = [
         "title": "DevOps · 容器与可运行",
         "provider": "kimi",
     },
+    {
+        "seat": "Evals",
+        "factory_role": "评测工程师",
+        "title": "Evals 专员 · 评测与门禁",
+        "provider": "kimi",
+    },
 ]
 
 # 真实构建参数（客观判分；略收紧以控墙钟，仍走完整进化）
@@ -67,14 +73,17 @@ RUN_PARAMS: dict[str, Any] = {
     "judge_shadow": False,
     "per_dim": 2,
     "generations": 3,
-    "variants_per_gen": 5,
+    # 10 而非 5：受控对照（PERF.md §8）里变体数 5→12 使同相位评测数翻倍而墙钟只多 10.6%，
+    # 32 并发本来闲着（利用率 0.23）。代价是 token 随变体数线性涨，靠 budget_tokens 兜住。
+    "variants_per_gen": 10,
     "reps": 1,
     "elite": 2,
     "min_gain": 0.5,
     "patience": 1,
     "seed": 20260810,
-    "concurrency": 16,
-    "budget_tokens": 1_500_000,
+    # 32 为实测甜点（见 rolefactory/PERF.md）：再高吞吐不涨而 429 重试骤增
+    "concurrency": 32,
+    "budget_tokens": 2_500_000,
     "budget_seconds": 2400,
     "anchor_limit": 5,
 }
@@ -109,8 +118,15 @@ def wait_run(run_id: str) -> dict[str, Any]:
         st = _http("GET", f"/api/run/{run_id}", timeout=30)
         status = st.get("status")
         phase = st.get("phase") or st.get("status")
-        prog = st.get("eval_done"), st.get("eval_total")
-        print(f"  [{run_id}] status={status} phase={phase} eval={prog}", flush=True)
+        prog = st.get("progress") or {}
+        wall = st.get("wall_seconds")
+        print(
+            f"  [{run_id}] status={status} phase={phase} "
+            f"eval={prog.get('eval_done')}/{prog.get('eval_total')} "
+            f"failed={prog.get('eval_failed')} wall={wall}s "
+            f"phases={prog.get('phase_seconds')}",
+            flush=True,
+        )
         if status in ("done", "error", "aborted", "failed"):
             if status != "done":
                 raise RuntimeError(f"run_failed:{run_id}:{status}:{st.get('error') or st.get('abort_reason')}")
@@ -207,6 +223,27 @@ def write_genome(seat: str, genome: dict) -> list[Path]:
     return written
 
 
+def _genome_hash(genome: dict) -> str:
+    """与 tools/genome_card.py 同一套规范哈希：只由 role_id + 每槽 allele_id + 文本 sha256 决定。"""
+    try:
+        from genome_card import SLOTS, _sha256  # 同目录
+
+        slots = genome.get("slots") or {}
+        canon = {
+            "role_id": (genome.get("source") or {}).get("role_id") or "",
+            "slots": {
+                s: {
+                    "allele_id": (slots.get(s) or {}).get("allele_id"),
+                    "text_sha256": _sha256(str((slots.get(s) or {}).get("text") or "")),
+                }
+                for s in SLOTS
+            },
+        }
+        return _sha256(json.dumps(canon, ensure_ascii=False, sort_keys=True))
+    except Exception:  # noqa: BLE001 登记表不因哈希失败而写不出来
+        return ""
+
+
 def write_registry(rows: list[dict]) -> None:
     REG_PATH.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -216,23 +253,31 @@ def write_registry(rows: list[dict]) -> None:
         "- 工厂：`rolefactory` `http://127.0.0.1:8790`",
         "- 运行时基因组：`YiAgent/console/_workbench/AgentTeam/Develop/{Role}/genome.json`",
         "- 工作台副本：`A002.YiAgent/工作台/AgentTeam/Develop/{Role}/genome.json`",
+        "- 基因组卡（含内容哈希 / 逐槽消融 / 复现配方）：`YiAgent/rolefactory/data/runs/{run_id}/genome_card.md`",
         "",
-        "| 席位 | factory 角色名 | run_id | 冠军加权分 | Δ(相对基线) | 路径 |",
-        "|------|----------------|--------|------------|-------------|------|",
+        "| 席位 | factory 角色名 | run_id | 冠军加权 | Δ基线(train) | holdout Δ | genome_hash | 路径 |",
+        "|------|----------------|--------|----------|--------------|-----------|-------------|------|",
     ]
     for r in rows:
         src = r.get("source") or {}
+        hold = src.get("holdout") or {}
+        h = _genome_hash(r)
         lines.append(
             f"| {r.get('role')} | {r.get('factory_role')} | `{src.get('run_id')}` | "
             f"{src.get('champion_weighted')} | {src.get('delta_train_weighted')} | "
+            f"{hold.get('delta_weighted')} | `{h[:16] or '—'}` | "
             f"`AgentTeam/Develop/{r.get('role')}/genome.json` |"
         )
-    lines.append("")
-    lines.append("## 说明")
-    lines.append("")
-    lines.append("- 分数来自 rolefactory 客观断言实跑，非冻结演示。")
-    lines.append("- bridge `developRoles` 读取 runtime `_workbench/AgentTeam/Develop/*/genome.json`。")
-    lines.append("")
+    lines += [
+        "",
+        "## 说明",
+        "",
+        "- 分数来自 rolefactory 客观断言实跑，非冻结演示。",
+        "- bridge `developRoles` 读取 runtime `_workbench/AgentTeam/Develop/*/genome.json`。",
+        "- `genome_hash` 取前 16 位展示；校验落盘基因组是否就是该次实跑的冠军：",
+        "  `python tools/genome_card.py verify <run_id> <genome.json>`。",
+        "",
+    ]
     REG_PATH.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote registry {REG_PATH}", flush=True)
 

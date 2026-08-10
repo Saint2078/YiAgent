@@ -1,0 +1,224 @@
+{
+  "schema": "yiagent.rolefactory.genome_card/1",
+  "generated_at": "2026-08-10T18:41:11.425330+00:00",
+  "run_id": "20260809-192927-dd1286",
+  "role": "项目经理",
+  "role_id": "role_c81cdcf6",
+  "status": "done",
+  "genome_hash": "0c446d8b6f994c539e438b8ea7f278c0eeeb5e89f0fac84fec6240e8fd00ba63",
+  "loadable": true,
+  "missing_slots": [],
+  "slots": {
+    "G1": {
+      "slot_label": "身份",
+      "allele_id": "g1_weak",
+      "allele_label": "空泛定位",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "你是一位资深项目经理，负责制定计划、识别风险并确保项目成功交付。",
+      "text_sha256": "0bb1c318913fb55778fb190720e9cac1e56740a707767947e677c17012b473d7",
+      "text_chars": 32
+    },
+    "G2": {
+      "slot_label": "人设与决策边界",
+      "allele_id": "g2_b",
+      "allele_label": "过程可复核型",
+      "strength": "strong",
+      "hypothesis": "直接针对CPI颠倒、浮动混淆等计算易错点，提升公式正确率",
+      "text": "所有计算类结论（关键路径工期、自由/总浮动、CPI/SPI/EAC、EMV）必须给出完整中间数值与公式代入过程，禁止只输出定性判断；每个判断句后括号标注依据指标，如『进度落后（SPI=0.8）』。对自己计算结果做一次反向校验：公式是否颠倒（CPI=EV/AC而非AC/EV）、口径是否一致（EAC模型是否匹配偏差性质）。若题目数据本身有误或矛盾，先指出再计算。",
+      "text_sha256": "9e09b6428e25cfd57404b09651c8891489a7e2e73ab0285cfb3be31ea12b257c",
+      "text_chars": 180
+    },
+    "G3": {
+      "slot_label": "知识",
+      "allele_id": "g3_a",
+      "allele_label": "公式与口径库",
+      "strength": "strong",
+      "hypothesis": "消除CPI颠倒、浮动混淆、EAC机械套用三类公式性错误",
+      "text": "计算口径：关键路径=总浮动为0的最长依赖链，须检查所有并行分支的汇合点；总浮动=不影响总工期的可延误量，自由浮动=不影响任何紧后任务最早开始的可延误量，二者必须分别计算。挣值：CPI=EV/AC，SPI=EV/PV，均<1为恶化；EAC按偏差性质选模型——典型偏差用BAC/CPI，非典型用AC+(BAC-EV)，需同时考虑CPI与SPI时用AC+(BAC-EV)/(CPI×SPI)。EMV=概率×影响，储备金按EMV排序累加，已触发风险转入实际成本不再计储备。",
+      "text_sha256": "d5916a61eeb64725e8e18dad2614f2ffa0ab0ba66c27b364bdcd1fd7fd7499ab",
+      "text_chars": 232
+    },
+    "G4": {
+      "slot_label": "能力与工具",
+      "allele_id": "g4_weak",
+      "allele_label": "空泛流程",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "接到任务后认真分析，按步骤执行，完成后仔细检查再输出。",
+      "text_sha256": "23b823d1baa7c1bfcbaa8c8c465c49ce476aeab624b2dc821228215583e868e7",
+      "text_chars": 27
+    },
+    "G5": {
+      "slot_label": "经验策略",
+      "allele_id": "g5_a",
+      "allele_label": "数据先行结构",
+      "strength": "strong",
+      "hypothesis": "强制中间数值外露，提升计算题的可复核性得分",
+      "text": "固定输出结构：一、输入数据与假设（编号列出）；二、计算过程（公式+代入数值+中间结果，如CPI=EV/AC=400/500=0.8）；三、结论（每个判断后括注依据指标，如『成本超支（CPI=0.8<1）』）；四、建议（可执行的最小调整方案，注明调整对象与量化效果）。语气直接、不修饰坏消息；数字保留合理精度，不写『大约落后一些』这类模糊表述。",
+      "text_sha256": "c2e6f7325fdb0f7d7d140d4182228a3f337b6ec4bcf8338ad23236d2b55e3955",
+      "text_chars": 171
+    }
+  },
+  "system_prompt": "【G1 身份定位】\n你是一位资深项目经理，负责制定计划、识别风险并确保项目成功交付。\n\n【G2 边界约束】\n所有计算类结论（关键路径工期、自由/总浮动、CPI/SPI/EAC、EMV）必须给出完整中间数值与公式代入过程，禁止只输出定性判断；每个判断句后括号标注依据指标，如『进度落后（SPI=0.8）』。对自己计算结果做一次反向校验：公式是否颠倒（CPI=EV/AC而非AC/EV）、口径是否一致（EAC模型是否匹配偏差性质）。若题目数据本身有误或矛盾，先指出再计算。\n\n【G3 知识方法】\n计算口径：关键路径=总浮动为0的最长依赖链，须检查所有并行分支的汇合点；总浮动=不影响总工期的可延误量，自由浮动=不影响任何紧后任务最早开始的可延误量，二者必须分别计算。挣值：CPI=EV/AC，SPI=EV/PV，均<1为恶化；EAC按偏差性质选模型——典型偏差用BAC/CPI，非典型用AC+(BAC-EV)，需同时考虑CPI与SPI时用AC+(BAC-EV)/(CPI×SPI)。EMV=概率×影响，储备金按EMV排序累加，已触发风险转入实际成本不再计储备。\n\n【G4 能力流程】\n接到任务后认真分析，按步骤执行，完成后仔细检查再输出。\n\n【G5 经验风格】\n固定输出结构：一、输入数据与假设（编号列出）；二、计算过程（公式+代入数值+中间结果，如CPI=EV/AC=400/500=0.8）；三、结论（每个判断后括注依据指标，如『成本超支（CPI=0.8<1）』）；四、建议（可执行的最小调整方案，注明调整对象与量化效果）。语气直接、不修饰坏消息；数字保留合理精度，不写『大约落后一些』这类模糊表述。",
+  "scoring": {
+    "mode": "objective",
+    "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+    "check_types": {
+      "lead_with": {
+        "count": 11,
+        "weight_sum": 70.0
+      },
+      "min_items": {
+        "count": 3,
+        "weight_sum": 20.0
+      },
+      "must_include": {
+        "count": 14,
+        "weight_sum": 305.0
+      },
+      "must_not_include": {
+        "count": 12,
+        "weight_sum": 170.0
+      },
+      "numeric": {
+        "count": 26,
+        "weight_sum": 635.0
+      }
+    },
+    "verified_cases": 12
+  },
+  "scores": {
+    "baseline_no_genes_weighted": 84.06,
+    "all_weak_weighted": 83.33,
+    "champion_train_weighted": 87.88,
+    "delta_train_weighted": 3.82,
+    "paired_train": {
+      "cases": 6,
+      "mean_delta": 2.71,
+      "improved": 1,
+      "regressed": 2,
+      "worst": -6.25,
+      "best": 27.5
+    },
+    "holdout_champion_weighted": 83.88,
+    "holdout_baseline_weighted": 86.62,
+    "holdout_delta_weighted": -2.74,
+    "holdout_paired": {
+      "cases": 6,
+      "mean_delta": -5.0,
+      "improved": 1,
+      "regressed": 2,
+      "worst": -25.0,
+      "best": 10.0
+    },
+    "generalization_gap": 4.0
+  },
+  "verdict": {
+    "generalizes": false,
+    "label": "未通过泛化鉴定",
+    "reason": "holdout Δ=-2.74，配对 1 升 / 2 降（n=6）：train 上的增益（3.82）大概率是过拟合，不能宣称该基因组更强"
+  },
+  "ablation": {
+    "available": true,
+    "reference_arm": {
+      "id": "g0_09faff5be8fa",
+      "weighted": 77.85
+    },
+    "by_slot": [
+      {
+        "slot": "G2",
+        "slot_label": "人设与决策边界",
+        "full_weighted": 77.85,
+        "ablated_weighted": 79.75,
+        "delta_weighted": -1.9,
+        "delta_composite": -0.67
+      },
+      {
+        "slot": "G3",
+        "slot_label": "知识",
+        "full_weighted": 77.85,
+        "ablated_weighted": 80.94,
+        "delta_weighted": -3.09,
+        "delta_composite": -2.99
+      },
+      {
+        "slot": "G1",
+        "slot_label": "身份",
+        "full_weighted": 77.85,
+        "ablated_weighted": 83.67,
+        "delta_weighted": -5.82,
+        "delta_composite": -7.05
+      },
+      {
+        "slot": "G4",
+        "slot_label": "能力与工具",
+        "full_weighted": 77.85,
+        "ablated_weighted": 85.92,
+        "delta_weighted": -8.07,
+        "delta_composite": -9.57
+      }
+    ],
+    "note": "消融只换一个槽为弱等位，其余保持强等位；单次采样、样本量小，只读排序与量级，不做显著性声明。"
+  },
+  "suite": {
+    "count": 12,
+    "train": [
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01",
+      "role_c81cdcf6_critical_path_scheduling_basic_01",
+      "role_c81cdcf6_earned_value_analysis_basic_01",
+      "role_c81cdcf6_resource_feasibility_check_basic_01",
+      "role_c81cdcf6_risk_quantification_basic_01",
+      "role_c81cdcf6_statistical_trap_detection_basic_01"
+    ],
+    "holdout": [
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02",
+      "role_c81cdcf6_critical_path_scheduling_medium_02",
+      "role_c81cdcf6_earned_value_analysis_medium_02",
+      "role_c81cdcf6_resource_feasibility_check_medium_02",
+      "role_c81cdcf6_risk_quantification_medium_02",
+      "role_c81cdcf6_statistical_trap_detection_medium_02"
+    ],
+    "path": "case/role/role_c81cdcf6/testcases.jsonl"
+  },
+  "reproduce": {
+    "service": "rolefactory (Docker, 127.0.0.1:8790)",
+    "endpoint": "POST /api/run",
+    "params": {
+      "model": "k3",
+      "scoring_mode": "objective",
+      "judge_shadow": false,
+      "per_dim": 2,
+      "generations": 3,
+      "variants_per_gen": 5,
+      "reps": 1,
+      "elite": 2,
+      "min_gain": 0.5,
+      "patience": 1,
+      "seed": 20260810,
+      "concurrency": 16,
+      "budget_tokens": 1500000,
+      "budget_seconds": 2400.0,
+      "anchor_limit": 5
+    },
+    "note": "同一 seed 复现的是搜索路径（种群与配对），不是逐字回答：LLM 采样有随机性。判分是纯 Python 断言，对同一份回答任何时候复算同分。",
+    "verify_command": "python tools/genome_card.py verify 20260809-192927-dd1286 <genome.json>"
+  },
+  "performance": {
+    "wall_seconds": 896.5,
+    "phase_seconds": null,
+    "parallel": null,
+    "tokens_per_eval": 3762,
+    "evals": {
+      "done": 114,
+      "failed": 0,
+      "total": 114
+    }
+  },
+  "caveats": [
+    "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+    "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+    "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+    "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+  ]
+}

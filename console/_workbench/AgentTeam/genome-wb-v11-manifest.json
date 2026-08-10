@@ -1,5 +1,5 @@
 {
-  "synced_at": "2026-08-10T05:22:03.589906+00:00",
+  "synced_at": "2026-08-10T18:39:03.352562+00:00",
   "mode": "additive_enriched",
   "seats": [
     {
@@ -82,6 +82,23 @@
         "可观测性与告警陷阱识别",
         "流水线与IaC安全审查",
         "事故因果纪律与止损"
+      ]
+    },
+    {
+      "seat": "Evals",
+      "base_pack": "evals_specialist",
+      "pack_id": "evals_specialist_v1_1",
+      "run_id": "20260810-181341-bbaec2",
+      "alleles_base": 54,
+      "alleles_factory_added": 15,
+      "alleles_total": 69,
+      "dimensions": [
+        "指标计算与统计严谨性",
+        "评测陷阱识别（数据泄漏/污染/循环论证）",
+        "闭式判分规则设计",
+        "测试判据与回归口径把控",
+        "长任务分层与阈值标定",
+        "反刷分与评测过拟合防范（反直觉）"
       ]
     }
   ]

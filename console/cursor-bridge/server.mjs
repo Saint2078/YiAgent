@@ -315,7 +315,7 @@ seedKeysFromItAssets();
 const agentSessions = new Map();
 let sendChain = Promise.resolve();
 
-const DEVELOP_ROLES = ["Product", "PM", "Architect", "Dev", "DevOps"];
+const DEVELOP_ROLES = ["Product", "PM", "Architect", "Dev", "DevOps", "Evals"];
 const PROJECT_BRIEF_FILES = ["项目信息.md", "项目计划.md", "项目登记.md"];
 
 function agentDirName(name) {

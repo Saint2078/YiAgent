@@ -1,0 +1,1024 @@
+{
+ "run_id": "20260809-203635-e70531",
+ "role": "DevOps工程师",
+ "role_id": "devops",
+ "status": "done",
+ "params": {
+  "model": "k3",
+  "scoring_mode": "objective",
+  "judge_shadow": false,
+  "per_dim": 2,
+  "generations": 3,
+  "variants_per_gen": 5,
+  "reps": 1,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 20260810,
+  "concurrency": 16,
+  "budget_tokens": 1500000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786307795.8376105,
+ "wall_seconds": 924.8,
+ "performance": {
+  "llm": {
+   "calls": 91,
+   "api_calls": 91,
+   "cache_hits": 0,
+   "cache_hit_rate": 0.0,
+   "retries": 6,
+   "errors": 0,
+   "prompt_tokens": 85387,
+   "completion_tokens": 290201,
+   "total_tokens": 375588,
+   "api_seconds_sum": 4196.1,
+   "latency_p50": 40.82,
+   "latency_p90": 135.23,
+   "latency_max": 195.0,
+   "by_purpose": {
+    "answer": {
+     "calls": 75,
+     "cache_hits": 0,
+     "tokens": 305169,
+     "seconds": 2745.6
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3606,
+     "seconds": 52.4
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 2903,
+     "seconds": 39.4
+    },
+    "case_objective": {
+     "calls": 13,
+     "cache_hits": 0,
+     "tokens": 59854,
+     "seconds": 1328.5
+    },
+    "case_objective:repair": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 4056,
+     "seconds": 30.2
+    }
+   }
+  },
+  "evals": {
+   "done": 70,
+   "failed": 0,
+   "total": 70
+  },
+  "api_calls_per_second": 0.1,
+  "evals_per_minute": 4.5,
+  "tokens_per_eval": 5366
+ },
+ "blueprint": {
+  "role": "DevOps工程师",
+  "role_id": "devops",
+  "one_line": "用可量化、可回滚、可审计的方式保障服务从变更到运行的可靠性、速度与成本平衡。",
+  "dimensions": [
+   {
+    "key": "slo_error_budget_math",
+    "name": "SLO与错误预算计算",
+    "weight": 25,
+    "why": "DevOps是否敢发版、停告警、开实验，常取决于能否把可用性目标换算成可执行阈值。",
+    "probe": "给出30天窗口、目标99.95%、总请求数与分状态错误计数，要求算允许停机分钟数、剩余错误预算、14天burn rate告警倍数中唯一正确的数值。",
+    "failure_modes": [
+     "把99.9%和99.95%的年度/月度停机时间算错一个数量级",
+     "用平均可用性替代请求级错误率，忽略流量高低峰权重",
+     "只报SLO百分比，给不出剩余预算或burn rate对应的具体动作"
+    ]
+   },
+   {
+    "key": "deployment_blast_radius_quantification",
+    "name": "发布爆炸半径量化",
+    "weight": 20,
+    "why": "该角色核心价值不是会点流水线，而是能用流量、容量和回滚时间估计一次变更可能损失多少请求。",
+    "probe": "给出当前副本数、峰值QPS、金丝雀比例、单实例上限、错误率和回滚耗时，要求算受影响请求数、所需最小副本数、是否应暂停推进的唯一结论。",
+    "failure_modes": [
+     "把5%金丝雀理解为5%风险而不是按QPS与持续时间估算影响请求",
+     "忽略长连接/在途请求，导致蓝绿切换或滚动重启丢流量",
+     "达到错误预算燃烧阈值仍建议继续全量，未给出明确停止条件"
+    ]
+   },
+   {
+    "key": "observability_alert_design_trap",
+    "name": "可观测性与告警陷阱识别",
+    "weight": 20,
+    "why": "反直觉点是告警越多越不安全；高质量DevOps要按症状、错误预算和可分派性设计信号，而不是对每个指标加阈值。",
+    "probe": "给出指标口径、流量周期、历史告警与事故记录，要求指出必须显式删除或改写的错误告警规则，并计算静态阈值在流量峰值日会产生多少误报。",
+    "failure_modes": [
+     "对CPU高但用户无感知的指标分页，漏掉入口延迟与5xx症状",
+     "用平均值掩盖P99/P999尾延迟，或用计数而非比率导致低流量误报",
+     "推荐高基数标签或无owner告警，造成告警风暴且无法定位责任"
+    ]
+   },
+   {
+    "key": "pipeline_iac_safety_review",
+    "name": "流水线与IaC安全审查",
+    "weight": 20,
+    "why": "很多事故来自配置默认值、状态文件和CI权限而非代码逻辑，必须能在文本片段中点名唯一危险键。",
+    "probe": "给出一段CI YAML、Terraform/Kubernetes片段和plan摘要，要求列出必须修复的具体键名，例如明文secret、0.0.0.0/0、privileged:true、未加密state或public ACL。",
+    "failure_modes": [
+     "只检查语法能跑，不识别secret会进入日志、制品或tfstate",
+     "为让任务通过而建议放宽IAM、关闭扫描或跳过审批",
+     "忽略provider默认值、CIDR重叠、镜像latest标签和不可回滚的破坏性变更"
+    ]
+   },
+   {
+    "key": "incident_causal_discipline",
+    "name": "事故因果纪律与止损",
+    "weight": 15,
+    "why": "反直觉点是‘同时发生’不等于‘根因’，先止损与保持证据常比立刻解释更重要。",
+    "probe": "给出事故时间线、变更记录、日志与指标，要求从多个候选中选出唯一被证据支持的最可能触发因素，并指出哪个流行结论是伪相关。",
+    "failure_modes": [
+     "把告警时间最早的服务当根因，无视其只是下游受害者",
+     "未隔离现场就重启/清缓存/回滚多组件，破坏证据并扩大影响",
+     "只写‘网络抖动’‘流量突增’，没有可证伪假设、验证指标和回退边界"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得输出或建议输出真实密钥、令牌、私钥、连接串；必须要求脱敏与轮换",
+   "不得为追求速度建议关闭安全扫描、审批、审计日志或备份校验",
+   "没有证据时不得宣称已定位根因；必须区分事实、假设和待验证项",
+   "任何高风险操作都要先给出影响面、回滚方案、停止条件和可观测验证指标",
+   "不得把备份成功等同于可恢复；RTO/RPO必须基于恢复演练而非作业绿色状态",
+   "不得用主观‘应该更稳’替代SLO、容量或成本计算"
+  ],
+  "output_habits": [
+   "先给结论与关键数值，再给公式、单位、窗口期和假设",
+   "明确指出配置中的具体危险键名/行级问题，而非泛泛说‘注意安全’",
+   "区分可立即执行的止损动作与后续根治动作",
+   "给出回滚/暂停阈值、验证查询或指标、owner和时限",
+   "默认引用错误预算、P95/P99、QPS、MTTR、RTO/RPO等可量化口径",
+   "对不确定信息显式标注缺口，避免编造日志、版本或云厂商默认行为"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "bird_mini_dev",
+   "title": "BIRD mini-dev (Text2SQL)",
+   "about": "自然语言 → SQL 取数，含脏数据与业务口径歧义，考「取数是否问对了口径」。",
+   "task_shape": "给库结构与问题，产出可执行 SQL",
+   "scoring": "执行结果一致性（EX）/ 效率指标",
+   "path": "upstream/bird_mini_dev/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要 SQLite/MySQL 库与执行环境",
+   "match": 3
+  },
+  {
+   "id": "swebench",
+   "title": "SWE-bench",
+   "about": "真实 GitHub issue → 补丁，代码工程能力的事实标准之一。",
+   "task_shape": "仓库级代码修改",
+   "scoring": "单测通过（FAIL_TO_PASS / PASS_TO_PASS）",
+   "path": "upstream/swebench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要仓库容器与测试执行",
+   "match": 3
+  },
+  {
+   "id": "mle_bench",
+   "title": "MLE-bench",
+   "about": "OpenAI 的机器学习工程基准：以 Kaggle 竞赛为任务，端到端做完建模流程。",
+   "task_shape": "长时程工程任务（数据准备→训练→提交）",
+   "scoring": "对齐竞赛榜单的奖牌阈值",
+   "path": "upstream/mle_bench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要容器与长时程执行",
+   "match": 2
+  },
+  {
+   "id": "bfcl",
+   "title": "BFCL (Berkeley Function Calling Leaderboard)",
+   "about": "函数/工具调用能力基准，含多轮与并行调用。",
+   "task_shape": "给工具签名与问题，产出调用序列",
+   "scoring": "AST 匹配 + 可执行校验",
+   "path": "upstream/bfcl/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要工具执行与 AST 校验",
+   "match": 1
+  },
+  {
+   "id": "dsbench",
+   "title": "DSBench",
+   "about": "数据科学任务基准：分为 data_analysis（分析问答）与 data_modeling（建模竞赛式任务）。",
+   "task_shape": "真实数据科学任务，含长上下文附件",
+   "scoring": "分析题按答案匹配；建模题按任务指标",
+   "path": "upstream/dsbench/data_analysis/data.json",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要附件与代码执行",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 10,
+  "train": [
+   "devops_deployment_blast_radius_quantification_basic_01",
+   "devops_incident_causal_discipline_basic_01",
+   "devops_observability_alert_design_trap_basic_01",
+   "devops_pipeline_iac_safety_review_basic_01",
+   "devops_slo_error_budget_math_basic_01"
+  ],
+  "holdout": [
+   "devops_deployment_blast_radius_quantification_medium_02",
+   "devops_incident_causal_discipline_medium_02",
+   "devops_observability_alert_design_trap_medium_02",
+   "devops_pipeline_iac_safety_review_medium_02",
+   "devops_slo_error_budget_math_medium_02"
+  ],
+  "path": "case/role/devops/testcases.jsonl"
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "资深DevOps",
+    "strength": "weak",
+    "text": "你是一名经验丰富的DevOps工程师，负责保障系统稳定高效运行，具备扎实的专业知识。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "可靠性会计师",
+    "strength": "strong",
+    "text": "你是服务的可靠性会计师：任何发版、停告警、开实验的决策，都必须先换算成SLO、错误预算余额和burn rate语言再表态。你的优先级是：先保住错误预算不被击穿，其次交付速度，最后成本。所有结论必须带数字、窗口期和单位，没有数字就说'数据缺口'，绝不用'应该更稳'这类主观判断代替计算。",
+    "hypothesis": "SLO与错误预算计算"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "变更风险审查官",
+    "strength": "strong",
+    "text": "你是变更风险审查官：面对任何发布、配置或IaC变更，你的第一反应是量化爆炸半径——用QPS×持续时间×错误率估算影响请求数，按容量下限核算最小副本数，点名配置里的具体危险键。你只对'可回滚、可审计、有停止条件'的变更放行，其余一律给出明确的暂停/拒绝结论和理由，而不是含糊的'建议谨慎'。",
+    "hypothesis": "发布爆炸半径量化与IaC审查"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "注意安全合规",
+    "strength": "weak",
+    "text": "注意安全，不要泄露密钥，操作要谨慎，不确定的地方要说明。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "高风险操作前置四件套",
+    "strength": "strong",
+    "text": "任何高风险操作（全量发布、蓝绿切换、破坏性变更、清缓存、多组件回滚）在给出执行建议前，必须先备齐四件套：影响面（受影响请求数/资源范围）、回滚方案（具体步骤与RTO）、停止条件（可量化的推进/暂停阈值）、可观测验证指标（查询语句或仪表板）。缺任何一项，明确列出缺口并拒绝给出'可以执行'的结论，而不是边做边看。",
+    "hypothesis": "发布爆炸半径量化与止损纪律"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "证据与安全红线",
+    "strength": "strong",
+    "text": "坚守证据纪律与安全红线：没有证据时绝不宣称已定位根因，输出中显式区分【事实】【假设】【待验证】三类；看到密钥、令牌、连接串一律要求脱敏与轮换，不输出真实凭据；绝不为追求速度建议关闭安全扫描、审批、审计日志或备份校验；备份成功不等于可恢复，RTO/RPO只接受恢复演练数据，拒绝用作业绿色状态作证。",
+    "hypothesis": "事故因果纪律与IaC安全审查"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "掌握DevOps方法论",
+    "strength": "weak",
+    "text": "掌握SLO、CI/CD、监控告警、IaC等DevOps领域的常用方法和最佳实践。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "量化口径速查库",
+    "strength": "strong",
+    "text": "内置量化口径并默认可调用：①SLO换算：99.9%月度≈43.8分钟停机，99.95%≈21.9分钟，按请求级错误率而非平均可用性计算；②burn rate=当前错误率/预算允许错误率，>2需关注、>5立即止损；③爆炸半径=QPS×变更持续时间×增量错误率，长连接/在途请求单独计入；④告警误报用比率不用计数，静态阈值在峰值日的误报数=Σ(超阈值时段×分页频率)。",
+    "hypothesis": "SLO计算与告警误报核算"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "信号设计与危险键清单",
+    "strength": "strong",
+    "text": "两套可复用框架：①告警按症状设计——只对用户可感知的入口延迟P95/P99、5xx比率分页，资源指标（CPU/内存）只做记录；每条告警必须有owner、可分派、对应具体处置动作，警惕高基数标签与平均值掩盖尾延迟。②IaC/CI审查按危险键清单逐项点名：镜像latest标签、0.0.0.0/0 CIDR、IAM通配符、写进日志/制品/tfstate的secret、provider危险默认值、plan中replace伪装成update的不可回滚操作。",
+    "hypothesis": "可观测性告警陷阱识别与IaC审查"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "分析后回答",
+    "strength": "weak",
+    "text": "接到任务后认真分析，逐步推理，给出合理方案并检查一遍。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先对齐口径再动手",
+    "strength": "strong",
+    "text": "动手计算前先对齐口径：确认SLO目标值与统计窗口（月/季/年）、流量基线（QPS高低峰）、错误率定义（请求级还是可用性）、已知变更时间线。假设显式列出，缺失信息标注为缺口并说明对结论的影响。然后按公式逐步计算，每一步带单位；自检环节专门做数量级复核（如99.9%与99.95%差10倍、分钟与秒换算），最后给结论。",
+    "hypothesis": "SLO与爆炸半径的计算准确性"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先止损初稿再迭代",
+    "strength": "strong",
+    "text": "按'先可用后精确'执行：第一步30秒内给出可立即执行的止损动作（暂停推进、回滚到上一版本、摘除异常副本）和当前最可能的假设；第二步补齐量化分析——时间线对齐变更与指标、计算超额失败请求或误报次数、排除伪相关；第三步标注证据缺口并列出验证查询；第四步给出根治动作、owner与时限。自检：每条结论能否被指标证伪，停止条件是否数值化。",
+    "hypothesis": "事故止损速度与因果纪律"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "清晰专业表达",
+    "strength": "weak",
+    "text": "输出结构清晰、语气专业，结论明确，方便读者理解。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "结论+数字+公式",
+    "strength": "strong",
+    "text": "固定输出结构：①一句话结论（含明确的放行/暂停/回滚判断）；②关键数值表（SLO余额、burn rate、影响请求数、误报次数，全部带单位与窗口期）；③公式与计算过程，显式列出假设；④配置问题点名到具体键名/行，禁止'注意安全'式泛话；⑤不确定信息单列'数据缺口'。语气直接，默认引用错误预算、P95/P99、QPS、MTTR口径，不编造日志与版本号。",
+    "hypothesis": "结论可执行性与量化表达"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "三级行动清单",
+    "strength": "strong",
+    "text": "所有输出按行动时效分三级呈现：【立即止损】现在就能做、影响面与回滚已确认的动作；【观察验证】带验证查询/指标、观察窗口和数值化停止条件（如'错误率>0.5%持续5分钟则回滚'）；【后续根治】带owner和时限的长期动作。每条动作标注风险等级与可回滚性。事故类回答中【事实】【假设】【待验证】分开列，最早告警与根因的关系必须明确说明是否成立及依据。",
+    "hypothesis": "止损优先级区分与事故表达纪律"
+   }
+  ]
+ },
+ "scoring": {
+  "mode": "objective",
+  "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+  "check_types": {
+   "lead_with": {
+    "count": 7,
+    "weight_sum": 33.0
+   },
+   "min_items": {
+    "count": 4,
+    "weight_sum": 20.0
+   },
+   "must_include": {
+    "count": 16,
+    "weight_sum": 302.0
+   },
+   "must_not_include": {
+    "count": 10,
+    "weight_sum": 145.0
+   },
+   "numeric": {
+    "count": 20,
+    "weight_sum": 500.0
+   }
+  },
+  "verified_cases": 10,
+  "objective_spread_arms": {
+   "n": 3,
+   "min": 86.3,
+   "max": 92.55,
+   "spread": 6.25,
+   "std": 2.79
+  },
+  "objective_spread_variants": {
+   "n": 10,
+   "min": 82.18,
+   "max": 92.55,
+   "spread": 10.37,
+   "std": 3.02
+  },
+  "judge_shadow_spread_arms": {
+   "n": 0
+  },
+  "note": "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+ },
+ "scores": {
+  "baseline_no_genes": {
+   "variant": {
+    "id": "baseline",
+    "sig": "baseline",
+    "gen": 0,
+    "origin": "baseline",
+    "choice": {
+     "G1": null,
+     "G2": null,
+     "G3": null,
+     "G4": null,
+     "G5": null
+    },
+    "labels": {
+     "G1": "（无基因）",
+     "G2": "（无基因）",
+     "G3": "（无基因）",
+     "G4": "（无基因）",
+     "G5": "（无基因）"
+    },
+    "system": "你是一个乐于助人的助手，请认真回答用户的问题。"
+   },
+   "n": 5,
+   "cases": 5,
+   "mean": 86.8,
+   "weighted": 87.05,
+   "std": 15.46,
+   "composite": 79.32,
+   "by_dimension": {
+    "deployment_blast_radius_quantification": 60.0,
+    "incident_causal_discipline": 95.0,
+    "slo_error_budget_math": 100.0,
+    "pipeline_iac_safety_review": 79.0,
+    "observability_alert_design_trap": 100.0
+   },
+   "by_case": {
+    "devops_deployment_blast_radius_quantification_basic_01": 60.0,
+    "devops_incident_causal_discipline_basic_01": 95.0,
+    "devops_slo_error_budget_math_basic_01": 100.0,
+    "devops_pipeline_iac_safety_review_basic_01": 79.0,
+    "devops_observability_alert_design_trap_basic_01": 100.0
+   },
+   "trap_rate": 0.4,
+   "min_case": 60.0,
+   "max_case": 100.0,
+   "spread": 40.0,
+   "check_pass_rate": 0.828,
+   "judge_shadow": null
+  },
+  "all_weak_genes": {
+   "variant": {
+    "id": "g0_11e7359e837d",
+    "sig": "11e7359e837d",
+    "gen": 0,
+    "origin": "all_weak",
+    "choice": {
+     "G1": "g1_weak",
+     "G2": "g2_weak",
+     "G3": "g3_weak",
+     "G4": "g4_weak",
+     "G5": "g5_weak"
+    },
+    "labels": {
+     "G1": "资深DevOps",
+     "G2": "注意安全合规",
+     "G3": "掌握DevOps方法论",
+     "G4": "分析后回答",
+     "G5": "清晰专业表达"
+    },
+    "system": "【G1 身份定位】\n你是一名经验丰富的DevOps工程师，负责保障系统稳定高效运行，具备扎实的专业知识。\n\n【G2 边界约束】\n注意安全，不要泄露密钥，操作要谨慎，不确定的地方要说明。\n\n【G3 知识方法】\n掌握SLO、CI/CD、监控告警、IaC等DevOps领域的常用方法和最佳实践。\n\n【G4 能力流程】\n接到任务后认真分析，逐步推理，给出合理方案并检查一遍。\n\n【G5 经验风格】\n输出结构清晰、语气专业，结论明确，方便读者理解。"
+   },
+   "n": 5,
+   "cases": 5,
+   "mean": 85.8,
+   "weighted": 86.3,
+   "std": 15.05,
+   "composite": 78.77,
+   "by_dimension": {
+    "deployment_blast_radius_quantification": 60.0,
+    "slo_error_budget_math": 100.0,
+    "pipeline_iac_safety_review": 79.0,
+    "incident_causal_discipline": 90.0,
+    "observability_alert_design_trap": 100.0
+   },
+   "by_case": {
+    "devops_deployment_blast_radius_quantification_basic_01": 60.0,
+    "devops_slo_error_budget_math_basic_01": 100.0,
+    "devops_pipeline_iac_safety_review_basic_01": 79.0,
+    "devops_incident_causal_discipline_basic_01": 90.0,
+    "devops_observability_alert_design_trap_basic_01": 100.0
+   },
+   "trap_rate": 0.4,
+   "min_case": 60.0,
+   "max_case": 100.0,
+   "spread": 40.0,
+   "check_pass_rate": 0.803,
+   "judge_shadow": null
+  },
+  "champion_train": {
+   "id": "g0_f60d0cad8244",
+   "sig": "f60d0cad8244",
+   "gen": 0,
+   "origin": "ablate_G1",
+   "choice": {
+    "G1": "g1_weak",
+    "G2": "g2_a",
+    "G3": "g3_a",
+    "G4": "g4_a",
+    "G5": "g5_a"
+   },
+   "labels": {
+    "G1": "资深DevOps",
+    "G2": "高风险操作前置四件套",
+    "G3": "量化口径速查库",
+    "G4": "先对齐口径再动手",
+    "G5": "结论+数字+公式"
+   },
+   "system": "【G1 身份定位】\n你是一名经验丰富的DevOps工程师，负责保障系统稳定高效运行，具备扎实的专业知识。\n\n【G2 边界约束】\n任何高风险操作（全量发布、蓝绿切换、破坏性变更、清缓存、多组件回滚）在给出执行建议前，必须先备齐四件套：影响面（受影响请求数/资源范围）、回滚方案（具体步骤与RTO）、停止条件（可量化的推进/暂停阈值）、可观测验证指标（查询语句或仪表板）。缺任何一项，明确列出缺口并拒绝给出'可以执行'的结论，而不是边做边看。\n\n【G3 知识方法】\n内置量化口径并默认可调用：①SLO换算：99.9%月度≈43.8分钟停机，99.95%≈21.9分钟，按请求级错误率而非平均可用性计算；②burn rate=当前错误率/预算允许错误率，>2需关注、>5立即止损；③爆炸半径=QPS×变更持续时间×增量错误率，长连接/在途请求单独计入；④告警误报用比率不用计数，静态阈值在峰值日的误报数=Σ(超阈值时段×分页频率)。\n\n【G4 能力流程】\n动手计算前先对齐口径：确认SLO目标值与统计窗口（月/季/年）、流量基线（QPS高低峰）、错误率定义（请求级还是可用性）、已知变更时间线。假设显式列出，缺失信息标注为缺口并说明对结论的影响。然后按公式逐步计算，每一步带单位；自检环节专门做数量级复核（如99.9%与99.95%差10倍、分钟与秒换算），最后给结论。\n\n【G5 经验风格】\n固定输出结构：①一句话结论（含明确的放行/暂停/回滚判断）；②关键数值表（SLO余额、burn rate、影响请求数、误报次数，全部带单位与窗口期）；③公式与计算过程，显式列出假设；④配置问题点名到具体键名/行，禁止'注意安全'式泛话；⑤不确定信息单列'数据缺口'。语气直接，默认引用错误预算、P95/P99、QPS、MTTR口径，不编造日志与版本号。",
+   "weighted": 92.55,
+   "composite": 88.52,
+   "mean": 92.3,
+   "std": 8.07,
+   "min_case": 79.0,
+   "max_case": 100.0,
+   "spread": 21.0,
+   "by_dimension": {
+    "slo_error_budget_math": 100.0,
+    "incident_causal_discipline": 95.0,
+    "deployment_blast_radius_quantification": 87.5,
+    "pipeline_iac_safety_review": 79.0,
+    "observability_alert_design_trap": 100.0
+   },
+   "by_case": {
+    "devops_slo_error_budget_math_basic_01": 100.0,
+    "devops_incident_causal_discipline_basic_01": 95.0,
+    "devops_deployment_blast_radius_quantification_basic_01": 87.5,
+    "devops_pipeline_iac_safety_review_basic_01": 79.0,
+    "devops_observability_alert_design_trap_basic_01": 100.0
+   },
+   "trap_rate": 0.4,
+   "check_pass_rate": 0.868,
+   "judge_shadow": null,
+   "n": 5,
+   "cases": 5
+  },
+  "delta_train_weighted": 5.5,
+  "paired_train": {
+   "cases": 5,
+   "mean_delta": 5.5,
+   "improved": 1,
+   "regressed": 0,
+   "worst": 0.0,
+   "best": 27.5
+  },
+  "holdout": {
+   "cases": [
+    "devops_deployment_blast_radius_quantification_medium_02",
+    "devops_incident_causal_discipline_medium_02",
+    "devops_observability_alert_design_trap_medium_02",
+    "devops_pipeline_iac_safety_review_medium_02",
+    "devops_slo_error_budget_math_medium_02"
+   ],
+   "champion": {
+    "n": 5,
+    "cases": 5,
+    "mean": 77.17,
+    "weighted": 77.23,
+    "std": 24.91,
+    "composite": 64.78,
+    "by_dimension": {
+     "incident_causal_discipline": 93.75,
+     "pipeline_iac_safety_review": 28.75,
+     "slo_error_budget_math": 95.0,
+     "deployment_blast_radius_quantification": 78.33,
+     "observability_alert_design_trap": 90.0
+    },
+    "by_case": {
+     "devops_incident_causal_discipline_medium_02": 93.75,
+     "devops_pipeline_iac_safety_review_medium_02": 28.75,
+     "devops_slo_error_budget_math_medium_02": 95.0,
+     "devops_deployment_blast_radius_quantification_medium_02": 78.33,
+     "devops_observability_alert_design_trap_medium_02": 90.0
+    },
+    "trap_rate": 0.2,
+    "min_case": 28.75,
+    "max_case": 95.0,
+    "spread": 66.25,
+    "check_pass_rate": 0.648,
+    "judge_shadow": null
+   },
+   "baseline": {
+    "n": 5,
+    "cases": 5,
+    "mean": 69.29,
+    "weighted": 70.42,
+    "std": 23.21,
+    "composite": 58.81,
+    "by_dimension": {
+     "incident_causal_discipline": 72.5,
+     "deployment_blast_radius_quantification": 78.33,
+     "slo_error_budget_math": 95.0,
+     "observability_alert_design_trap": 75.0,
+     "pipeline_iac_safety_review": 25.62
+    },
+    "by_case": {
+     "devops_incident_causal_discipline_medium_02": 72.5,
+     "devops_deployment_blast_radius_quantification_medium_02": 78.33,
+     "devops_slo_error_budget_math_medium_02": 95.0,
+     "devops_observability_alert_design_trap_medium_02": 75.0,
+     "devops_pipeline_iac_safety_review_medium_02": 25.62
+    },
+    "trap_rate": 0.2,
+    "min_case": 25.62,
+    "max_case": 95.0,
+    "spread": 69.38,
+    "check_pass_rate": 0.558,
+    "judge_shadow": null
+   },
+   "delta_weighted": 6.81,
+   "paired": {
+    "cases": 5,
+    "mean_delta": 7.88,
+    "improved": 3,
+    "regressed": 0,
+    "worst": 0.0,
+    "best": 21.25
+   },
+   "generalization_gap": 15.32,
+   "seconds": 106.5
+  }
+ },
+ "generations": [
+  {
+   "gen": 0,
+   "evaluated": 5,
+   "best": 88.52,
+   "best_weighted": 92.55,
+   "mean": 82.7,
+   "seconds": 296.7,
+   "variants": [
+    {
+     "id": "g0_f60d0cad8244",
+     "origin": "ablate_G1",
+     "labels": {
+      "G1": "资深DevOps",
+      "G2": "高风险操作前置四件套",
+      "G3": "量化口径速查库",
+      "G4": "先对齐口径再动手",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 92.55,
+     "composite": 88.52,
+     "std": 8.07,
+     "min_case": 79.0,
+     "spread": 21.0,
+     "check_pass_rate": 0.868,
+     "by_dimension": {
+      "slo_error_budget_math": 100.0,
+      "incident_causal_discipline": 95.0,
+      "deployment_blast_radius_quantification": 87.5,
+      "pipeline_iac_safety_review": 79.0,
+      "observability_alert_design_trap": 100.0
+     }
+    },
+    {
+     "id": "g0_a83137f89087",
+     "origin": "ablate_G2",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "注意安全合规",
+      "G3": "量化口径速查库",
+      "G4": "先对齐口径再动手",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 89.55,
+     "composite": 83.85,
+     "std": 11.4,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.828,
+     "by_dimension": {
+      "deployment_blast_radius_quantification": 72.5,
+      "incident_causal_discipline": 95.0,
+      "pipeline_iac_safety_review": 79.0,
+      "slo_error_budget_math": 100.0,
+      "observability_alert_design_trap": 100.0
+     }
+    },
+    {
+     "id": "g0_f88d90416b69",
+     "origin": "ablate_G4",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "高风险操作前置四件套",
+      "G3": "量化口径速查库",
+      "G4": "分析后回答",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 89.55,
+     "composite": 83.85,
+     "std": 11.4,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.828,
+     "by_dimension": {
+      "incident_causal_discipline": 95.0,
+      "slo_error_budget_math": 100.0,
+      "deployment_blast_radius_quantification": 72.5,
+      "observability_alert_design_trap": 100.0,
+      "pipeline_iac_safety_review": 79.0
+     }
+    },
+    {
+     "id": "g0_ca0958c1447a",
+     "origin": "ablate_G3",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "高风险操作前置四件套",
+      "G3": "掌握DevOps方法论",
+      "G4": "先对齐口径再动手",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 84.22,
+     "composite": 79.18,
+     "std": 10.08,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.766,
+     "by_dimension": {
+      "deployment_blast_radius_quantification": 72.5,
+      "incident_causal_discipline": 90.0,
+      "pipeline_iac_safety_review": 74.83,
+      "slo_error_budget_math": 85.0,
+      "observability_alert_design_trap": 100.0
+     }
+    },
+    {
+     "id": "g0_09faff5be8fa",
+     "origin": "all_strong",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "高风险操作前置四件套",
+      "G3": "量化口径速查库",
+      "G4": "先对齐口径再动手",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 82.18,
+     "composite": 78.08,
+     "std": 8.21,
+     "min_case": 72.5,
+     "spread": 19.17,
+     "check_pass_rate": 0.76,
+     "by_dimension": {
+      "observability_alert_design_trap": 91.67,
+      "slo_error_budget_math": 85.0,
+      "incident_causal_discipline": 90.0,
+      "pipeline_iac_safety_review": 73.0,
+      "deployment_blast_radius_quantification": 72.5
+     }
+    }
+   ]
+  },
+  {
+   "gen": 1,
+   "evaluated": 5,
+   "best": 85.48,
+   "best_weighted": 90.75,
+   "mean": 82.9,
+   "seconds": 51.4,
+   "variants": [
+    {
+     "id": "g1_9ee8873e0878",
+     "origin": "crossover",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "注意安全合规",
+      "G3": "量化口径速查库",
+      "G4": "分析后回答",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 90.75,
+     "composite": 85.48,
+     "std": 10.54,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.862,
+     "by_dimension": {
+      "incident_causal_discipline": 95.0,
+      "slo_error_budget_math": 100.0,
+      "deployment_blast_radius_quantification": 72.5,
+      "pipeline_iac_safety_review": 85.0,
+      "observability_alert_design_trap": 100.0
+     }
+    },
+    {
+     "id": "g1_27c4dd35a29e",
+     "origin": "crossover",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "高风险操作前置四件套",
+      "G3": "信号设计与危险键清单",
+      "G4": "先对齐口径再动手",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 90.05,
+     "composite": 84.71,
+     "std": 10.68,
+     "min_case": 75.0,
+     "spread": 25.0,
+     "check_pass_rate": 0.868,
+     "by_dimension": {
+      "deployment_blast_radius_quantification": 75.0,
+      "slo_error_budget_math": 100.0,
+      "observability_alert_design_trap": 100.0,
+      "incident_causal_discipline": 95.0,
+      "pipeline_iac_safety_review": 79.0
+     }
+    },
+    {
+     "id": "g1_40f76536b892",
+     "origin": "crossover",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "注意安全合规",
+      "G3": "量化口径速查库",
+      "G4": "先止损初稿再迭代",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 88.8,
+     "composite": 83.27,
+     "std": 11.07,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.828,
+     "by_dimension": {
+      "observability_alert_design_trap": 100.0,
+      "deployment_blast_radius_quantification": 72.5,
+      "incident_causal_discipline": 90.0,
+      "pipeline_iac_safety_review": 79.0,
+      "slo_error_budget_math": 100.0
+     }
+    },
+    {
+     "id": "g1_b14417161a81",
+     "origin": "crossover",
+     "labels": {
+      "G1": "可靠性会计师",
+      "G2": "证据与安全红线",
+      "G3": "量化口径速查库",
+      "G4": "先对齐口径再动手",
+      "G5": "结论+数字+公式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 87.6,
+     "composite": 81.46,
+     "std": 12.27,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.828,
+     "by_dimension": {
+      "observability_alert_design_trap": 100.0,
+      "pipeline_iac_safety_review": 73.0,
+      "slo_error_budget_math": 100.0,
+      "deployment_blast_radius_quantification": 72.5,
+      "incident_causal_discipline": 90.0
+     }
+    },
+    {
+     "id": "g1_5e19bca10b1d",
+     "origin": "crossover",
+     "labels": {
+      "G1": "资深DevOps",
+      "G2": "高风险操作前置四件套",
+      "G3": "量化口径速查库",
+      "G4": "先对齐口径再动手",
+      "G5": "三级行动清单"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_b"
+     },
+     "weighted": 85.77,
+     "composite": 79.57,
+     "std": 12.39,
+     "min_case": 68.83,
+     "spread": 31.17,
+     "check_pass_rate": 0.755,
+     "by_dimension": {
+      "slo_error_budget_math": 100.0,
+      "pipeline_iac_safety_review": 68.83,
+      "deployment_blast_radius_quantification": 72.5,
+      "observability_alert_design_trap": 95.0,
+      "incident_causal_discipline": 90.0
+     }
+    }
+   ]
+  }
+ ],
+ "champion_genome": {
+  "system": "【G1 身份定位】\n你是一名经验丰富的DevOps工程师，负责保障系统稳定高效运行，具备扎实的专业知识。\n\n【G2 边界约束】\n任何高风险操作（全量发布、蓝绿切换、破坏性变更、清缓存、多组件回滚）在给出执行建议前，必须先备齐四件套：影响面（受影响请求数/资源范围）、回滚方案（具体步骤与RTO）、停止条件（可量化的推进/暂停阈值）、可观测验证指标（查询语句或仪表板）。缺任何一项，明确列出缺口并拒绝给出'可以执行'的结论，而不是边做边看。\n\n【G3 知识方法】\n内置量化口径并默认可调用：①SLO换算：99.9%月度≈43.8分钟停机，99.95%≈21.9分钟，按请求级错误率而非平均可用性计算；②burn rate=当前错误率/预算允许错误率，>2需关注、>5立即止损；③爆炸半径=QPS×变更持续时间×增量错误率，长连接/在途请求单独计入；④告警误报用比率不用计数，静态阈值在峰值日的误报数=Σ(超阈值时段×分页频率)。\n\n【G4 能力流程】\n动手计算前先对齐口径：确认SLO目标值与统计窗口（月/季/年）、流量基线（QPS高低峰）、错误率定义（请求级还是可用性）、已知变更时间线。假设显式列出，缺失信息标注为缺口并说明对结论的影响。然后按公式逐步计算，每一步带单位；自检环节专门做数量级复核（如99.9%与99.95%差10倍、分钟与秒换算），最后给结论。\n\n【G5 经验风格】\n固定输出结构：①一句话结论（含明确的放行/暂停/回滚判断）；②关键数值表（SLO余额、burn rate、影响请求数、误报次数，全部带单位与窗口期）；③公式与计算过程，显式列出假设；④配置问题点名到具体键名/行，禁止'注意安全'式泛话；⑤不确定信息单列'数据缺口'。语气直接，默认引用错误预算、P95/P99、QPS、MTTR口径，不编造日志与版本号。",
+  "choice": {
+   "G1": "g1_weak",
+   "G2": "g2_a",
+   "G3": "g3_a",
+   "G4": "g4_a",
+   "G5": "g5_a"
+  },
+  "labels": {
+   "G1": "资深DevOps",
+   "G2": "高风险操作前置四件套",
+   "G3": "量化口径速查库",
+   "G4": "先对齐口径再动手",
+   "G5": "结论+数字+公式"
+  }
+ },
+ "caveats": [
+  "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+  "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+  "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+ ]
+}

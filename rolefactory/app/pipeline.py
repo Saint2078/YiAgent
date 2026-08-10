@@ -77,12 +77,31 @@ def aggregate(rows: list[dict[str, Any]], blueprint: dict[str, Any]) -> dict[str
     }
 
 
+def bootstrap_ci(diffs: list[float], *, iters: int = 2000, seed: int = 20260811) -> list[float] | None:
+    """配对差值均值的 95% 自助置信区间。
+
+    题数只有 5–6 时，`mean_delta` 的点估计不足以判定优劣：换一组题就可能翻符号。
+    这里对「题」重采样（配对结构天然保留），给出区间；区间跨 0 就是判不了，不许当赢。
+    固定 seed，同一份 by_case 复算得同一区间。
+    """
+    n = len(diffs)
+    if n < 3:
+        return None
+    rng = random.Random(seed)
+    means = [statistics.fmean(rng.choices(diffs, k=n)) for _ in range(iters)]
+    means.sort()
+    lo = means[int(0.025 * iters)]
+    hi = means[min(iters - 1, int(0.975 * iters))]
+    return [round(lo, 2), round(hi, 2)]
+
+
 def paired_delta(champ: dict[str, Any], base: dict[str, Any]) -> dict[str, Any]:
     a, b = champ.get("by_case") or {}, base.get("by_case") or {}
     common = sorted(set(a) & set(b))
     if not common:
         return {"cases": 0}
     diffs = [a[c] - b[c] for c in common]
+    ci = bootstrap_ci(diffs)
     return {
         "cases": len(common),
         "mean_delta": round(statistics.fmean(diffs), 2),
@@ -90,6 +109,10 @@ def paired_delta(champ: dict[str, Any], base: dict[str, Any]) -> dict[str, Any]:
         "regressed": sum(1 for d in diffs if d < -0.5),
         "worst": round(min(diffs), 2),
         "best": round(max(diffs), 2),
+        "sd_delta": round(statistics.stdev(diffs), 2) if len(diffs) > 1 else None,
+        "mean_delta_ci95": ci,
+        # 区间整体在 0 以上/以下才算判定成立；跨 0 一律「判不了」
+        "significant": (bool(ci[0] > 0 or ci[1] < 0) if ci else None),
     }
 
 
@@ -102,6 +125,8 @@ class Run:
     role: str
     params: dict[str, Any]
     created_at: float = field(default_factory=time.time)
+    # created_at 是可读时间戳；时长一律用单调钟，避免容器时钟被校正后出现负数
+    created_mono: float = field(default_factory=time.monotonic)
     status: str = "running"
     phase: str = "anchors"
     error: str = ""
@@ -120,8 +145,12 @@ class Run:
     eval_done: int = 0
     eval_total: int = 0
     eval_failed: int = 0
+    phase_seconds: dict[str, float] = field(default_factory=dict)
     session: Session | None = None
     task: asyncio.Task | None = None
+
+    def mark(self, phase: str, seconds: float) -> None:
+        self.phase_seconds[phase] = round(self.phase_seconds.get(phase, 0.0) + max(0.0, seconds), 1)
 
     @property
     def role_id(self) -> str:
@@ -136,7 +165,7 @@ class Run:
 
     def snapshot(self, *, full: bool = False) -> dict[str, Any]:
         s = self.session
-        wall = (s.wall if s else time.time() - self.created_at)
+        wall = (s.wall if s else max(0.0, time.monotonic() - self.created_mono))
         llm = s.meter.snapshot() if s else {}
         throughput = None
         if llm.get("api_calls") and wall > 0:
@@ -157,6 +186,7 @@ class Run:
                 "eval_done": self.eval_done,
                 "eval_total": self.eval_total,
                 "eval_failed": self.eval_failed,
+                "phase_seconds": self.phase_seconds,
             },
             "llm": {**llm, "calls_per_second": throughput, "model": (s.model if s else SETTINGS.model),
                     "concurrency": (s.concurrency if s else SETTINGS.concurrency)},
@@ -267,7 +297,10 @@ async def execute(run: Run, api_key: str) -> None:
     run.session = session
     rng = random.Random(int(p.get("seed") or 42))
     reps = max(1, int(p.get("reps") or 1))
-    t_phase = time.time()
+    # holdout 只有 2 个臂（冠军 vs 无基因基线）、5–6 道题，是全流程最便宜的一段，
+    # 却是「有没有泛化」的唯一判据。单独把重复次数抬上去买信噪比，代价约一个批次。
+    hold_reps = max(reps, int(p.get("holdout_reps") or 3))
+    t_phase = time.monotonic()
 
     try:
         # 1) 锚点
@@ -278,91 +311,137 @@ async def execute(run: Run, api_key: str) -> None:
 
         # 2) 蓝图
         run.phase = "blueprint"
-        t_phase = time.time()
+        t_phase = time.monotonic()
         mode = str(p.get("scoring_mode") or "judge")
         run.blueprint = await roles.plan_blueprint(session, run.role, run.anchors, mode=mode)
+        run.mark("blueprint", time.monotonic() - t_phase)
         run.log(
-            f"蓝图 {len(run.blueprint['dimensions'])} 维度（{time.time() - t_phase:.1f}s）："
+            f"蓝图 {len(run.blueprint['dimensions'])} 维度（{time.monotonic() - t_phase:.1f}s）："
             + "、".join(f"{d['name']}{d['weight']}" for d in run.blueprint["dimensions"])
         )
         run.persist()
 
         # 3) 题组 + 裁判（维度级并行）
+        # 基因库只拿前几道题的标题当上下文，够用了就开工，与剩余出题（含长尾）并行。
         run.phase = "cases"
-        t_phase = time.time()
+        t_phase = time.monotonic()
+        bank_ready = asyncio.Event()
+        bank_cue = max(2, min(4, int(p.get("per_dim") or 2) * len(run.blueprint["dimensions"])))
 
         def on_case(case: dict | None, err: str | None) -> None:
             if case:
                 run.cases.append(case)
                 run.log(f"出题 {len(run.cases)}：[{case['dimension']}/{case['level']}] {case['title']}")
+                if len(run.cases) >= bank_cue:
+                    bank_ready.set()
             elif err:
                 run.log(f"出题失败 {err}")
 
         run.cases = []
-        cases = await roles.build_suite(
-            session,
-            run.blueprint,
-            run.anchors,
-            per_dim=int(p.get("per_dim") or 2),
-            on_case=on_case,
-            mode=mode,
+        suite_task = asyncio.create_task(
+            roles.build_suite(
+                session,
+                run.blueprint,
+                run.anchors,
+                per_dim=int(p.get("per_dim") or 2),
+                on_case=on_case,
+                mode=mode,
+            )
         )
+        cue_task = asyncio.create_task(bank_ready.wait())
+        await asyncio.wait({suite_task, cue_task}, return_when=asyncio.FIRST_COMPLETED)
+        cue_task.cancel()
+        bank_task: asyncio.Task | None = None
+        if run.cases:
+            run.phase = "bank"
+            t_bank = time.monotonic()
+            bank_task = asyncio.create_task(
+                genes.build_bank(session, run.blueprint, list(run.cases))
+            )
+            run.log(f"基因库与出题并行开工（已就绪 {len(run.cases)} 题）")
+        run.phase = "cases"
+        try:
+            cases = await suite_task
+        except BaseException:
+            if bank_task:
+                bank_task.cancel()
+            raise
         if not cases:
+            if bank_task:
+                bank_task.cancel()
             raise RuntimeError("题组为空")
         run.cases = cases
         train, hold = roles.split_holdout(cases)
         run.train_ids = [c["id"] for c in train]
         run.holdout_ids = [c["id"] for c in hold]
         store.save_suite(run.role_id, cases, run.blueprint)
+        run.mark("cases", time.monotonic() - t_phase)
         run.log(
-            f"题组 {len(cases)} 道（{time.time() - t_phase:.1f}s）｜train {len(train)} / holdout {len(hold)}"
+            f"题组 {len(cases)} 道（{time.monotonic() - t_phase:.1f}s）｜train {len(train)} / holdout {len(hold)}"
         )
         run.persist()
 
-        # 4) 基因库
+        # 4) 基因库（多半已在出题期间跑掉大半）
         run.phase = "bank"
-        t_phase = time.time()
-        run.bank = await genes.build_bank(session, run.blueprint, cases)
+        if bank_task is None:
+            t_bank = time.monotonic()
+            bank_task = asyncio.create_task(genes.build_bank(session, run.blueprint, cases))
+        run.bank = await bank_task
+        run.mark("bank", time.monotonic() - t_bank)
         run.log(
-            f"基因库就绪（{time.time() - t_phase:.1f}s）："
+            f"基因库就绪（{time.monotonic() - t_bank:.1f}s，与出题重叠）："
             + "｜".join(f"{s}×{len(run.bank[s])}" for s, _ in genes.SLOTS)
         )
         run.persist()
 
-        # 5) 基线（无基因 + 全弱基因）
+        # 5) 基线（无基因 + 全弱基因）与第 0 代合批
+        # 两者互不依赖，合成一个批次少一次 barrier：一代的墙钟由最慢那条决定，批越少越省。
         run.phase = "baseline"
-        t_phase = time.time()
+        t_phase = time.monotonic()
         base_v = genes.baseline_variant()
         weak_v = genes.all_weak_variant(run.bank)
         shadow = bool(p.get("judge_shadow", True))
-        got = await eval_batch(run, session, [base_v, weak_v], train, reps, shadow_judge=shadow)
-        run.baseline = {"variant": base_v, **aggregate(got[base_v["id"]], run.blueprint)}
-        run.all_weak = {"variant": weak_v, **aggregate(got[weak_v["id"]], run.blueprint)}
-        run.log(
-            f"基线 weighted={run.baseline.get('weighted')}｜全弱基因 weighted={run.all_weak.get('weighted')}"
-            f"（{time.time() - t_phase:.1f}s）"
-        )
-        run.persist()
 
-        # 6) 多代进化
-        run.phase = "evolve"
         max_gen = max(1, int(p.get("generations") or 3))
         pop_n = max(2, int(p.get("variants_per_gen") or 6))
         elite_k = max(1, int(p.get("elite") or 2))
         min_gain = float(p.get("min_gain") or 0.5)
 
         seen: set[str] = set()
-        hof: list[dict[str, Any]] = []
         population = genes.seed_population(run.bank, pop_n, rng)
         for v in population:
             seen.add(v["sig"])
+
+        run.log(
+            f"基线 + 第 0 代合批：{2 + len(population)} 个变体 × {len(train)} 题 × {reps} 次"
+        )
+        got = await eval_batch(
+            run, session, [base_v, weak_v] + population, train, reps, shadow_judge=shadow
+        )
+        run.baseline = {"variant": base_v, **aggregate(got[base_v["id"]], run.blueprint)}
+        run.all_weak = {"variant": weak_v, **aggregate(got[weak_v["id"]], run.blueprint)}
+        gen0_rows: dict[str, list[dict[str, Any]]] | None = {v["id"]: got[v["id"]] for v in population}
+        run.mark("baseline+gen0", time.monotonic() - t_phase)
+        run.log(
+            f"基线 weighted={run.baseline.get('weighted')}｜全弱基因 weighted={run.all_weak.get('weighted')}"
+            f"（{time.monotonic() - t_phase:.1f}s）"
+        )
+        run.persist()
+
+        # 6) 多代进化
+        run.phase = "evolve"
+        hof: list[dict[str, Any]] = []
         best_composite = float("-inf")
         stagnant = 0
 
         for gen in range(max_gen):
-            t_gen = time.time()
-            run.log(f"第 {gen} 代：{len(population)} 个变体 × {len(train)} 题 × {reps} 次")
-            got = await eval_batch(run, session, population, train, reps)
+            t_gen = time.monotonic()
+            if gen == 0 and gen0_rows is not None:
+                got, gen0_rows = gen0_rows, None
+                run.log(f"第 0 代复用合批结果：{len(population)} 个变体")
+            else:
+                run.log(f"第 {gen} 代：{len(population)} 个变体 × {len(train)} 题 × {reps} 次")
+                got = await eval_batch(run, session, population, train, reps)
             scored: list[dict[str, Any]] = []
             for v in population:
                 agg = aggregate(got[v["id"]], run.blueprint)
@@ -382,7 +461,7 @@ async def execute(run: Run, api_key: str) -> None:
                 "best": scored[0]["composite"],
                 "best_weighted": scored[0]["weighted"],
                 "mean": round(statistics.fmean([s["composite"] for s in scored]), 2),
-                "seconds": round(time.time() - t_gen, 1),
+                "seconds": round(time.monotonic() - t_gen, 1),
                 "variants": [
                     {
                         "id": s["id"],
@@ -411,9 +490,10 @@ async def execute(run: Run, api_key: str) -> None:
                 )
                 if k in hof[0]
             }
+            run.mark("evolve", time.monotonic() - t_gen)
             run.log(
                 f"第 {gen} 代最优 composite={scored[0]['composite']} weighted={scored[0]['weighted']}"
-                f"｜{scored[0]['origin']}｜{time.time() - t_gen:.1f}s"
+                f"｜{scored[0]['origin']}｜{time.monotonic() - t_gen:.1f}s"
             )
             run.persist()
 
@@ -441,19 +521,20 @@ async def execute(run: Run, api_key: str) -> None:
         # 7) holdout 鉴定
         if hold and run.champion:
             run.phase = "holdout"
-            t_phase = time.time()
+            t_phase = time.monotonic()
             champ_v = next((h for h in hof if h["id"] == run.champion["id"]), hof[0])
             champ_slim = {
                 "id": champ_v["id"], "sig": champ_v["sig"], "system": champ_v["system"],
                 "choice": champ_v["choice"], "labels": champ_v["labels"],
             }
             got = await eval_batch(
-                run, session, [champ_slim, base_v], hold, reps, shadow_judge=bool(p.get("judge_shadow", True))
+                run, session, [champ_slim, base_v], hold, hold_reps, shadow_judge=bool(p.get("judge_shadow", True))
             )
             champ_h = aggregate(got[champ_slim["id"]], run.blueprint)
             base_h = aggregate(got[base_v["id"]], run.blueprint)
             run.holdout = {
                 "cases": run.holdout_ids,
+                "reps": hold_reps,
                 "champion": champ_h,
                 "baseline": base_h,
                 "delta_weighted": (
@@ -467,8 +548,9 @@ async def execute(run: Run, api_key: str) -> None:
                     if champ_h.get("weighted") is not None
                     else None
                 ),
-                "seconds": round(time.time() - t_phase, 1),
+                "seconds": round(time.monotonic() - t_phase, 1),
             }
+            run.mark("holdout", time.monotonic() - t_phase)
             run.log(
                 f"holdout 冠军={champ_h.get('weighted')} 基线={base_h.get('weighted')}"
                 f" Δ={run.holdout.get('delta_weighted')}｜泛化差={run.holdout.get('generalization_gap')}"
@@ -550,6 +632,41 @@ def scoring_summary(run: Run) -> dict[str, Any]:
     }
 
 
+def parallel_profile(run: Run, llm: dict[str, Any], wall: float) -> dict[str, Any]:
+    """并发画像：真实在跑并发 = API 占用秒 / 墙钟秒（排队时间已剔除）。
+
+    - `effective_parallel` 贴近 `concurrency_cap` → 闸门是瓶颈，可加并发；
+    - 远低于上限 → 瓶颈在批次结构（barrier / 长尾），加并发无用。
+    """
+    api_s = float(llm.get("api_seconds_sum") or 0.0)
+    queue_s = float(llm.get("queue_seconds_sum") or 0.0)
+    cap = int((run.session.concurrency if run.session else SETTINGS.concurrency) or 1)
+    eff = round(api_s / wall, 2) if wall > 0 else None
+    return {
+        "concurrency_cap": cap,
+        "effective_parallel": eff,
+        "utilization_vs_cap": round(eff / cap, 3) if eff is not None and cap else None,
+        "inflight_peak": llm.get("inflight_peak"),
+        "api_seconds_sum": round(api_s, 1),
+        "queue_seconds_sum": round(queue_s, 1),
+        "queue_share": round(queue_s / (api_s + queue_s), 3) if (api_s + queue_s) > 0 else None,
+        "serial_seconds_equivalent": round(api_s, 1),
+        "speedup_vs_serial": round(api_s / wall, 2) if wall > 0 else None,
+        "hedges": llm.get("hedges"),
+        "hedge_wins": llm.get("hedge_wins"),
+        "latency": {
+            "p50": llm.get("latency_p50"),
+            "p90": llm.get("latency_p90"),
+            "p99": llm.get("latency_p99"),
+            "max": llm.get("latency_max"),
+        },
+        "note": (
+            "排队秒数不计入 API 秒数；hedges 为长尾补发次数，hedge_wins 为补发先到的次数"
+            "（被丢弃的那份仍消耗了服务端 token，未计入本地 tokens）。"
+        ),
+    }
+
+
 def write_report(run: Run) -> None:
     s = run.session
     llm = s.meter.snapshot() if s else {}
@@ -575,6 +692,8 @@ def write_report(run: Run) -> None:
             "api_calls_per_second": round(llm.get("api_calls", 0) / wall, 2) if wall > 0 else None,
             "evals_per_minute": round(run.eval_done / wall * 60, 1) if wall > 0 else None,
             "tokens_per_eval": round(llm.get("total_tokens", 0) / run.eval_done) if run.eval_done else None,
+            "phase_seconds": run.phase_seconds,
+            "parallel": parallel_profile(run, llm, wall),
         },
         "blueprint": run.blueprint,
         "anchors": run.anchors,
@@ -615,6 +734,11 @@ def write_report(run: Run) -> None:
             ]
         ),
     }
+    if (llm.get("hedges") or 0) > 0:
+        report["caveats"].append(
+            f"长尾对冲：补发 {llm['hedges']} 次、其中 {llm.get('hedge_wins') or 0} 次由补发先返回；"
+            "被丢弃那份的服务端 token 未计入本地计量，实际用量略高于报告值。"
+        )
     store.write_json(store.run_dir(run.run_id) / "report.json", report)
 
 

@@ -1,0 +1,222 @@
+{
+  "schema": "yiagent.rolefactory.genome_card/1",
+  "generated_at": "2026-08-10T18:41:10.850384+00:00",
+  "run_id": "20260809-203635-e70531",
+  "role": "DevOps工程师",
+  "role_id": "devops",
+  "status": "done",
+  "genome_hash": "623dfa11cb6e5accc6f5b13e06831eabb81b7ce6b3002b990ea6e24ab23f35f6",
+  "loadable": true,
+  "missing_slots": [],
+  "slots": {
+    "G1": {
+      "slot_label": "身份",
+      "allele_id": "g1_weak",
+      "allele_label": "资深DevOps",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "你是一名经验丰富的DevOps工程师，负责保障系统稳定高效运行，具备扎实的专业知识。",
+      "text_sha256": "84891a2b22cbeaf58c73ef4fecabc139ca5e23efa73a65e30ace39cbbe014740",
+      "text_chars": 42
+    },
+    "G2": {
+      "slot_label": "人设与决策边界",
+      "allele_id": "g2_a",
+      "allele_label": "高风险操作前置四件套",
+      "strength": "strong",
+      "hypothesis": "发布爆炸半径量化与止损纪律",
+      "text": "任何高风险操作（全量发布、蓝绿切换、破坏性变更、清缓存、多组件回滚）在给出执行建议前，必须先备齐四件套：影响面（受影响请求数/资源范围）、回滚方案（具体步骤与RTO）、停止条件（可量化的推进/暂停阈值）、可观测验证指标（查询语句或仪表板）。缺任何一项，明确列出缺口并拒绝给出'可以执行'的结论，而不是边做边看。",
+      "text_sha256": "7895d11d957f084623b691ab17cdb42f60f852defd0fc5110921355455f8e00e",
+      "text_chars": 155
+    },
+    "G3": {
+      "slot_label": "知识",
+      "allele_id": "g3_a",
+      "allele_label": "量化口径速查库",
+      "strength": "strong",
+      "hypothesis": "SLO计算与告警误报核算",
+      "text": "内置量化口径并默认可调用：①SLO换算：99.9%月度≈43.8分钟停机，99.95%≈21.9分钟，按请求级错误率而非平均可用性计算；②burn rate=当前错误率/预算允许错误率，>2需关注、>5立即止损；③爆炸半径=QPS×变更持续时间×增量错误率，长连接/在途请求单独计入；④告警误报用比率不用计数，静态阈值在峰值日的误报数=Σ(超阈值时段×分页频率)。",
+      "text_sha256": "b00511227b501717d86876a189167f498b62fc315e667bc4f163aa118b188f84",
+      "text_chars": 182
+    },
+    "G4": {
+      "slot_label": "能力与工具",
+      "allele_id": "g4_a",
+      "allele_label": "先对齐口径再动手",
+      "strength": "strong",
+      "hypothesis": "SLO与爆炸半径的计算准确性",
+      "text": "动手计算前先对齐口径：确认SLO目标值与统计窗口（月/季/年）、流量基线（QPS高低峰）、错误率定义（请求级还是可用性）、已知变更时间线。假设显式列出，缺失信息标注为缺口并说明对结论的影响。然后按公式逐步计算，每一步带单位；自检环节专门做数量级复核（如99.9%与99.95%差10倍、分钟与秒换算），最后给结论。",
+      "text_sha256": "26a434d8caa61b5410eb6b15cb82f5d2265a8858f4b6ac71f75bf1bfb6998b21",
+      "text_chars": 157
+    },
+    "G5": {
+      "slot_label": "经验策略",
+      "allele_id": "g5_a",
+      "allele_label": "结论+数字+公式",
+      "strength": "strong",
+      "hypothesis": "结论可执行性与量化表达",
+      "text": "固定输出结构：①一句话结论（含明确的放行/暂停/回滚判断）；②关键数值表（SLO余额、burn rate、影响请求数、误报次数，全部带单位与窗口期）；③公式与计算过程，显式列出假设；④配置问题点名到具体键名/行，禁止'注意安全'式泛话；⑤不确定信息单列'数据缺口'。语气直接，默认引用错误预算、P95/P99、QPS、MTTR口径，不编造日志与版本号。",
+      "text_sha256": "bc3fbf883e7a24a0f7df0b5a06b381918a6404c400719fce844caaa3564b4495",
+      "text_chars": 176
+    }
+  },
+  "system_prompt": "【G1 身份定位】\n你是一名经验丰富的DevOps工程师，负责保障系统稳定高效运行，具备扎实的专业知识。\n\n【G2 边界约束】\n任何高风险操作（全量发布、蓝绿切换、破坏性变更、清缓存、多组件回滚）在给出执行建议前，必须先备齐四件套：影响面（受影响请求数/资源范围）、回滚方案（具体步骤与RTO）、停止条件（可量化的推进/暂停阈值）、可观测验证指标（查询语句或仪表板）。缺任何一项，明确列出缺口并拒绝给出'可以执行'的结论，而不是边做边看。\n\n【G3 知识方法】\n内置量化口径并默认可调用：①SLO换算：99.9%月度≈43.8分钟停机，99.95%≈21.9分钟，按请求级错误率而非平均可用性计算；②burn rate=当前错误率/预算允许错误率，>2需关注、>5立即止损；③爆炸半径=QPS×变更持续时间×增量错误率，长连接/在途请求单独计入；④告警误报用比率不用计数，静态阈值在峰值日的误报数=Σ(超阈值时段×分页频率)。\n\n【G4 能力流程】\n动手计算前先对齐口径：确认SLO目标值与统计窗口（月/季/年）、流量基线（QPS高低峰）、错误率定义（请求级还是可用性）、已知变更时间线。假设显式列出，缺失信息标注为缺口并说明对结论的影响。然后按公式逐步计算，每一步带单位；自检环节专门做数量级复核（如99.9%与99.95%差10倍、分钟与秒换算），最后给结论。\n\n【G5 经验风格】\n固定输出结构：①一句话结论（含明确的放行/暂停/回滚判断）；②关键数值表（SLO余额、burn rate、影响请求数、误报次数，全部带单位与窗口期）；③公式与计算过程，显式列出假设；④配置问题点名到具体键名/行，禁止'注意安全'式泛话；⑤不确定信息单列'数据缺口'。语气直接，默认引用错误预算、P95/P99、QPS、MTTR口径，不编造日志与版本号。",
+  "scoring": {
+    "mode": "objective",
+    "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+    "check_types": {
+      "lead_with": {
+        "count": 7,
+        "weight_sum": 33.0
+      },
+      "min_items": {
+        "count": 4,
+        "weight_sum": 20.0
+      },
+      "must_include": {
+        "count": 16,
+        "weight_sum": 302.0
+      },
+      "must_not_include": {
+        "count": 10,
+        "weight_sum": 145.0
+      },
+      "numeric": {
+        "count": 20,
+        "weight_sum": 500.0
+      }
+    },
+    "verified_cases": 10
+  },
+  "scores": {
+    "baseline_no_genes_weighted": 87.05,
+    "all_weak_weighted": 86.3,
+    "champion_train_weighted": 92.55,
+    "delta_train_weighted": 5.5,
+    "paired_train": {
+      "cases": 5,
+      "mean_delta": 5.5,
+      "improved": 1,
+      "regressed": 0,
+      "worst": 0.0,
+      "best": 27.5
+    },
+    "holdout_champion_weighted": 77.23,
+    "holdout_baseline_weighted": 70.42,
+    "holdout_delta_weighted": 6.81,
+    "holdout_paired": {
+      "cases": 5,
+      "mean_delta": 7.88,
+      "improved": 3,
+      "regressed": 0,
+      "worst": 0.0,
+      "best": 21.25
+    },
+    "generalization_gap": 15.32
+  },
+  "verdict": {
+    "generalizes": true,
+    "label": "holdout 站得住",
+    "reason": "holdout Δ=+6.81，配对 3 升 / 0 降（n=5）"
+  },
+  "ablation": {
+    "available": true,
+    "reference_arm": {
+      "id": "g0_09faff5be8fa",
+      "weighted": 82.18
+    },
+    "by_slot": [
+      {
+        "slot": "G3",
+        "slot_label": "知识",
+        "full_weighted": 82.18,
+        "ablated_weighted": 84.22,
+        "delta_weighted": -2.04,
+        "delta_composite": -1.1
+      },
+      {
+        "slot": "G2",
+        "slot_label": "人设与决策边界",
+        "full_weighted": 82.18,
+        "ablated_weighted": 89.55,
+        "delta_weighted": -7.37,
+        "delta_composite": -5.77
+      },
+      {
+        "slot": "G4",
+        "slot_label": "能力与工具",
+        "full_weighted": 82.18,
+        "ablated_weighted": 89.55,
+        "delta_weighted": -7.37,
+        "delta_composite": -5.77
+      },
+      {
+        "slot": "G1",
+        "slot_label": "身份",
+        "full_weighted": 82.18,
+        "ablated_weighted": 92.55,
+        "delta_weighted": -10.37,
+        "delta_composite": -10.44
+      }
+    ],
+    "note": "消融只换一个槽为弱等位，其余保持强等位；单次采样、样本量小，只读排序与量级，不做显著性声明。"
+  },
+  "suite": {
+    "count": 10,
+    "train": [
+      "devops_deployment_blast_radius_quantification_basic_01",
+      "devops_incident_causal_discipline_basic_01",
+      "devops_observability_alert_design_trap_basic_01",
+      "devops_pipeline_iac_safety_review_basic_01",
+      "devops_slo_error_budget_math_basic_01"
+    ],
+    "holdout": [
+      "devops_deployment_blast_radius_quantification_medium_02",
+      "devops_incident_causal_discipline_medium_02",
+      "devops_observability_alert_design_trap_medium_02",
+      "devops_pipeline_iac_safety_review_medium_02",
+      "devops_slo_error_budget_math_medium_02"
+    ],
+    "path": "case/role/devops/testcases.jsonl"
+  },
+  "reproduce": {
+    "service": "rolefactory (Docker, 127.0.0.1:8790)",
+    "endpoint": "POST /api/run",
+    "params": {
+      "model": "k3",
+      "scoring_mode": "objective",
+      "judge_shadow": false,
+      "per_dim": 2,
+      "generations": 3,
+      "variants_per_gen": 5,
+      "reps": 1,
+      "elite": 2,
+      "min_gain": 0.5,
+      "patience": 1,
+      "seed": 20260810,
+      "concurrency": 16,
+      "budget_tokens": 1500000,
+      "budget_seconds": 2400.0,
+      "anchor_limit": 5
+    },
+    "note": "同一 seed 复现的是搜索路径（种群与配对），不是逐字回答：LLM 采样有随机性。判分是纯 Python 断言，对同一份回答任何时候复算同分。",
+    "verify_command": "python tools/genome_card.py verify 20260809-203635-e70531 <genome.json>"
+  },
+  "performance": {
+    "wall_seconds": 924.8,
+    "phase_seconds": null,
+    "parallel": null,
+    "tokens_per_eval": 5366,
+    "evals": {
+      "done": 70,
+      "failed": 0,
+      "total": 70
+    }
+  },
+  "caveats": [
+    "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+    "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+    "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+    "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+  ]
+}

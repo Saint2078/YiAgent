@@ -1,0 +1,224 @@
+{
+  "schema": "yiagent.rolefactory.genome_card/1",
+  "generated_at": "2026-08-10T18:41:11.679990+00:00",
+  "run_id": "20260809-201229-aa45e1",
+  "role": "软件开发工程师",
+  "role_id": "role_cbf11840",
+  "status": "done",
+  "genome_hash": "eb8422af9b560b6cad4e9e34574c0e2df6acd73cff2d5c7404446139bbda67cc",
+  "loadable": true,
+  "missing_slots": [],
+  "slots": {
+    "G1": {
+      "slot_label": "身份",
+      "allele_id": "g1_weak",
+      "allele_label": "泛泛负责",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "你是一名认真负责、追求高质量的软件开发工程师。",
+      "text_sha256": "e1611e9d857cdfaf8c520549c47e3c4904475fff5ed8f65635b49a6c3abe9eed",
+      "text_chars": 23
+    },
+    "G2": {
+      "slot_label": "人设与决策边界",
+      "allele_id": "g2_b",
+      "allele_label": "陷阱前提复述",
+      "strength": "strong",
+      "hypothesis": "提前拦截单位、日期、统计口径与并发误判",
+      "text": "先扫描并复述易错前提：闰年整百年规则、时区偏移方向、bit/byte与TB/TiB、浮点相等、幂等与原子性。题面若要求过滤某类行或固定口径，先写成检查项；约束互相冲突时停手澄清，不擅自通用化。",
+      "text_sha256": "09c2cd12fceafa86ab8f9f852cb59f097ba1dec2137c4ea2196fb0af6e0ce4c7",
+      "text_chars": 96
+    },
+    "G3": {
+      "slot_label": "知识",
+      "allele_id": "g3_a",
+      "allele_label": "缺陷闭环",
+      "strength": "strong",
+      "hypothesis": "提升唯一根因定位与防回归能力",
+      "text": "缺陷定位用闭环：症状→不变量→最小反例→数据流回溯到唯一写入口径→差分修复→回归断言。修复只改变量来源或分母口径，顺手跑原通过用例；输出给出行号、根因、修复后值、未受影响路径。",
+      "text_sha256": "800cc7b7cc4eda57a2dd39177d3cce29f6421b2e3c17aeb0cd18aa54ab44bad8",
+      "text_chars": 88
+    },
+    "G4": {
+      "slot_label": "能力与工具",
+      "allele_id": "g4_weak",
+      "allele_label": "按步来",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "接到任务后认真分析并实现，最后检查。",
+      "text_sha256": "bf6d52ea120ced3dc18ba544b1adb40cc024f77adcf206f729aac3a31da8b52e",
+      "text_chars": 18
+    },
+    "G5": {
+      "slot_label": "经验策略",
+      "allele_id": "g5_a",
+      "allele_label": "结论先行",
+      "strength": "strong",
+      "hypothesis": "提高自动判分命中率与陷阱揭示完整度",
+      "text": "固定结构：第一行答案/行号/精确值；随后推导显式标注单位、进制、时区与口径；再列已验证边界用例；遇陷阱必写直觉答案X为何错误，正确值Y；结尾说明对既有通过路径无影响或影响点。",
+      "text_sha256": "6fffced269f983b1befd2548f23b3ee2fef1d8a32e173a20aee267af03486563",
+      "text_chars": 87
+    }
+  },
+  "system_prompt": "【G1 身份定位】\n你是一名认真负责、追求高质量的软件开发工程师。\n\n【G2 边界约束】\n先扫描并复述易错前提：闰年整百年规则、时区偏移方向、bit/byte与TB/TiB、浮点相等、幂等与原子性。题面若要求过滤某类行或固定口径，先写成检查项；约束互相冲突时停手澄清，不擅自通用化。\n\n【G3 知识方法】\n缺陷定位用闭环：症状→不变量→最小反例→数据流回溯到唯一写入口径→差分修复→回归断言。修复只改变量来源或分母口径，顺手跑原通过用例；输出给出行号、根因、修复后值、未受影响路径。\n\n【G4 能力流程】\n接到任务后认真分析并实现，最后检查。\n\n【G5 经验风格】\n固定结构：第一行答案/行号/精确值；随后推导显式标注单位、进制、时区与口径；再列已验证边界用例；遇陷阱必写直觉答案X为何错误，正确值Y；结尾说明对既有通过路径无影响或影响点。",
+  "scoring": {
+    "mode": "objective",
+    "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+    "check_types": {
+      "lead_with": {
+        "count": 12,
+        "weight_sum": 75.0
+      },
+      "min_items": {
+        "count": 4,
+        "weight_sum": 25.0
+      },
+      "must_include": {
+        "count": 14,
+        "weight_sum": 320.0
+      },
+      "must_not_include": {
+        "count": 12,
+        "weight_sum": 190.0
+      },
+      "numeric": {
+        "count": 22,
+        "weight_sum": 590.0
+      }
+    },
+    "verified_cases": 12
+  },
+  "scores": {
+    "baseline_no_genes_weighted": 85.62,
+    "all_weak_weighted": 90.12,
+    "champion_train_weighted": 93.12,
+    "delta_train_weighted": 7.5,
+    "paired_train": {
+      "cases": 6,
+      "mean_delta": 10.83,
+      "improved": 2,
+      "regressed": 0,
+      "worst": 0.0,
+      "best": 45.0
+    },
+    "holdout_champion_weighted": 90.5,
+    "holdout_baseline_weighted": 93.62,
+    "holdout_delta_weighted": -3.12,
+    "holdout_paired": {
+      "cases": 6,
+      "mean_delta": -3.47,
+      "improved": 0,
+      "regressed": 2,
+      "worst": -12.5,
+      "best": 0.0
+    },
+    "generalization_gap": 2.62
+  },
+  "verdict": {
+    "generalizes": false,
+    "label": "未通过泛化鉴定",
+    "reason": "holdout Δ=-3.12，配对 0 升 / 2 降（n=6）：train 上的增益（7.5）大概率是过拟合，不能宣称该基因组更强"
+  },
+  "ablation": {
+    "available": true,
+    "reference_arm": {
+      "id": "g0_09faff5be8fa",
+      "weighted": 86.88
+    },
+    "by_slot": [
+      {
+        "slot": "G2",
+        "slot_label": "人设与决策边界",
+        "full_weighted": 86.88,
+        "ablated_weighted": 84.25,
+        "delta_weighted": 2.63,
+        "delta_composite": 10.67
+      },
+      {
+        "slot": "G3",
+        "slot_label": "知识",
+        "full_weighted": 86.88,
+        "ablated_weighted": 85.25,
+        "delta_weighted": 1.63,
+        "delta_composite": 7.97
+      },
+      {
+        "slot": "G1",
+        "slot_label": "身份",
+        "full_weighted": 86.88,
+        "ablated_weighted": 88.62,
+        "delta_weighted": -1.74,
+        "delta_composite": -0.65
+      },
+      {
+        "slot": "G4",
+        "slot_label": "能力与工具",
+        "full_weighted": 86.88,
+        "ablated_weighted": 90.38,
+        "delta_weighted": -3.5,
+        "delta_composite": -4.44
+      }
+    ],
+    "note": "消融只换一个槽为弱等位，其余保持强等位；单次采样、样本量小，只读排序与量级，不做显著性声明。"
+  },
+  "suite": {
+    "count": 12,
+    "train": [
+      "role_cbf11840_boundary_numeric_traps_basic_01",
+      "role_cbf11840_code_defect_localization_basic_01",
+      "role_cbf11840_complexity_capacity_estimation_basic_01",
+      "role_cbf11840_counterintuitive_concurrency_semantics_basic_01",
+      "role_cbf11840_data_statistical_reasoning_basic_01",
+      "role_cbf11840_test_reasoning_oracle_basic_01"
+    ],
+    "holdout": [
+      "role_cbf11840_boundary_numeric_traps_medium_02",
+      "role_cbf11840_code_defect_localization_medium_02",
+      "role_cbf11840_complexity_capacity_estimation_medium_02",
+      "role_cbf11840_counterintuitive_concurrency_semantics_medium_02",
+      "role_cbf11840_data_statistical_reasoning_medium_02",
+      "role_cbf11840_test_reasoning_oracle_medium_02"
+    ],
+    "path": "case/role/role_cbf11840/testcases.jsonl"
+  },
+  "reproduce": {
+    "service": "rolefactory (Docker, 127.0.0.1:8790)",
+    "endpoint": "POST /api/run",
+    "params": {
+      "model": "k3",
+      "scoring_mode": "objective",
+      "judge_shadow": false,
+      "per_dim": 2,
+      "generations": 3,
+      "variants_per_gen": 5,
+      "reps": 1,
+      "elite": 2,
+      "min_gain": 0.5,
+      "patience": 1,
+      "seed": 20260810,
+      "concurrency": 16,
+      "budget_tokens": 1500000,
+      "budget_seconds": 2400.0,
+      "anchor_limit": 5
+    },
+    "note": "同一 seed 复现的是搜索路径（种群与配对），不是逐字回答：LLM 采样有随机性。判分是纯 Python 断言，对同一份回答任何时候复算同分。",
+    "verify_command": "python tools/genome_card.py verify 20260809-201229-aa45e1 <genome.json>"
+  },
+  "performance": {
+    "wall_seconds": 1531.7,
+    "phase_seconds": null,
+    "parallel": null,
+    "tokens_per_eval": 3504,
+    "evals": {
+      "done": 114,
+      "failed": 0,
+      "total": 114
+    }
+  },
+  "caveats": [
+    "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+    "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+    "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+    "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+  ]
+}

@@ -1,0 +1,964 @@
+{
+ "run_id": "20260809-191310-a7b2bd",
+ "role": "产品经理",
+ "role_id": "role_775f14fc",
+ "status": "done",
+ "params": {
+  "model": "k3",
+  "scoring_mode": "objective",
+  "judge_shadow": false,
+  "per_dim": 2,
+  "generations": 3,
+  "variants_per_gen": 5,
+  "reps": 1,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 20260810,
+  "concurrency": 16,
+  "budget_tokens": 1500000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786302790.702349,
+ "wall_seconds": 864.7,
+ "performance": {
+  "llm": {
+   "calls": 86,
+   "api_calls": 86,
+   "cache_hits": 0,
+   "cache_hit_rate": 0.0,
+   "retries": 4,
+   "errors": 0,
+   "prompt_tokens": 76426,
+   "completion_tokens": 241614,
+   "total_tokens": 318040,
+   "api_seconds_sum": 7210.0,
+   "latency_p50": 85.08,
+   "latency_p90": 163.73,
+   "latency_max": 228.74,
+   "by_purpose": {
+    "answer": {
+     "calls": 74,
+     "cache_hits": 0,
+     "tokens": 273866,
+     "seconds": 6336.9
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3523,
+     "seconds": 36.9
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 2402,
+     "seconds": 31.3
+    },
+    "case_objective": {
+     "calls": 10,
+     "cache_hits": 0,
+     "tokens": 38249,
+     "seconds": 804.9
+    }
+   }
+  },
+  "evals": {
+   "done": 70,
+   "failed": 0,
+   "total": 70
+  },
+  "api_calls_per_second": 0.1,
+  "evals_per_minute": 4.9,
+  "tokens_per_eval": 4543
+ },
+ "blueprint": {
+  "role": "产品经理",
+  "role_id": "role_775f14fc",
+  "one_line": "把模糊的用户/业务问题转成可验证、可排期、可复盘的需求与决策，并对指标结果和副作用负责。",
+  "dimensions": [
+   {
+    "key": "metric_definition_guardrails",
+    "name": "指标定义与护栏设计",
+    "weight": 20,
+    "why": "PM 最常把方向带偏的方式就是选对目标但算错口径、忽视护栏，导致优化一个虚荣指标。",
+    "probe": "给一段业务背景与原始事件口径，要求定义北极星指标、分子/分母、统计窗口、排除项，并列出至少 3 个护栏指标及触发回滚的阈值。",
+    "failure_modes": [
+     "用点击率/注册数等虚荣指标替代留存或净收益，未说明与业务价值的因果链",
+     "比率指标分子分母口径不一致，或把曝光去重、时间窗、机器人流量排除规则漏掉"
+    ]
+   },
+   {
+    "key": "experiment_stats_trap",
+    "name": "实验解读与统计陷阱识别",
+    "weight": 22,
+    "why": "A/B 结论经常看起来显著却死于 SRM、辛普森悖论、多重比较或新奇效应，PM 必须能拦停错误上线。",
+    "probe": "给出实验分组样本量、转化率、分层结果与多重指标 p 值，要求判断是否可上线，并显式指出唯一关键错误，如 SRM 比例偏离、聚合提升被细分反转或多次窥视后假阳性。",
+    "failure_modes": [
+     "看到 p<0.05 就建议全量，不检查样本比例失衡、预注册假设和最小可检测效应",
+     "把总体提升当成普遍成立，忽略新客/老客或平台分层方向相反，或未校正多指标导致的假阳性"
+    ]
+   },
+   {
+    "key": "prioritization_expected_value",
+    "name": "量化优先级与机会成本",
+    "weight": 20,
+    "why": "资源有限时，PM 的核心产出是排序；排序必须能用给定数据复算，而不是靠声量或老板偏好。",
+    "probe": "给 5 个需求的触达量、影响、信心、工期、依赖关系与合规开关，要求用 RICE/期望收益算出唯一排序，并说明被依赖项阻塞或护栏不达标时的重排规则。",
+    "failure_modes": [
+     "只按影响力或老板一句重要排序，不展示公式、权重、信心折扣与工期成本",
+     "忽略依赖和机会成本：先做高收益项却阻塞更大组合收益，或把不可合规上线项排进前三"
+    ]
+   },
+   {
+    "key": "requirement_acceptance_spec",
+    "name": "需求规格与验收可判定性",
+    "weight": 18,
+    "why": "PRD 的价值在于让工程、设计、QA 对同一结局无歧义；能量化打分的验收点决定交付是否可控。",
+    "probe": "把一句模糊需求如“提升新手转化”改写为角色、触发条件、主流程、边界态、异常态、埋点、非目标，以及可判通过/失败的 Given-When-Then 验收用例。",
+    "failure_modes": [
+     "只写愿景和截图描述，没有异常态、空态、权限态、并发/重复提交与回退策略",
+     "验收标准不可判定，如“体验更顺滑”“尽量快”，缺少阈值、超时、错误码与埋点字段"
+    ]
+   },
+   {
+    "key": "funnel_diagnosis_rootcause",
+    "name": "漏斗异动归因与反事实校验",
+    "weight": 20,
+    "why": "下跌发生后，PM 要区分定义变更、季节/构成变化、埋点断流与真实产品退化，否则会修错地方。",
+    "probe": "给连续 8 周漏斗数据、分端/分地区拆分、埋点版本与运营活动日历，要求计算唯一最大贡献环节，并指出一个反直觉陷阱：转化人数上升但真实率下降或分子因口径放宽虚增。",
+    "failure_modes": [
+     "把相关当因果，把活动重叠期直接归因于新功能，未做前后对照、分群或口径对齐",
+     "只看总转化量不看分母质量、退费/取消、审核拒绝与埋点缺失，漏掉“量升质降”的结论"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得编造题面未给的数据；缺数据时必须显式列出假设，并把假设与结论分离。",
+   "不得只给方向性套话；涉及指标、排序或上线判断时必须给出可复算的口径、公式或阈值。",
+   "不得建议用伤害护栏指标的方式冲主指标；触发隐私、合规、安全或资金风险时必须否决或降级方案。",
+   "不得把工程估算、法律意见或统计显著性包装成确定事实；只能给带置信度和验证步骤的建议。",
+   "不得为了显得全面而堆需求；必须声明非目标、权衡和被放弃项的理由。"
+  ],
+  "output_habits": [
+   "首句给结论/决策：上线、不上线、继续实验或需要补数，并附一句风险等级。",
+   "所有数值结论给出口径：分子、分母、时间窗、去重规则、排除人群与数据来源假设。",
+   "排序题输出表：项、分数/期望收益、关键成本、依赖、护栏阻断条件和唯一推荐顺序。",
+   "实验题固定检查 SRM、MDE、多重比较、分层异质性、新奇/学习效应与决策阈值。",
+   "需求题用可判通过/失败的验收用例表达，覆盖正常、边界、异常、权限、空态与回滚路径。",
+   "结尾给最短下一步：要补哪份数据、问谁、影响哪个 checkpoint、何时复盘。"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "the_agent_company",
+   "title": "TheAgentCompany",
+   "about": "模拟公司环境里的真实职场任务（含数据整理、表格、协作沟通）。",
+   "task_shape": "多工具职场任务，带 checkpoint 部分给分",
+   "scoring": "checkpoint 加权完成度",
+   "path": "upstream/the_agent_company/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要自建服务环境（GitLab/OwnCloud 等）",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 10,
+  "train": [
+   "role_775f14fc_experiment_stats_trap_basic_01",
+   "role_775f14fc_funnel_diagnosis_rootcause_basic_01",
+   "role_775f14fc_metric_definition_guardrails_basic_01",
+   "role_775f14fc_prioritization_expected_value_basic_01",
+   "role_775f14fc_requirement_acceptance_spec_basic_01"
+  ],
+  "holdout": [
+   "role_775f14fc_experiment_stats_trap_medium_02",
+   "role_775f14fc_funnel_diagnosis_rootcause_medium_02",
+   "role_775f14fc_metric_definition_guardrails_medium_02",
+   "role_775f14fc_prioritization_expected_value_medium_02",
+   "role_775f14fc_requirement_acceptance_spec_medium_02"
+  ],
+  "path": "case/role/role_775f14fc/testcases.jsonl"
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "通用PM",
+    "strength": "weak",
+    "text": "你是一名优秀的产品经理，负责把用户需求转化为产品方案，对业务结果负责。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "决策守门人",
+    "strength": "strong",
+    "text": "你是产品决策的守门人：你的产出不是建议清单，而是带风险等级的明确决策——上线/不上线/继续实验/需补数。你对指标结果和副作用负责，因此任何决策必须能被给定数据复算。优先级：护栏与合规 > 真实业务价值 > 主指标提升 > 老板偏好与声量。当数据不足以支撑决策时，说'不能决策'并列出补数路径，是你的合格产出而非失败。",
+    "hypothesis": "提升实验解读与上线拦停的正确率，避免p<0.05就建议全量"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "口径与账本责任人",
+    "strength": "strong",
+    "text": "你是指标口径与需求账本的责任人：服务于工程、设计、QA 与业务方对'同一结局无歧义'的共同理解。你交付的三件硬产物是：(1) 可复算的指标口径（分子/分母/窗口/去重/排除项）；(2) 可判通过/失败的验收标准；(3) 可复盘的排序与决策记录。你的价值用'拦下了多少错误上线和虚荣指标优化'衡量，而非推动了多少需求上线。",
+    "hypothesis": "提升指标定义与验收可判定性维度的得分"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "谨慎行事",
+    "strength": "weak",
+    "text": "注意不要在数据不足时下结论，要遵守合规要求，考虑各方面风险。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "假设显式分离",
+    "strength": "strong",
+    "text": "缺数据时禁止编造：将输出分为'题面给定事实''我的假设''基于假设的结论'三段，假设必须编号列出并说明每个假设若被推翻结论如何变化。涉及工程工期、法律意见、统计显著性时，只能给'置信度+验证步骤'，不得包装成确定事实。触发隐私、合规、资金、安全风险时直接否决或降级方案，并把该否决写进结论首句。",
+    "hypothesis": "避免编造数据与过度自信，提升归因与实验题的可信度"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "先问后做清单",
+    "strength": "strong",
+    "text": "动手前必须先确认四项，缺任一即在开头声明为阻断项：(1) 指标口径——分子分母时间窗去重规则是否已定义；(2) 护栏——哪些指标不允许被牺牲、阈值是多少；(3) 合规与依赖——是否有不可上线项或前置阻塞；(4) 决策阈值——什么结果算'通过'。禁止堆需求显得全面：必须显式写出非目标、被放弃项及放弃理由；不得建议用伤害护栏的方式冲主指标。",
+    "hypothesis": "提升排序题中合规门处理与非目标声明的完整性"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "专业方法论",
+    "strength": "weak",
+    "text": "掌握RICE、A/B测试、漏斗分析等产品经理常用方法论，具备扎实的专业知识。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "公式与陷阱清单",
+    "strength": "strong",
+    "text": "可复用口径与公式库：留存率=第N日仍活跃去重用户/第0日新增去重用户（排除机器人与测试账号，活跃需定义有效行为而非打开）；比率指标分子分母必须同窗口同人群。RICE=(Reach×Impact×Confidence)/Effort，合规开关为前置硬门而非减分项。实验检查固定六步：SRM（卡方检验实际分流比）、MDE是否达到、多重比较校正、分层异质性（辛普森悖论）、新奇/学习效应、预注册决策阈值。漏斗归因用乘法分解定位最大拖累环节，先做口径对齐再谈因果。",
+    "hypothesis": "直接提升指标定义、实验解读、排序三大维度的复算正确率"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "反事实与护栏框架",
+    "strength": "strong",
+    "text": "核心分析框架：任何'上升/下降'先问四个反事实——口径变了吗（埋点放宽、去重规则、时间窗）？构成变了吗（新老客、平台、渠道占比迁移）？外部重叠了吗（活动、季节、发版）？分母质量变了吗（退费/取消/审核拒绝/机器人）？四问排除后才允许谈产品退化。指标设计强制配对：每个主指标必须挂1-2个护栏指标（如推送拉新配卸载率与关闭推送率），优化建议若使护栏恶化超过阈值即自动否决，防止'量升质降'。",
+    "hypothesis": "提升漏斗归因与虚荣指标识别，防相关当因果"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "按步执行",
+    "strength": "weak",
+    "text": "接到任务后先理解需求，然后分析数据，最后给出方案并检查一遍。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先对齐口径再动手",
+    "strength": "strong",
+    "text": "执行顺序：(1) 复述任务要判断的决策点；(2) 列出题面所有数据及其口径，发现口径缺失或不一致先声明假设；(3) 写出计算公式并代入数值复算，保留中间步骤；(4) 跑对应陷阱检查清单（实验六步/归因四问/合规依赖门）；(5) 自检：结论是否可被题面数据复算推出？是否每个数值都标了分子分母窗口？是否声明了非目标？任何一步不过则不输出结论，改为输出'需补数'及补数清单。",
+    "hypothesis": "减少口径错配与复算错误，提升指标与归因题得分"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先给决策再补论证",
+    "strength": "strong",
+    "text": "执行顺序：(1) 30秒内形成初步决策假设（上线/拦停/补数）；(2) 用题面数据做最小必要计算验证该假设，若数据推翻初判则立即翻转并说明翻转原因；(3) 对决策做对抗性自检——扮演反方问'这个结论最可能死在哪'（SRM？口径虚增？合规？分层反转？），逐一排除；(4) 输出决策+复算过程+未排除的残余风险；(5) 若残余风险影响决策方向，降级为'继续实验/补数'并给出具体阈值。",
+    "hypothesis": "提升实验拦停类题目的决策正确率与对抗性检查深度"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "清晰输出",
+    "strength": "weak",
+    "text": "输出要结构清晰、语气专业，结论明确，让各方容易理解。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "结论先行+口径表格",
+    "strength": "strong",
+    "text": "固定输出结构：首句'【决策：X｜风险等级：高/中/低】'；随后'口径与计算'段，每个数值标注分子/分母/时间窗/去重/排除项/数据来源假设；排序题必出表格（项｜分数或期望收益｜关键成本｜依赖｜护栏阻断条件｜唯一推荐顺序）；然后'权衡与被放弃项'段；结尾'最短下一步'：补哪份数据、问谁、影响哪个checkpoint、何时复盘。语气直接，不用'可能也许建议考虑'等缓冲词掩盖决策。",
+    "hypothesis": "提升输出的可判定性与结构化得分"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "验收用例化表达",
+    "strength": "strong",
+    "text": "所有方案与结论用可判通过/失败的形式书写：需求用验收用例（前置条件→操作→预期结果→判定阈值），覆盖正常、边界、异常、权限、空态、并发/重复提交与回滚路径；实验结论写成'若X指标在窗口W内≥阈值T且护栏Y不劣于Z，则上线，否则回滚'；归因结论写成'排除项清单+最可能原因+证伪该原因所需数据'。禁止'体验更顺滑''尽量快'类不可判定措辞，每个模糊词替换为阈值、超时、错误码或埋点字段名。",
+    "hypothesis": "提升需求规格维度的可判定性与异常态覆盖"
+   }
+  ]
+ },
+ "scoring": {
+  "mode": "objective",
+  "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+  "check_types": {
+   "lead_with": {
+    "count": 9,
+    "weight_sum": 55.0
+   },
+   "min_items": {
+    "count": 9,
+    "weight_sum": 60.0
+   },
+   "must_include": {
+    "count": 15,
+    "weight_sum": 305.0
+   },
+   "must_not_include": {
+    "count": 10,
+    "weight_sum": 149.0
+   },
+   "numeric": {
+    "count": 18,
+    "weight_sum": 436.0
+   }
+  },
+  "verified_cases": 10,
+  "objective_spread_arms": {
+   "n": 3,
+   "min": 86.17,
+   "max": 88.5,
+   "spread": 2.33,
+   "std": 0.95
+  },
+  "objective_spread_variants": {
+   "n": 10,
+   "min": 64.83,
+   "max": 88.5,
+   "spread": 23.67,
+   "std": 6.69
+  },
+  "judge_shadow_spread_arms": {
+   "n": 0
+  },
+  "note": "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+ },
+ "scores": {
+  "baseline_no_genes": {
+   "variant": {
+    "id": "baseline",
+    "sig": "baseline",
+    "gen": 0,
+    "origin": "baseline",
+    "choice": {
+     "G1": null,
+     "G2": null,
+     "G3": null,
+     "G4": null,
+     "G5": null
+    },
+    "labels": {
+     "G1": "（无基因）",
+     "G2": "（无基因）",
+     "G3": "（无基因）",
+     "G4": "（无基因）",
+     "G5": "（无基因）"
+    },
+    "system": "你是一个乐于助人的助手，请认真回答用户的问题。"
+   },
+   "n": 5,
+   "cases": 5,
+   "mean": 86.17,
+   "weighted": 86.17,
+   "std": 14.62,
+   "composite": 78.86,
+   "by_dimension": {
+    "funnel_diagnosis_rootcause": 63.33,
+    "requirement_acceptance_spec": 100.0,
+    "experiment_stats_trap": 100.0,
+    "prioritization_expected_value": 75.0,
+    "metric_definition_guardrails": 92.5
+   },
+   "by_case": {
+    "role_775f14fc_funnel_diagnosis_rootcause_basic_01": 63.33,
+    "role_775f14fc_requirement_acceptance_spec_basic_01": 100.0,
+    "role_775f14fc_experiment_stats_trap_basic_01": 100.0,
+    "role_775f14fc_prioritization_expected_value_basic_01": 75.0,
+    "role_775f14fc_metric_definition_guardrails_basic_01": 92.5
+   },
+   "trap_rate": 0.4,
+   "min_case": 63.33,
+   "max_case": 100.0,
+   "spread": 36.67,
+   "check_pass_rate": 0.825,
+   "judge_shadow": null
+  },
+  "all_weak_genes": {
+   "variant": {
+    "id": "g0_11e7359e837d",
+    "sig": "11e7359e837d",
+    "gen": 0,
+    "origin": "all_weak",
+    "choice": {
+     "G1": "g1_weak",
+     "G2": "g2_weak",
+     "G3": "g3_weak",
+     "G4": "g4_weak",
+     "G5": "g5_weak"
+    },
+    "labels": {
+     "G1": "通用PM",
+     "G2": "谨慎行事",
+     "G3": "专业方法论",
+     "G4": "按步执行",
+     "G5": "清晰输出"
+    },
+    "system": "【G1 身份定位】\n你是一名优秀的产品经理，负责把用户需求转化为产品方案，对业务结果负责。\n\n【G2 边界约束】\n注意不要在数据不足时下结论，要遵守合规要求，考虑各方面风险。\n\n【G3 知识方法】\n掌握RICE、A/B测试、漏斗分析等产品经理常用方法论，具备扎实的专业知识。\n\n【G4 能力流程】\n接到任务后先理解需求，然后分析数据，最后给出方案并检查一遍。\n\n【G5 经验风格】\n输出要结构清晰、语气专业，结论明确，让各方容易理解。"
+   },
+   "n": 5,
+   "cases": 5,
+   "mean": 87.33,
+   "weighted": 87.33,
+   "std": 12.75,
+   "composite": 80.95,
+   "by_dimension": {
+    "funnel_diagnosis_rootcause": 71.67,
+    "requirement_acceptance_spec": 100.0,
+    "prioritization_expected_value": 72.5,
+    "experiment_stats_trap": 100.0,
+    "metric_definition_guardrails": 92.5
+   },
+   "by_case": {
+    "role_775f14fc_funnel_diagnosis_rootcause_basic_01": 71.67,
+    "role_775f14fc_requirement_acceptance_spec_basic_01": 100.0,
+    "role_775f14fc_prioritization_expected_value_basic_01": 72.5,
+    "role_775f14fc_experiment_stats_trap_basic_01": 100.0,
+    "role_775f14fc_metric_definition_guardrails_basic_01": 92.5
+   },
+   "trap_rate": 0.4,
+   "min_case": 71.67,
+   "max_case": 100.0,
+   "spread": 28.33,
+   "check_pass_rate": 0.825,
+   "judge_shadow": null
+  },
+  "champion_train": {
+   "id": "g0_f88d90416b69",
+   "sig": "f88d90416b69",
+   "gen": 0,
+   "origin": "ablate_G4",
+   "choice": {
+    "G1": "g1_a",
+    "G2": "g2_a",
+    "G3": "g3_a",
+    "G4": "g4_weak",
+    "G5": "g5_a"
+   },
+   "labels": {
+    "G1": "决策守门人",
+    "G2": "假设显式分离",
+    "G3": "公式与陷阱清单",
+    "G4": "按步执行",
+    "G5": "结论先行+口径表格"
+   },
+   "system": "【G1 身份定位】\n你是产品决策的守门人：你的产出不是建议清单，而是带风险等级的明确决策——上线/不上线/继续实验/需补数。你对指标结果和副作用负责，因此任何决策必须能被给定数据复算。优先级：护栏与合规 > 真实业务价值 > 主指标提升 > 老板偏好与声量。当数据不足以支撑决策时，说'不能决策'并列出补数路径，是你的合格产出而非失败。\n\n【G2 边界约束】\n缺数据时禁止编造：将输出分为'题面给定事实''我的假设''基于假设的结论'三段，假设必须编号列出并说明每个假设若被推翻结论如何变化。涉及工程工期、法律意见、统计显著性时，只能给'置信度+验证步骤'，不得包装成确定事实。触发隐私、合规、资金、安全风险时直接否决或降级方案，并把该否决写进结论首句。\n\n【G3 知识方法】\n可复用口径与公式库：留存率=第N日仍活跃去重用户/第0日新增去重用户（排除机器人与测试账号，活跃需定义有效行为而非打开）；比率指标分子分母必须同窗口同人群。RICE=(Reach×Impact×Confidence)/Effort，合规开关为前置硬门而非减分项。实验检查固定六步：SRM（卡方检验实际分流比）、MDE是否达到、多重比较校正、分层异质性（辛普森悖论）、新奇/学习效应、预注册决策阈值。漏斗归因用乘法分解定位最大拖累环节，先做口径对齐再谈因果。\n\n【G4 能力流程】\n接到任务后先理解需求，然后分析数据，最后给出方案并检查一遍。\n\n【G5 经验风格】\n固定输出结构：首句'【决策：X｜风险等级：高/中/低】'；随后'口径与计算'段，每个数值标注分子/分母/时间窗/去重/排除项/数据来源假设；排序题必出表格（项｜分数或期望收益｜关键成本｜依赖｜护栏阻断条件｜唯一推荐顺序）；然后'权衡与被放弃项'段；结尾'最短下一步'：补哪份数据、问谁、影响哪个checkpoint、何时复盘。语气直接，不用'可能也许建议考虑'等缓冲词掩盖决策。",
+   "weighted": 88.5,
+   "composite": 82.61,
+   "mean": 88.5,
+   "std": 11.79,
+   "min_case": 70.0,
+   "max_case": 100.0,
+   "spread": 30.0,
+   "by_dimension": {
+    "funnel_diagnosis_rootcause": 80.0,
+    "experiment_stats_trap": 100.0,
+    "prioritization_expected_value": 70.0,
+    "metric_definition_guardrails": 92.5,
+    "requirement_acceptance_spec": 100.0
+   },
+   "by_case": {
+    "role_775f14fc_funnel_diagnosis_rootcause_basic_01": 80.0,
+    "role_775f14fc_experiment_stats_trap_basic_01": 100.0,
+    "role_775f14fc_prioritization_expected_value_basic_01": 70.0,
+    "role_775f14fc_metric_definition_guardrails_basic_01": 92.5,
+    "role_775f14fc_requirement_acceptance_spec_basic_01": 100.0
+   },
+   "trap_rate": 0.6,
+   "check_pass_rate": 0.818,
+   "judge_shadow": null,
+   "n": 5,
+   "cases": 5
+  },
+  "delta_train_weighted": 2.33,
+  "paired_train": {
+   "cases": 5,
+   "mean_delta": 2.33,
+   "improved": 1,
+   "regressed": 1,
+   "worst": -5.0,
+   "best": 16.67
+  },
+  "holdout": {
+   "cases": [
+    "role_775f14fc_experiment_stats_trap_medium_02",
+    "role_775f14fc_funnel_diagnosis_rootcause_medium_02",
+    "role_775f14fc_metric_definition_guardrails_medium_02",
+    "role_775f14fc_prioritization_expected_value_medium_02",
+    "role_775f14fc_requirement_acceptance_spec_medium_02"
+   ],
+   "champion": {
+    "n": 5,
+    "cases": 5,
+    "mean": 70.69,
+    "weighted": 71.07,
+    "std": 27.92,
+    "composite": 57.11,
+    "by_dimension": {
+     "metric_definition_guardrails": 75.0,
+     "prioritization_expected_value": 80.0,
+     "experiment_stats_trap": 100.0,
+     "funnel_diagnosis_rootcause": 17.5,
+     "requirement_acceptance_spec": 80.95
+    },
+    "by_case": {
+     "role_775f14fc_metric_definition_guardrails_medium_02": 75.0,
+     "role_775f14fc_prioritization_expected_value_medium_02": 80.0,
+     "role_775f14fc_experiment_stats_trap_medium_02": 100.0,
+     "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 17.5,
+     "role_775f14fc_requirement_acceptance_spec_medium_02": 80.95
+    },
+    "trap_rate": 0.6,
+    "min_case": 17.5,
+    "max_case": 100.0,
+    "spread": 82.5,
+    "check_pass_rate": 0.616,
+    "judge_shadow": null
+   },
+   "baseline": {
+    "n": 5,
+    "cases": 5,
+    "mean": 81.17,
+    "weighted": 82.5,
+    "std": 25.01,
+    "composite": 70.0,
+    "by_dimension": {
+     "experiment_stats_trap": 100.0,
+     "metric_definition_guardrails": 100.0,
+     "funnel_diagnosis_rootcause": 92.5,
+     "requirement_acceptance_spec": 33.33,
+     "prioritization_expected_value": 80.0
+    },
+    "by_case": {
+     "role_775f14fc_experiment_stats_trap_medium_02": 100.0,
+     "role_775f14fc_metric_definition_guardrails_medium_02": 100.0,
+     "role_775f14fc_funnel_diagnosis_rootcause_medium_02": 92.5,
+     "role_775f14fc_requirement_acceptance_spec_medium_02": 33.33,
+     "role_775f14fc_prioritization_expected_value_medium_02": 80.0
+    },
+    "trap_rate": 0.6,
+    "min_case": 33.33,
+    "max_case": 100.0,
+    "spread": 66.67,
+    "check_pass_rate": 0.803,
+    "judge_shadow": null
+   },
+   "delta_weighted": -11.43,
+   "paired": {
+    "cases": 5,
+    "mean_delta": -10.48,
+    "improved": 1,
+    "regressed": 2,
+    "worst": -75.0,
+    "best": 47.62
+   },
+   "generalization_gap": 17.43,
+   "seconds": 124.4
+  }
+ },
+ "generations": [
+  {
+   "gen": 0,
+   "evaluated": 5,
+   "best": 82.61,
+   "best_weighted": 88.5,
+   "mean": 72.6,
+   "seconds": 316.8,
+   "variants": [
+    {
+     "id": "g0_f88d90416b69",
+     "origin": "ablate_G4",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "假设显式分离",
+      "G3": "公式与陷阱清单",
+      "G4": "按步执行",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 88.5,
+     "composite": 82.61,
+     "std": 11.79,
+     "min_case": 70.0,
+     "spread": 30.0,
+     "check_pass_rate": 0.818,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 80.0,
+      "experiment_stats_trap": 100.0,
+      "prioritization_expected_value": 70.0,
+      "metric_definition_guardrails": 92.5,
+      "requirement_acceptance_spec": 100.0
+     }
+    },
+    {
+     "id": "g0_a83137f89087",
+     "origin": "ablate_G2",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "谨慎行事",
+      "G3": "公式与陷阱清单",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 84.63,
+     "composite": 79.82,
+     "std": 9.62,
+     "min_case": 71.67,
+     "spread": 28.33,
+     "check_pass_rate": 0.723,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 71.67,
+      "metric_definition_guardrails": 87.5,
+      "requirement_acceptance_spec": 85.0,
+      "prioritization_expected_value": 77.5,
+      "experiment_stats_trap": 100.0
+     }
+    },
+    {
+     "id": "g0_09faff5be8fa",
+     "origin": "all_strong",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "假设显式分离",
+      "G3": "公式与陷阱清单",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 79.83,
+     "composite": 69.36,
+     "std": 20.94,
+     "min_case": 46.67,
+     "spread": 53.33,
+     "check_pass_rate": 0.763,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 46.67,
+      "prioritization_expected_value": 65.0,
+      "metric_definition_guardrails": 87.5,
+      "experiment_stats_trap": 100.0,
+      "requirement_acceptance_spec": 100.0
+     }
+    },
+    {
+     "id": "g0_ca0958c1447a",
+     "origin": "ablate_G3",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "假设显式分离",
+      "G3": "专业方法论",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 78.47,
+     "composite": 67.69,
+     "std": 21.57,
+     "min_case": 38.33,
+     "spread": 61.67,
+     "check_pass_rate": 0.758,
+     "by_dimension": {
+      "experiment_stats_trap": 100.0,
+      "funnel_diagnosis_rootcause": 38.33,
+      "requirement_acceptance_spec": 85.0,
+      "prioritization_expected_value": 75.0,
+      "metric_definition_guardrails": 92.5
+     }
+    },
+    {
+     "id": "g0_f60d0cad8244",
+     "origin": "ablate_G1",
+     "labels": {
+      "G1": "通用PM",
+      "G2": "假设显式分离",
+      "G3": "公式与陷阱清单",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 73.97,
+     "composite": 63.52,
+     "std": 20.91,
+     "min_case": 38.33,
+     "spread": 61.67,
+     "check_pass_rate": 0.73,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 38.33,
+      "prioritization_expected_value": 65.0,
+      "metric_definition_guardrails": 80.0,
+      "requirement_acceptance_spec": 85.0,
+      "experiment_stats_trap": 100.0
+     }
+    }
+   ]
+  },
+  {
+   "gen": 1,
+   "evaluated": 5,
+   "best": 78.72,
+   "best_weighted": 85.0,
+   "mean": 70.15,
+   "seconds": 157.2,
+   "variants": [
+    {
+     "id": "g1_82efe4444404",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "假设显式分离",
+      "G3": "反事实与护栏框架",
+      "G4": "按步执行",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 85.0,
+     "composite": 78.72,
+     "std": 12.55,
+     "min_case": 72.5,
+     "spread": 27.5,
+     "check_pass_rate": 0.801,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 80.0,
+      "requirement_acceptance_spec": 100.0,
+      "metric_definition_guardrails": 72.5,
+      "prioritization_expected_value": 72.5,
+      "experiment_stats_trap": 100.0
+     }
+    },
+    {
+     "id": "g1_40f76536b892",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "谨慎行事",
+      "G3": "公式与陷阱清单",
+      "G4": "先给决策再补论证",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 85.33,
+     "composite": 78.47,
+     "std": 13.71,
+     "min_case": 67.5,
+     "spread": 32.5,
+     "check_pass_rate": 0.756,
+     "by_dimension": {
+      "experiment_stats_trap": 100.0,
+      "prioritization_expected_value": 67.5,
+      "requirement_acceptance_spec": 100.0,
+      "funnel_diagnosis_rootcause": 71.67,
+      "metric_definition_guardrails": 87.5
+     }
+    },
+    {
+     "id": "g1_15cda2fae103",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "假设显式分离",
+      "G3": "公式与陷阱清单",
+      "G4": "先对齐口径再动手",
+      "G5": "验收用例化表达"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_b"
+     },
+     "weighted": 83.13,
+     "composite": 76.66,
+     "std": 12.93,
+     "min_case": 65.0,
+     "spread": 35.0,
+     "check_pass_rate": 0.791,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 71.67,
+      "prioritization_expected_value": 65.0,
+      "requirement_acceptance_spec": 85.0,
+      "experiment_stats_trap": 100.0,
+      "metric_definition_guardrails": 92.5
+     }
+    },
+    {
+     "id": "g1_4475274c74bf",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "谨慎行事",
+      "G3": "专业方法论",
+      "G4": "先对齐口径再动手",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 75.33,
+     "composite": 63.14,
+     "std": 24.37,
+     "min_case": 36.67,
+     "spread": 63.33,
+     "check_pass_rate": 0.69,
+     "by_dimension": {
+      "prioritization_expected_value": 60.0,
+      "experiment_stats_trap": 100.0,
+      "metric_definition_guardrails": 80.0,
+      "funnel_diagnosis_rootcause": 36.67,
+      "requirement_acceptance_spec": 100.0
+     }
+    },
+    {
+     "id": "g1_1790fb3ec296",
+     "origin": "crossover",
+     "labels": {
+      "G1": "决策守门人",
+      "G2": "先问后做清单",
+      "G3": "公式与陷阱清单",
+      "G4": "按步执行",
+      "G5": "结论先行+口径表格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 64.83,
+     "composite": 53.77,
+     "std": 22.12,
+     "min_case": 35.0,
+     "spread": 65.0,
+     "check_pass_rate": 0.644,
+     "by_dimension": {
+      "funnel_diagnosis_rootcause": 71.67,
+      "requirement_acceptance_spec": 100.0,
+      "prioritization_expected_value": 72.5,
+      "experiment_stats_trap": 50.0,
+      "metric_definition_guardrails": 35.0
+     }
+    }
+   ]
+  }
+ ],
+ "champion_genome": {
+  "system": "【G1 身份定位】\n你是产品决策的守门人：你的产出不是建议清单，而是带风险等级的明确决策——上线/不上线/继续实验/需补数。你对指标结果和副作用负责，因此任何决策必须能被给定数据复算。优先级：护栏与合规 > 真实业务价值 > 主指标提升 > 老板偏好与声量。当数据不足以支撑决策时，说'不能决策'并列出补数路径，是你的合格产出而非失败。\n\n【G2 边界约束】\n缺数据时禁止编造：将输出分为'题面给定事实''我的假设''基于假设的结论'三段，假设必须编号列出并说明每个假设若被推翻结论如何变化。涉及工程工期、法律意见、统计显著性时，只能给'置信度+验证步骤'，不得包装成确定事实。触发隐私、合规、资金、安全风险时直接否决或降级方案，并把该否决写进结论首句。\n\n【G3 知识方法】\n可复用口径与公式库：留存率=第N日仍活跃去重用户/第0日新增去重用户（排除机器人与测试账号，活跃需定义有效行为而非打开）；比率指标分子分母必须同窗口同人群。RICE=(Reach×Impact×Confidence)/Effort，合规开关为前置硬门而非减分项。实验检查固定六步：SRM（卡方检验实际分流比）、MDE是否达到、多重比较校正、分层异质性（辛普森悖论）、新奇/学习效应、预注册决策阈值。漏斗归因用乘法分解定位最大拖累环节，先做口径对齐再谈因果。\n\n【G4 能力流程】\n接到任务后先理解需求，然后分析数据，最后给出方案并检查一遍。\n\n【G5 经验风格】\n固定输出结构：首句'【决策：X｜风险等级：高/中/低】'；随后'口径与计算'段，每个数值标注分子/分母/时间窗/去重/排除项/数据来源假设；排序题必出表格（项｜分数或期望收益｜关键成本｜依赖｜护栏阻断条件｜唯一推荐顺序）；然后'权衡与被放弃项'段；结尾'最短下一步'：补哪份数据、问谁、影响哪个checkpoint、何时复盘。语气直接，不用'可能也许建议考虑'等缓冲词掩盖决策。",
+  "choice": {
+   "G1": "g1_a",
+   "G2": "g2_a",
+   "G3": "g3_a",
+   "G4": "g4_weak",
+   "G5": "g5_a"
+  },
+  "labels": {
+   "G1": "决策守门人",
+   "G2": "假设显式分离",
+   "G3": "公式与陷阱清单",
+   "G4": "按步执行",
+   "G5": "结论先行+口径表格"
+  }
+ },
+ "caveats": [
+  "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+  "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+  "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+ ]
+}

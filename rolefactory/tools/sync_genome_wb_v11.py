@@ -28,6 +28,7 @@ SEAT_TO_PACK = {
     "Architect": "ai_architect",
     "Dev": "develop",
     "DevOps": "devops",
+    "Evals": "evals_specialist",
 }
 
 SLOT_LABEL = {
@@ -44,6 +45,7 @@ SHORT = {
     "ai_architect": "架构师",
     "develop": "Develop",
     "devops": "DevOps",
+    "evals_specialist": "Evals专员",
 }
 
 

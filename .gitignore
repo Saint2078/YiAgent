@@ -24,8 +24,15 @@ tmp/
 .idea/
 *.swp
 
-# RoleFactory 运行数据（run 快照 / LLM 缓存 / 沉淀题库）
-rolefactory/data/
+# RoleFactory 运行数据：默认全忽略（LLM 缓存 / 逐条评测明细 / 沉淀题库，MB 级且可重跑），
+# 但实跑证据要入库：报告 + 基因组卡（合计几百 KB），否则「可复现证据」只活在本机。
+# 注意写法：不能写成 `rolefactory/data/`（整目录被排除后 git 不下钻，下面的负向规则会失效），
+# 必须先用 `**` 排文件、再用 `**/` 放行目录，最后逐个挑白名单文件。
+rolefactory/data/**
+!rolefactory/data/**/
+!rolefactory/data/runs/*/report.json
+!rolefactory/data/runs/*/genome_card.json
+!rolefactory/data/runs/*/genome_card.md
 rolefactory/tools/_peek.json
 
 # CodeBench：HF 数据集缓存与物化题包（GB 级，可用 tools/build_sample50.py 重建）

@@ -55,6 +55,13 @@ async def healthz() -> dict[str, Any]:
         "key_present": bool(SETTINGS.api_key()),
         "concurrency": SETTINGS.concurrency,
         "cache": SETTINGS.cache_enabled,
+        "hedge": {
+            "enabled": SETTINGS.hedge_enabled,
+            "min_seconds": SETTINGS.hedge_min_seconds,
+            "cap_seconds": SETTINGS.hedge_cap_seconds,
+            "p50_factor": SETTINGS.hedge_p50_factor,
+            "max_rate": SETTINGS.hedge_max_rate,
+        },
         "bench_index": SETTINGS.bench_index.is_file(),
         "phases": list(PHASES),
     }
@@ -82,9 +89,10 @@ async def perf_probe(payload: dict[str, Any] = Body(default={})) -> dict[str, An
     """并发压测：n 个独立小请求并行，测服务端可用吞吐与延时分布（绕过缓存）。"""
     n = max(1, min(64, int(payload.get("n") or 8)))
     conc = max(1, min(64, int(payload.get("concurrency") or n)))
-    max_tokens = max(16, min(512, int(payload.get("max_tokens") or 64)))
+    # k3 是推理模型：max_tokens 要含推理开销，给小了会空回复并触发重试风暴，压测数据就不可信
+    max_tokens = max(SETTINGS.min_max_tokens, min(4096, int(payload.get("max_tokens") or 1024)))
     session = Session(_key(payload.get("api_key")), payload.get("model"), concurrency=conc, cache=False)
-    t0 = time.time()
+    t0 = time.monotonic()
 
     async def one(i: int) -> bool:
         try:
@@ -99,7 +107,7 @@ async def perf_probe(payload: dict[str, Any] = Body(default={})) -> dict[str, An
             return False
 
     got = await asyncio.gather(*(one(i) for i in range(n)))
-    wall = time.time() - t0
+    wall = max(0.0, time.monotonic() - t0)
     m = session.meter.snapshot()
     return {
         "requests": n,
@@ -109,9 +117,16 @@ async def perf_probe(payload: dict[str, Any] = Body(default={})) -> dict[str, An
         "throughput_rps": round(sum(1 for g in got if g) / wall, 2) if wall > 0 else None,
         "latency_p50": m.get("latency_p50"),
         "latency_p90": m.get("latency_p90"),
+        "latency_p99": m.get("latency_p99"),
         "latency_max": m.get("latency_max"),
         "tokens": m.get("total_tokens"),
         "retries": m.get("retries"),
+        "inflight_peak": m.get("inflight_peak"),
+        "queue_seconds_sum": m.get("queue_seconds_sum"),
+        "api_seconds_sum": m.get("api_seconds_sum"),
+        "hedges": m.get("hedges"),
+        "hedge_wins": m.get("hedge_wins"),
+        # 串行等效秒数 / 墙钟：并发真实收益（排队时间已剔除）
         "speedup_vs_serial": (
             round((m.get("api_seconds_sum") or 0) / wall, 2) if wall > 0 else None
         ),
@@ -135,6 +150,8 @@ async def start_run(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         "generations": int(payload.get("generations") or 3),
         "variants_per_gen": int(payload.get("variants_per_gen") or 6),
         "reps": int(payload.get("reps") or 1),
+        # holdout 单独提采样：2 个臂 × 5–6 题，多跑几次只多一个批次，换来能判定的泛化结论
+        "holdout_reps": int(payload.get("holdout_reps") or 3),
         "elite": int(payload.get("elite") or 2),
         "min_gain": float(payload.get("min_gain") or 0.5),
         "patience": int(payload.get("patience") or 1),

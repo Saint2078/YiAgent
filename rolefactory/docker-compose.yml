@@ -11,11 +11,17 @@ services:
     environment:
       RF_BASE_URL: ${RF_BASE_URL:-https://api.kimi.com/coding/v1}
       RF_MODEL: ${RF_MODEL:-k3}
-      RF_CONCURRENCY: ${RF_CONCURRENCY:-24}
-      RF_MAX_CONNECTIONS: ${RF_MAX_CONNECTIONS:-64}
+      RF_CONCURRENCY: ${RF_CONCURRENCY:-32}
+      RF_MAX_CONNECTIONS: ${RF_MAX_CONNECTIONS:-96}
       RF_BUDGET_TOKENS: ${RF_BUDGET_TOKENS:-1500000}
       RF_BUDGET_SECONDS: ${RF_BUDGET_SECONDS:-3600}
       RF_CACHE: ${RF_CACHE:-1}
+      # 长尾对冲：单条超过 max(60s, 2×p50) 未回就补发一份，取先到的（额度 15% 调用数）
+      # 默认关——实测本供应商长尾由生成长度决定，补发 6 次 0 次先到，见 PERF.md
+      RF_HEDGE: ${RF_HEDGE:-0}
+      RF_HEDGE_MIN_SECONDS: ${RF_HEDGE_MIN_SECONDS:-60}
+      RF_HEDGE_CAP_SECONDS: ${RF_HEDGE_CAP_SECONDS:-180}
+      RF_HEDGE_MAX_RATE: ${RF_HEDGE_MAX_RATE:-0.15}
       RF_ALLOW_ORIGINS: ${RF_ALLOW_ORIGINS:-http://127.0.0.1:8188,http://localhost:8188,http://127.0.0.1:8790,http://localhost:8790}
     volumes:
       - ./data:/data
