@@ -71,7 +71,18 @@ TEAM = [
 RUN_PARAMS: dict[str, Any] = {
     "scoring_mode": "objective",
     "judge_shadow": False,
-    "per_dim": 2,
+    # 题量按判定力反推，不是拍脑袋（PERF.md §10.1）：holdout 6 道时区间半宽下限 1.72
+    # 已大于实测效应 1.41 —— 重复多少次都判不了；方差分解的处方是「加题、别加重复」。
+    # per_dim=8 + holdout_per_dim=7 → 每维 8 道里 7 道进 holdout（6 维 ≈ train 6 / holdout 42）。
+    # 为什么不把 holdout 顶到 54：两头都要防 ——
+    #   · holdout 题量只影响 2 个臂的评测（便宜），42 道时 MDE≈1.07 对实测效应 1.41 已有余量
+    #   · train 题量却要乘变体数与代数（10×3），每加 1 道 train 就多 30 次评测（贵）
+    # 代价：单席出题 48 道（约 +100 次调用）+ holdout 84 次评测。
+    # 已知取舍：train 只有 6 道，冠军选择本身仍是噪声大的 —— 但那是**选种质量**问题，
+    # 与**能不能判定**是两件事；先让判定成立，才知道选出来的到底有没有用。
+    "per_dim": 8,
+    "holdout_per_dim": 7,
+    "holdout_reps": 1,
     "generations": 3,
     # 10 而非 5：受控对照（PERF.md §8）里变体数 5→12 使同相位评测数翻倍而墙钟只多 10.6%，
     # 32 并发本来闲着（利用率 0.23）。代价是 token 随变体数线性涨，靠 budget_tokens 兜住。

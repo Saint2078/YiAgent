@@ -88,6 +88,7 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/audit_checks.py` | 审计 `must_not_include` 误判率（把「引用反驳」误判成「说错话」的比例） |
 | `tools/audit_cases.py [--by-run] [--raw]` | 历史题库对当前校验口径的通过率，估收紧校验要多烧多少出题调用 |
 | `tools/gameability.py [--raw] [--target-numeric 0.6]` | 量化堆词假答案能拿多少分（`--raw` 看清洗归一前的地板） |
+| `tools/check_contrib.py [run_id...]` | 把「冠军−基线」分差拆到每类断言，看谁在区分强弱、谁只是送分 |
 | `tools/rescore.py [--write]` | 用当前打分口径离线重算历史实跑，看冠军/分差会不会变（不花额度） |
 | `tools/power_check.py [--md]` | 判定力核算：现有题量能判出多大效应、判出实测效应要多少题（离线） |
 | `tools/variance_decomp.py <run_id>` | 方差分解：拆开题内噪声与题间差异，回答「该加重复还是加题」（离线） |
