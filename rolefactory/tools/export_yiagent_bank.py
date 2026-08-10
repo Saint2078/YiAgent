@@ -129,10 +129,10 @@ def provenance_of(report: dict[str, Any], card: dict[str, Any]) -> dict[str, Any
         "report": f"rolefactory/data/runs/{report.get('run_id')}/report.json",
         "genome_card": f"rolefactory/data/runs/{report.get('run_id')}/genome_card.md",
         "verify": f"python tools/genome_card.py verify {report.get('run_id')} <genome.json>",
-        # 实跑发生的时刻，不是导出时刻：同一个 run 反复导出，产物逐字节一致，
-        # 下游装配的 assembled_at 也就跟着稳定（导出时刻会让「可复现」名存实亡）
+        # 只记实跑时刻，**不记导出时刻**：交付物要是「这次实跑」的纯函数。
+        # 一个 exported_at 就能让同一个 run 每次导出都换字节，下游载体跟着换，
+        # 「可复现交付」当场变成空话；而「什么时候导的」git 历史里本来就有。
         "run_at": _run_at(report),
-        "exported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
 
 
@@ -172,6 +172,21 @@ def build_bank(run_id: str) -> dict[str, Any]:
                 "title": f"{role} · 全弱基因对照",
                 "slots": weak,
                 "role_in_pack": "contrast_all_weak",
+                # 自带血统压掉库级血统：这不是冠军，不能继承冠军的判定与「可宣称」。
+                # 装配侧 variant.provenance 优先，所以对照件不会冒充战绩。
+                "provenance": {
+                    "factory": "rolefactory",
+                    "run_id": report.get("run_id"),
+                    "role": role,
+                    "kind": "contrast_all_weak",
+                    "verdict": {
+                        "generalizes": None,
+                        "label": "对照件（不参与判定）",
+                        "reason": "全部取弱等位，用于观感对照，不是被鉴定的冠军基因。",
+                    },
+                    "claim": "仅作全弱对照，不代表任何战绩；不得作为交付实体",
+                    "run_at": _run_at(report),
+                },
             }
         )
 

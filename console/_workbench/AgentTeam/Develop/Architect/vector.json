@@ -6,7 +6,7 @@
     "variant_id": "var.ai.champion",
     "variant_title": "AI软件架构师 · 实跑冠军（run 20260809-194427-8cfdb4）",
     "role_id": "ai",
-    "assembled_at": "2026-08-10T19:25:05Z",
+    "assembled_at": "2026-08-09T19:44:27Z",
     "slots": {
       "G1": {
         "key": "identity",
@@ -173,7 +173,7 @@
       "report": "rolefactory/data/runs/20260809-194427-8cfdb4/report.json",
       "genome_card": "rolefactory/data/runs/20260809-194427-8cfdb4/genome_card.md",
       "verify": "python tools/genome_card.py verify 20260809-194427-8cfdb4 <genome.json>",
-      "exported_at": "2026-08-10T19:25:05+00:00"
+      "run_at": "2026-08-09T19:44:27Z"
     },
     "source": {
       "kind": "bank",

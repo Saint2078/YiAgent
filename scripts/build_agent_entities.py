@@ -58,7 +58,7 @@ def _fixed_stamp(bank: dict[str, Any]) -> str:
     重新装配，载体都逐字节一致 —— 这是「可复现交付」的字面含义。
     """
     pr = (bank.get("meta") or {}).get("provenance") or {}
-    for key in ("run_at", "exported_at"):  # run_at 缺失时退回导出时刻（旧 bank）
+    for key in ("run_at", "exported_at"):  # exported_at 只为兼容早期导出的 bank
         stamp = str(pr.get(key) or "").strip()
         if stamp:
             return stamp.replace("+00:00", "Z")

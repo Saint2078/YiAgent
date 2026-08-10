@@ -79,6 +79,23 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/build_devteam.py [席位...]` | 批量构建 Develop 六席并写登记表 |
 | `tools/build_devteam.py adopt <席位> <run_id>` | 采纳一次已完成的 run 为该席位基因组，不重跑 |
 | `tools/build_devteam.py registry` | 只按现有落盘基因组重写登记表 |
+| `tools/export_yiagent_bank.py <run_id>\|--seat X\|--all` | 实跑冠军 → `yiagent` 能装配的基因库（带血统与泛化判定） |
+| `tools/quota_probe.py` | 一次请求探上游额度是否可用（用服务端密钥，退出码 0=可用） |
+| `tools/watch_quota_reholdout.py` | 额度封顶时等待，恢复即自动把待复核席位的 holdout 按 `reps=3` 补齐 |
+
+## 从实跑冠军到可运行 Agent
+
+实跑产出的是基因，不是能跑的东西。接上装配链路：
+
+```bash
+python tools/export_yiagent_bank.py --all          # 六席 → data/yiagent_banks/*.bank.json
+cd .. && python scripts/build_agent_entities.py    # → 六席载体 + offline 出厂检验 + 登记表
+```
+
+导出的基因库里 `variant.hash` 就是基因组卡的规范哈希，所以载体的 `markers.gene_hash`
+能回溯到这次实跑；`meta.provenance` 带着泛化判定与一条 `claim`（这份基因允许对外说什么）。
+**未在 holdout 上证明更强的基因照样能装配**（判定问的是「比无基因强吗」，不是「能不能用」），
+但载体会自带这句话；要卡死就用 `yiagent assemble --require-generalization`。
 
 ## 评分口径
 

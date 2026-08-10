@@ -260,7 +260,9 @@ def assemble_vector(
 
     skill_tools = skill_openai_tools(sk)
     meta = b.get("meta") or {}
-    provenance = meta.get("provenance")
+    # variant 自带血统优先于库级血统：同一个库里可以既放冠军、又放对照 variant，
+    # 而判定/claim 是**针对某一套基因**说的，不能让对照件继承冠军的战绩。
+    provenance = v.get("provenance") or meta.get("provenance")
     pack: dict[str, Any] = {
         "kind": PACK_KIND,
         "pack_version": PACK_VERSION,

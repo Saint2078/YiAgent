@@ -42,7 +42,7 @@
       "report": "rolefactory/data/runs/20260810-185143-6ea6f5/report.json",
       "genome_card": "rolefactory/data/runs/20260810-185143-6ea6f5/genome_card.md",
       "verify": "python tools/genome_card.py verify 20260810-185143-6ea6f5 <genome.json>",
-      "exported_at": "2026-08-10T19:25:05+00:00"
+      "run_at": "2026-08-10T18:51:43Z"
     }
   },
   "alleles": {
@@ -201,7 +201,20 @@
         "G4": "g4_weak",
         "G5": "g5_weak"
       },
-      "role_in_pack": "contrast_all_weak"
+      "role_in_pack": "contrast_all_weak",
+      "provenance": {
+        "factory": "rolefactory",
+        "run_id": "20260810-185143-6ea6f5",
+        "role": "项目经理",
+        "kind": "contrast_all_weak",
+        "verdict": {
+          "generalizes": null,
+          "label": "对照件（不参与判定）",
+          "reason": "全部取弱等位，用于观感对照，不是被鉴定的冠军基因。"
+        },
+        "claim": "仅作全弱对照，不代表任何战绩；不得作为交付实体",
+        "run_at": "2026-08-10T18:51:43Z"
+      }
     }
   ]
 }

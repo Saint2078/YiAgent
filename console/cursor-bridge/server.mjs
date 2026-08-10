@@ -803,6 +803,36 @@ function loadDevelopGenome(role, { projectFolder = null } = {}) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
+/**
+ * 席位血统：这份基因来自哪次实跑、内容哈希、**能不能宣称更强**、有没有装成载体。
+ *
+ * 为什么要暴露：六席基因的 train 增益都是正的，但 holdout 判定目前全是「判不了」。
+ * 界面上如果只写「工厂实跑冠军」，看的人会自然读成「已验证更强」——那是没有的事。
+ * `generalizes` 三态：true 已证明 / false 已证伪 / null **判不了**，后两者都不许宣称更强。
+ */
+function developProvenance(genome, role) {
+  const src = genome?.source || {};
+  if (!src.run_id && !src.genome_hash) return null;
+  const verdict = src.verdict || {};
+  const g = typeof verdict.generalizes === "boolean" ? verdict.generalizes : null;
+  const vectorPath = path.join(developRoleDir(role), "vector.json");
+  return {
+    run_id: src.run_id || null,
+    genome_hash: src.genome_hash || null,
+    champion_weighted: src.champion_weighted ?? null,
+    delta_train_weighted: src.delta_train_weighted ?? null,
+    holdout_delta: src.holdout?.delta_weighted ?? null,
+    generalizes: g,
+    verdict_label: verdict.label || null,
+    claim:
+      g === true
+        ? "可称『在未见题上优于无基因基线』"
+        : "不得称更强：可称『由实跑冠军基因装配』",
+    // 装成表达载体才算「可运行实体」，只有 genome.json 的还只是纸面基因
+    vector: fs.existsSync(vectorPath) ? `AgentTeam/Develop/${role}/vector.json` : null,
+  };
+}
+
 function assembleDevelopPrompt(
   genome,
   userText,
@@ -1159,6 +1189,8 @@ async function runSend(
       path: genome.path || `AgentTeam/Develop/${role}`,
       provider: resolvedProvider,
       projectId: projectScope?.id || null,
+      // 血统随每次应答返回：界面不至于把「判不了」显示成「已验证更强」
+      provenance: developProvenance(genome, role),
     };
     if (resolvedProvider === "kimi") {
       kimiParts = splitDevelopPrompt(genome, prompt, promptOpts);
@@ -1338,12 +1370,14 @@ const server = http.createServer(async (req, res) => {
       let present = false;
       let display_name = role;
       let title = "";
+      let provenance = null;
       try {
         if (fs.existsSync(file)) {
           present = true;
           const g = JSON.parse(fs.readFileSync(file, "utf8"));
           display_name = g.display_name || role;
           title = g.title || "";
+          provenance = developProvenance(g, role);
         }
       } catch {
         /* ignore */
@@ -1354,6 +1388,7 @@ const server = http.createServer(async (req, res) => {
         display_name,
         title,
         present,
+        provenance,
         provider,
         model: provider === "kimi" ? runtime.kimiModel : runtime.model,
         path: `AgentTeam/Develop/${role}`,

@@ -134,7 +134,7 @@
       "generalization_gap": 2.62,
       "seconds": 64.1
     },
-    "built_at": "2026-08-09T20:36:35.820197+00:00",
+    "built_at": "2026-08-10T19:42:40.951283+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -151,6 +151,12 @@
       "budget_tokens": 1500000,
       "budget_seconds": 2400.0,
       "anchor_limit": 5
+    },
+    "genome_hash": "eb8422af9b560b6cad4e9e34574c0e2df6acd73cff2d5c7404446139bbda67cc",
+    "verdict": {
+      "generalizes": null,
+      "label": "reps=1 判不了（待复核）",
+      "reason": "holdout Δ=-3.12，配对 0 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
     }
   }
 }

@@ -6,7 +6,7 @@
     "variant_id": "var.role_b2267ae0.champion",
     "variant_title": "评测工程师 · 实跑冠军（run 20260810-181341-bbaec2）",
     "role_id": "role_b2267ae0",
-    "assembled_at": "2026-08-10T19:25:05Z",
+    "assembled_at": "2026-08-10T18:13:41Z",
     "slots": {
       "G1": {
         "key": "identity",
@@ -173,7 +173,7 @@
       "report": "rolefactory/data/runs/20260810-181341-bbaec2/report.json",
       "genome_card": "rolefactory/data/runs/20260810-181341-bbaec2/genome_card.md",
       "verify": "python tools/genome_card.py verify 20260810-181341-bbaec2 <genome.json>",
-      "exported_at": "2026-08-10T19:25:05+00:00"
+      "run_at": "2026-08-10T18:13:41Z"
     },
     "source": {
       "kind": "bank",

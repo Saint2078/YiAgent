@@ -74,6 +74,44 @@ CLI 入口 `yiagent smoke <vector.json> [--checklist] [--json] [--live]`。
 `build_vector.py` 可逐字节复现）→ smoke/checklist 全 offline；live 对话演示
 由人按 README 步骤触发。
 
+**「可复现」的字面含义**：交付物是「那次实跑」的**纯函数** —— 载体逐字节只由基因内容
+与实跑事实决定，不含机器信息、不含「什么时候导出的」。三处曾破坏这条属性、现已修掉：
+
+- `markers.source.path` 记 `repo:` 仓库相对路径而非绝对路径（`recipient.provenance_path`）。
+  此前落盘载体烧的是容器内 `/repo/...`，换机器逐字节复现直接失效
+- `assembled_at` 锚在**实跑发生的时刻**而非导出时刻
+- 导出物**不记 `exported_at`** —— 一个导出时间戳就能让同一个 run 每次导出都换字节，
+  下游载体跟着换；而「什么时候导的」git 历史里本来就有
+
+守这条的是 `tests/test_factory_intake.py::test_reexport_does_not_change_bytes`：
+**重新导出**基因库后字节必须不变。弱口径（给定同一份 bank 能重建）挡不住时间戳泄漏。
+
+## 实跑基因接入与出厂门禁（rolefactory → 可运行实体）
+
+`rolefactory`（`:8790`）产出的冠军基因与本包格式不同，桥接工具
+`rolefactory/tools/export_yiagent_bank.py` 把一次实跑导成本包能吃的 bank：
+
+- `variant.hash` 用**基因组卡的规范 sha256**（role_id + 每槽 allele_id + 槽文本），
+  于是载体的 `markers.gene_hash` 可回溯到实跑，`genome_card.py verify` 可对账
+- `meta.provenance` 带走血统：run_id、train/holdout 分差、泛化判定，外加一条
+  `claim`（这份基因**允许对外说什么**）
+- 附 `var.<role_id>.all_weak` 全弱对照 variant，本地即可做观感对照
+
+`assemble_vector` 把 `bank.meta.provenance` 原样带进 `markers.provenance`
+（没血统的 bank 不凭空造该键，否则既有载体字节会变）。`generalizes(pack)` 给出
+三态：`True` 已证明优于无基因基线 / `False` 已证伪 / `None` **判不了**——
+`None` 与 `False` 都不许对外宣称更强，别把「判不了」当好消息。
+
+门禁分两档，因为泛化判定回答的是「这套基因比无基因强吗」，不是「这个 Agent 能不能用」：
+
+| 档 | 行为 |
+|----|------|
+| 默认 | 放行，但把血统与「可宣称」打印出来（不虚假宣传） |
+| `yiagent assemble --require-generalization` | 未证明则拒装，退出码 3（生产投放用） |
+
+整条链路由 `scripts/build_agent_entities.py` 串起（六席 → 载体 → offline 出厂检验
+→ 登记表 `工作台/AgentTeam/agent-entities.md`），零真实 LLM 调用。
+
 ## 改进闭环（Session → Factory）
 
 效果差时：`yiagent improve` 从 CLI session 导出 improve-pack → 工厂 `:8787` 载入种子（跳过 A/B）→ 邻域精炼（固定 G1，主变异 G2/G4/G5）→ 初筛/终筛 → `save/*_best_genome*` → `yiagent improve --apply` 写回 `~/.yiagent`（`agent.bank` + `agent.variant`）。

@@ -72,6 +72,24 @@ class ProvenanceTests(unittest.TestCase):
         self.assertNotIn("provenance", pack["markers"])
         self.assertNotIn("generalizes=", marker_line(pack))
 
+    def test_variant_provenance_overrides_bank(self):
+        # 对照件不许继承冠军的战绩：variant 自带血统优先
+        bank = _bank({"generalizes": True, "label": "站得住"})
+        bank["variants"].append(
+            {
+                "id": "var.role_test.all_weak",
+                "title": "全弱对照",
+                "slots": {s: f"{s.lower()}_a" for s in ("G1", "G2", "G3", "G4", "G5")},
+                "provenance": {"kind": "contrast_all_weak", "claim": "仅作对照",
+                               "verdict": {"generalizes": None, "label": "对照件（不参与判定）"}},
+            }
+        )
+        champ = assemble_vector("host", bank, variant_id="var.role_test.champion", assembled_at=TS)
+        weak = assemble_vector("host", bank, variant_id="var.role_test.all_weak", assembled_at=TS)
+        self.assertIs(generalizes(champ), True)
+        self.assertIsNone(generalizes(weak))
+        self.assertEqual(weak["markers"]["provenance"]["claim"], "仅作对照")
+
     def test_marker_line_shows_verdict(self):
         pack = assemble_vector("host", _bank({"generalizes": None, "label": "reps=1 判不了"}), assembled_at=TS)
         line = marker_line(pack)
@@ -218,6 +236,33 @@ class EntityReproducibleTests(unittest.TestCase):
                 # source.path 是本机相对仓库根的写法，两侧都走同一函数，应完全相等
                 self.assertEqual(rebuilt, saved, f"{seat} 载体无法逐字节重建")
 
+    def test_reexport_does_not_change_bytes(self):
+        """强口径：**重新导出基因库**后载体仍逐字节一致。
+
+        弱口径（给定同一份 bank 可重建）挡不住一个 `exported_at` ——
+        导出时刻泄进产物，交付物就不再是「这次实跑」的纯函数了。
+        """
+        exporter = REPO / "rolefactory" / "tools" / "export_yiagent_bank.py"
+        banks = sorted((REPO / "rolefactory" / "data" / "yiagent_banks").glob("*.bank.json"))
+        if not banks or not exporter.is_file():
+            self.skipTest("本机没有导出的实跑 bank")
+
+        import os  # noqa: PLC0415
+
+        seat = banks[0].stem.replace(".bank", "")
+        before = banks[0].read_bytes()
+        r = subprocess.run(
+            [sys.executable, str(exporter), "--seat", seat],
+            cwd=str(REPO / "rolefactory"), capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(
+            banks[0].read_bytes(), before,
+            f"{seat} 基因库重新导出后字节变了：交付物不是实跑的纯函数",
+        )
+
     def test_stamp_anchored_on_run_not_export(self):
         # 装配时间必须锚在实跑时刻：否则重新导出基因库就换字节，「可复现」名存实亡
         sys.path.insert(0, str(REPO / "scripts"))
@@ -229,6 +274,52 @@ class EntityReproducibleTests(unittest.TestCase):
         # 旧 bank 没有 run_at 时退回导出时刻，而不是 now()
         old = {"meta": {"provenance": {"exported_at": "2026-08-11T03:00:00+00:00"}}}
         self.assertEqual(_fixed_stamp(old), "2026-08-11T03:00:00Z")
+
+
+class EntityBootsTests(unittest.TestCase):
+    """六席载体必须真能启动成 Agent —— 不只是「存在一个 JSON」。
+
+    LLM 全 mock，一次真实调用都不发；验的是「载体 → 可对话会话」这一步接得上：
+    基因组文本确实进了 system、身份等位在里面、`genome_pack` 事件带得出判定。
+    """
+
+    SEAT_DIR = REPO / "console" / "_workbench" / "AgentTeam" / "Develop"
+
+    def test_every_seat_boots_a_session(self):
+        from unittest.mock import patch  # noqa: PLC0415
+
+        from yiagent.agent import AgentSession  # noqa: PLC0415
+        from yiagent.phenotype import load_vector  # noqa: PLC0415
+
+        vectors = sorted(self.SEAT_DIR.glob("*/vector.json")) if self.SEAT_DIR.is_dir() else []
+        if not vectors:
+            self.skipTest("本机没有落盘载体；跑 scripts/build_agent_entities.py 后生效")
+
+        def fake_chat(**_kw):
+            return {"choices": [{"message": {"role": "assistant", "content": "pong"}}], "usage": {}}
+
+        for vpath in vectors:
+            seat = vpath.parent.name
+            with self.subTest(seat=seat):
+                pack = load_vector(vpath)
+                events: list[dict] = []
+                with tempfile.TemporaryDirectory() as td, \
+                     patch("yiagent.agent.chat_completions", side_effect=fake_chat):
+                    sess = AgentSession(
+                        model="kimi-k2.5", api_key="sk-test-key-xxxxxxxx",
+                        vector=pack, cwd=td, on_event=events.append,
+                    )
+                    self.assertEqual(sess.prompt("ping"), "pong")
+
+                system = sess.messages[0]["content"]
+                # G1/G2 的等位 id 必须真出现在 system 里，否则基因等于没装上
+                for slot in ("G1", "G2"):
+                    aid = pack["markers"]["slots"][slot]["allele_id"]
+                    self.assertIn(aid, system, f"{seat} 的 {slot} 等位 {aid} 没进 system")
+                # 构造即发 genome_pack 事件，且这一行带着泛化判定（能不能宣称更强）
+                gp = [e for e in events if e.get("type") == "genome_pack"]
+                self.assertTrue(gp, f"{seat} 没发 genome_pack 事件")
+                self.assertIn("generalizes=", gp[0]["line"])
 
 
 if __name__ == "__main__":

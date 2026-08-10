@@ -6,7 +6,7 @@
     "variant_id": "var.role_c81cdcf6.champion",
     "variant_title": "项目经理 · 实跑冠军（run 20260810-185143-6ea6f5）",
     "role_id": "role_c81cdcf6",
-    "assembled_at": "2026-08-10T19:25:05Z",
+    "assembled_at": "2026-08-10T18:51:43Z",
     "slots": {
       "G1": {
         "key": "identity",
@@ -179,7 +179,7 @@
       "report": "rolefactory/data/runs/20260810-185143-6ea6f5/report.json",
       "genome_card": "rolefactory/data/runs/20260810-185143-6ea6f5/genome_card.md",
       "verify": "python tools/genome_card.py verify 20260810-185143-6ea6f5 <genome.json>",
-      "exported_at": "2026-08-10T19:25:05+00:00"
+      "run_at": "2026-08-10T18:51:43Z"
     },
     "source": {
       "kind": "bank",
