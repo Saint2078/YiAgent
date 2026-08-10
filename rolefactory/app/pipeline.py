@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from . import anchors as anchors_mod
-from . import genes, judge, roles, store
+from . import genes, judge, objective, roles, store
 from .config import SETTINGS
 from .llm import Budget, Session
 
@@ -656,7 +656,14 @@ async def reholdout(run_id: str, api_key: str, *, reps: int = 3) -> dict[str, An
         "checked_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "cases": sorted(hold_ids),
         "reps": reps,
-        "previous": {"reps": (state.get("holdout") or {}).get("reps") or 1, "delta_weighted": prev},
+        # 复核复用缓存的回答，但用**当时**的打分代码。若原 run 是旧口径打的，
+        # 这份 holdout 就与它的 train 分不同尺 —— 必须记下来，否则无从察觉。
+        "scorer_version": objective.SCORER_VERSION,
+        "previous": {
+            "reps": (state.get("holdout") or {}).get("reps") or 1,
+            "delta_weighted": prev,
+            "scorer_version": (state.get("scoring") or {}).get("scorer_version"),
+        },
         "champion": champ_h,
         "baseline": base_h,
         "delta_weighted": (
@@ -710,6 +717,8 @@ def scoring_summary(run: Run) -> dict[str, Any]:
 
     return {
         "mode": mode,
+        # 分数只在同一打分口径版本内可比。写进报告，跨版本对比时才有据可查。
+        "scorer_version": objective.SCORER_VERSION if mode == "objective" else None,
         "how": (
             "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），"
             "纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。"

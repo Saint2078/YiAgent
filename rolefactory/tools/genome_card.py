@@ -184,6 +184,12 @@ def verdict(scores: dict[str, Any], hold: dict[str, Any]) -> dict[str, Any]:
             "reason": f"holdout Δ={d:+} 但配对 {imp} 升 / {reg} 降（{sample}），方向不一致{note}"}
 
 
+def _scorer_v(block: dict[str, Any] | None) -> int:
+    """打分口径版本；缺失即 1（该字段随 v2 引入，之前的 run 都是 v1）。"""
+    v = (block or {}).get("scorer_version")
+    return int(v) if isinstance(v, int) else 1
+
+
 def _read_reholdout(run_id: str) -> dict[str, Any] | None:
     """holdout 复核结果（POST /api/run/{id}/reholdout 生成）。
 
@@ -251,6 +257,13 @@ def build_card(run_id: str) -> dict[str, Any]:
                  "delta_weighted": (scores.get("holdout") or {}).get("delta_weighted")}
                 if hold_source == "reholdout" else None
             ),
+            # 打分口径版本：复核用**当时**的打分代码，可能与原 run 不同尺。
+            # 不同尺时 train Δ 与 holdout Δ 不可直接相减，卡片上必须写出来。
+            # 字段随 v2 引入，所以**缺失即 v1**（那批 run 都在修 must_not_include 之前）。
+            "scorer_version_train": _scorer_v(report.get("scoring")),
+            "scorer_version_holdout": (
+                _scorer_v(recheck) if hold_source == "reholdout" else _scorer_v(report.get("scoring"))
+            ),
         },
         "verdict": verdict({**scores}, hold),
         "ablation": ablation(report),
@@ -304,6 +317,12 @@ def card_md(card: dict[str, Any]) -> str:
         lines.append(
             f"| holdout 来源 | **复核**（`reholdout.json`，采样更足）；"
             f"原 run 那次 reps={old.get('reps')} 得 Δ={old.get('delta_weighted')} |"
+        )
+    vt, vh = sc.get("scorer_version_train"), sc.get("scorer_version_holdout")
+    if vt != vh:
+        lines.append(
+            f"| ⚠ 打分口径 | train 用 v{vt or '?'}、holdout 用 v{vh or '?'} —— **两把尺子**，"
+            "`泛化差(train−holdout)` 不可直接相减（口径差异见 PERF.md §12） |"
         )
     lines += [
         "",

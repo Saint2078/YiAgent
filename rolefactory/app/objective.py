@@ -32,6 +32,14 @@ CHECK_TYPES = (
     "regex",
 )
 
+# 打分口径版本。**改了给分规则就必须 +1**：分数只在同一版本内可比。
+# 存在的理由是一个具体的坑：holdout 复核会复用缓存的回答、但用**当时**的打分代码，
+# 于是一张卡片上可能出现「train 分来自旧尺子、holdout 分来自新尺子」，肉眼看不出来。
+# 有了版本号，跨版本比较会被 genome_card 显式标注。
+#   1 = 初版
+#   2 = 2026-08-11：must_not_include 区分「主张」与「引用并否掉」（PERF.md §12）
+SCORER_VERSION = 2
+
 _FULL_TO_HALF = str.maketrans(
     "０１２３４５６７８９％．，（）：；－ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ",
     "0123456789%.,():;-ABCDEFGHIJKLMNOPQRSTUVWXYZ",
