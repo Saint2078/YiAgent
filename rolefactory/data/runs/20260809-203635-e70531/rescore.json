@@ -2,90 +2,90 @@
   "run_id": "20260809-203635-e70531",
   "role": "DevOps工程师",
   "evaluations_rescored": 70,
-  "score_changed": 6,
+  "score_changed": 47,
   "champion_arm": "g0_f60d0cad8244",
   "arms": [
     {
       "arm": "baseline",
       "old_train": 86.8,
-      "new_train": 89.8,
+      "new_train": 92.76,
       "old_holdout": 69.29,
-      "new_holdout": 74.29
+      "new_holdout": 72.96
     },
     {
       "arm": "g0_09faff5be8fa",
       "old_train": 82.43,
-      "new_train": 82.43,
+      "new_train": 87.14,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_11e7359e837d",
       "old_train": 85.8,
-      "new_train": 85.8,
+      "new_train": 89.78,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_a83137f89087",
       "old_train": 89.3,
-      "new_train": 89.3,
+      "new_train": 92.4,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_ca0958c1447a",
       "old_train": 84.47,
-      "new_train": 84.47,
+      "new_train": 87.04,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_f60d0cad8244",
       "old_train": 92.3,
-      "new_train": 92.3,
+      "new_train": 94.58,
       "old_holdout": 77.17,
-      "new_holdout": 79.17
+      "new_holdout": 76.63
     },
     {
       "arm": "g0_f88d90416b69",
       "old_train": 89.3,
-      "new_train": 92.3,
+      "new_train": 94.58,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_27c4dd35a29e",
       "old_train": 89.8,
-      "new_train": 89.8,
+      "new_train": 92.76,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_40f76536b892",
       "old_train": 88.3,
-      "new_train": 88.3,
+      "new_train": 91.6,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_5e19bca10b1d",
       "old_train": 85.27,
-      "new_train": 85.27,
+      "new_train": 89.36,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_9ee8873e0878",
       "old_train": 90.5,
-      "new_train": 90.5,
+      "new_train": 93.2,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_b14417161a81",
       "old_train": 87.1,
-      "new_train": 90.1,
+      "new_train": 92.98,
       "old_holdout": null,
       "new_holdout": null
     }
@@ -94,7 +94,7 @@
   "new_top": "g0_f60d0cad8244",
   "champion_still_top": true,
   "old_holdout_delta": 7.88,
-  "new_holdout_delta": 4.88,
+  "new_holdout_delta": 3.67,
   "old_train_delta": 5.5,
-  "new_train_delta": 2.5
+  "new_train_delta": 1.82
 }

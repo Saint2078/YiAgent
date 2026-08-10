@@ -94,10 +94,11 @@ class ScoreAnswerIntegrationTests(unittest.TestCase):
 
 
 class NumericShareGateTests(unittest.TestCase):
-    """出题自校必须挡住「尺子分辨率不足」的题（numeric 权重占比过低）。
+    """numeric 权重占比靠**归一化**达标，而不是把题打回重出。
 
-    这条门禁的代价是被打回的题要重生成（多花一次调用），所以边界要钉死：
-    45% 以下打回，45% 及以上放行。
+    钉死这件事的理由是一次实测教训：先前把 45% 做成硬门槛，而它正落在模型自然产出的
+    众数上，历史题库里 30% 的好题被打回（tools/audit_cases.py）。现在 normalize_checks
+    会把占比缩放到 NUMERIC_SHARE_TARGET，verify_case 只留 40% 的兜底断言。
     """
 
     def _case(self, numeric_w: float, other_w: float) -> dict:
@@ -122,24 +123,45 @@ class NumericShareGateTests(unittest.TestCase):
             ],
         }
 
-    def test_low_numeric_share_rejected(self):
+    def _share(self, checks: list[dict]) -> float:
+        total = sum(float(c["weight"]) for c in checks)
+        num = sum(float(c["weight"]) for c in checks if c["type"] == "numeric")
+        return num / total
+
+    def test_low_share_gets_rebalanced_not_rejected(self):
+        from app.objective import NUMERIC_SHARE_TARGET, normalize_checks, verify_case  # noqa: PLC0415
+
+        case = self._case(30, 55)  # 原始 30/100 = 30%，先前会被打回
+        case["checks"] = normalize_checks(case["checks"])
+        self.assertAlmostEqual(self._share(case["checks"]), NUMERIC_SHARE_TARGET, places=3)
+        ok, problems = verify_case(case)
+        self.assertTrue(ok, problems)
+
+    def test_rebalance_preserves_total_weight(self):
+        from app.objective import normalize_checks  # noqa: PLC0415
+
+        raw = self._case(30, 55)["checks"]
+        before = sum(float(c["weight"]) for c in raw)
+        after = sum(float(c["weight"]) for c in normalize_checks([dict(c) for c in raw]))
+        self.assertAlmostEqual(before, after, places=3)
+
+    def test_all_numeric_left_alone(self):
+        from app.objective import rebalance_numeric  # noqa: PLC0415
+
+        checks = [
+            {"type": "numeric", "id": "n1", "weight": 40.0},
+            {"type": "numeric", "id": "n2", "weight": 60.0},
+        ]
+        self.assertEqual(self._share(rebalance_numeric(checks)), 1.0)
+
+    def test_bare_checks_below_floor_still_flagged(self):
+        """绕过归一化直接塞 checks 时，兜底断言仍要报警。"""
         from app.objective import verify_case  # noqa: PLC0415
 
-        ok, problems = verify_case(self._case(30, 55))  # 30/100 = 30%
+        case = self._case(30, 55)  # 未过 normalize_checks
+        ok, problems = verify_case(case)
         self.assertFalse(ok)
-        self.assertTrue(any("分辨率" in p for p in problems), problems)
-
-    def test_sufficient_numeric_share_passes(self):
-        from app.objective import verify_case  # noqa: PLC0415
-
-        ok, problems = verify_case(self._case(60, 25))  # 60/100 = 60%
-        self.assertTrue(ok, problems)
-
-    def test_boundary_45_percent_passes(self):
-        from app.objective import verify_case  # noqa: PLC0415
-
-        ok, problems = verify_case(self._case(45, 40))
-        self.assertTrue(ok, problems)
+        self.assertTrue(any("归一化" in p for p in problems), problems)
 
 
 if __name__ == "__main__":

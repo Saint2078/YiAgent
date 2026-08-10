@@ -31,15 +31,28 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 RUNS = ROOT / "data" / "runs"
 
+from app import objective  # noqa: E402
 from app.objective import score_answer  # noqa: E402
 
 
-def _checks_by_case(run_id: str) -> dict[str, list[dict[str, Any]]]:
+def _checks_by_case(run_id: str, *, raw: bool = False) -> dict[str, list[dict[str, Any]]]:
+    """题目断言。默认过一遍 `normalize_checks`，与出题时的实跑路径一致。
+
+    这一步不是可选的润色：现在的 normalize_checks 会**删掉泄露答案的同义词**并
+    归一化 numeric 权重占比（PERF.md §13–14）。落盘题库是旧口径生成的，不过这一步
+    就等于拿旧尺子重算，问不出「新尺子下结论会不会变」。
+    """
     p = RUNS / run_id / "state.json"
     if not p.is_file():
         return {}
     state = json.loads(p.read_text(encoding="utf-8"))
-    return {c["id"]: (c.get("checks") or []) for c in state.get("cases") or []}
+    out: dict[str, list[dict[str, Any]]] = {}
+    for c in state.get("cases") or []:
+        checks = c.get("checks") or []
+        if not raw:
+            checks = objective.normalize_checks([dict(x) for x in checks])
+        out[c["id"]] = checks
+    return out
 
 
 def _state(run_id: str) -> dict[str, Any]:

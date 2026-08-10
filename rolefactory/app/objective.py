@@ -38,7 +38,14 @@ CHECK_TYPES = (
 # 有了版本号，跨版本比较会被 genome_card 显式标注。
 #   1 = 初版
 #   2 = 2026-08-11：must_not_include 区分「主张」与「引用并否掉」（PERF.md §12）
-SCORER_VERSION = 2
+#   3 = 2026-08-11：出题期归一化 numeric 权重占比 + 删掉泄答案的同义词（PERF.md §13–14）
+SCORER_VERSION = 3
+
+# 出题时 numeric 断言的权重目标占比。假答案的分数地板 ≈ 1 − 该占比，
+# 所以它直接决定尺子的分辨率：0.40 时纯堆词能拿真实基线的 81%，0.60 时降到 74%。
+# 取 0.60 而不是更高：非 numeric 的断言（禁含/回问/结论先行）考的是别的东西，
+# 压太狠会把「答得对但说得糊」和「答得对且说得清」抹成同一分。
+NUMERIC_SHARE_TARGET = 0.60
 
 _FULL_TO_HALF = str.maketrans(
     "０１２３４５６７８９％．，（）：；－ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ",
@@ -396,7 +403,155 @@ def normalize_checks(raw: Any) -> list[dict[str, Any]]:
         item["weight"] = w
         item["id"] = str(spec.get("id") or f"{ctype}_{i + 1}")
         out.append(item)
+    # 顺序要紧：先删泄答案的同义词（可能整条 check 消失），再按剩下的项归一化权重
+    return rebalance_numeric(strip_answer_leaks(out))
+
+
+def rebalance_numeric(
+    checks: list[dict[str, Any]], *, target: float = NUMERIC_SHARE_TARGET
+) -> list[dict[str, Any]]:
+    """把 numeric 断言的权重占比缩放到 `target`，总权重不变。
+
+    这是**尺子的分辨率旋钮**：堆词假答案在 numeric 上恒得 0、在其余断言上几乎全拿，
+    所以假答案的地板 ≈ 1 − numeric 占比。实测（tools/gameability.py）占比 40% 时
+    纯堆词能拿真实基线的 81%，八成分数不区分好坏。
+
+    为什么是缩放、而不是把不合格的题打回重出：占比是**给分配比**，不是题目对错。
+    先前把 45% 做成硬门槛，结果它正落在模型自然产出的众数上——历史 148 道客观题里
+    否掉 30%（多数恰好卡在 40%），每道最多再烧 2 次出题调用，换来的只是同一道题
+    换个权重写法（tools/audit_cases.py 量的）。缩放 0 额度、且对每道题都生效。
+
+    只在同时存在 numeric 与非 numeric 时动手：
+    - 全是 numeric：占比已是 100%，不需要也不能降（没有别的项可分权重）
+    - 没有 numeric：verify_case 会直接否掉，这里不越权补
+    """
+    num = [c for c in checks if str(c.get("type")) == "numeric"]
+    rest = [c for c in checks if str(c.get("type")) != "numeric"]
+    if not num or not rest:
+        return checks
+    total = sum(float(c.get("weight") or 0) for c in checks)
+    if total <= 0:
+        return checks
+    t = min(max(float(target), 0.0), 1.0)
+    w_num, w_rest = sum(float(c.get("weight") or 0) for c in num), 0.0
+    w_rest = total - w_num
+    if w_num <= 0 or w_rest <= 0:
+        return checks
+    k_num, k_rest = (total * t) / w_num, (total * (1.0 - t)) / w_rest
+    for c in num:
+        c["weight"] = round(float(c["weight"]) * k_num, 4)
+    for c in rest:
+        c["weight"] = round(float(c["weight"]) * k_rest, 4)
+    return checks
+
+
+_KEYWORD_TYPES = ("must_include", "lead_with", "ask_back", "min_items")
+
+
+def keyword_text(checks: list[dict[str, Any]]) -> str:
+    """把断言里**给答题者可抄的关键词**拼成一段文本（不含 numeric 的 target）。
+
+    用途是自检：若这段文本本身就能命中 numeric，说明标准答案被写进了关键词表。
+    """
+    words: list[str] = []
+    for c in checks:
+        if str(c.get("type")) not in _KEYWORD_TYPES:
+            continue
+        for g in c.get("groups") or []:
+            if isinstance(g, dict):
+                words.extend(str(s) for s in (g.get("any") or []) if str(s).strip())
+            elif isinstance(g, (list, tuple)):
+                words.extend(str(s) for s in g if str(s).strip())
+            elif str(g).strip():
+                words.append(str(g))
+        for extra in ("phrases", "items", "any"):
+            v = c.get(extra)
+            if isinstance(v, list):
+                words.extend(str(s) for s in v if str(s).strip())
+    return "；".join(words)
+
+
+def _carries_answer(text: str, numerics: list[dict[str, Any]]) -> bool:
+    """这条同义词本身是否带着某个 numeric 的标准答案。
+
+    不走 `_hit_numeric`：那个函数要求 `near` 上下文同时出现，单条同义词往往不含，
+    会漏判。这里只问「里面的数字等不等于答案」，宁严不宽。
+    """
+    vals = _numbers_in(normalize(text))
+    if not vals:
+        return False
+    for spec in numerics:
+        try:
+            target = float(spec.get("target"))
+        except (TypeError, ValueError):
+            continue
+        try:
+            tol = float(spec.get("tolerance"))
+        except (TypeError, ValueError):
+            tol = abs(target) * 0.02
+        tol = max(tol, abs(target) * 1e-6)
+        if any(abs(v - target) <= tol for v in vals):
+            return True
+    return False
+
+
+def strip_answer_leaks(checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """删掉「把 numeric 标准答案写进去」的关键词同义词；组空了删组，组全没了删该 check。
+
+    为什么是删、而不是把题打回重出：带答案的同义词**本身就是坏同义词** —— 它让
+    must_include 变成 numeric 的影子，同一件事给两份分，还让抄关键词的人白拿数值分。
+    删掉它既修了漏洞，又不损失题目里其余考点。
+
+    代价对比是实测的（tools/audit_cases.py）：历史 148 道题里 56% 带这个毛病，
+    走「否题重出」要多烧约 112% 的出题调用，且连败 3 次的维度会直接丢题；
+    删同义词 0 额度、且确定性可复现。
+    """
+    numerics = [c for c in checks if str(c.get("type")) == "numeric"]
+    if not numerics:
+        return checks
+    out: list[dict[str, Any]] = []
+    for c in checks:
+        if str(c.get("type")) not in _KEYWORD_TYPES or not isinstance(c.get("groups"), list):
+            out.append(c)
+            continue
+        groups: list[Any] = []
+        for g in c["groups"]:
+            if isinstance(g, dict):
+                kept = [s for s in (g.get("any") or []) if not _carries_answer(str(s), numerics)]
+                if kept:
+                    groups.append({**g, "any": kept})
+            elif isinstance(g, (list, tuple)):
+                kept = [s for s in g if not _carries_answer(str(s), numerics)]
+                if kept:
+                    groups.append(kept)
+            elif not _carries_answer(str(g), numerics):
+                groups.append(g)
+        if groups:
+            out.append({**c, "groups": groups})
+        # 组全被删 = 这条断言只考「把答案说出来」，numeric 已经在考了，丢掉不损失考点
     return out
+
+
+def leaks_numeric(checks: list[dict[str, Any]]) -> list[str]:
+    """返回「关键词表里泄了标准答案」的 numeric check id。
+
+    这是一个实测出来的漏洞：Dev 席有道题，纯堆关键词能拿 **100 分**。原因不是权重
+    配比，而是 `must_include` 的同义词里直接写着 numeric 的答案（"365"、"第 10 行"），
+    于是「把关键词抄一遍」等于连数值分一起白拿 —— 而 numeric 恰恰是全部分辨率的来源。
+
+    判据直接借 `_hit_numeric`：**打分器认不认**才是唯一标准，
+    这样不会因为小整数（3、10）在别处偶然出现而误伤。
+    """
+    text = normalize(keyword_text(checks))
+    if not text:
+        return []
+    bad: list[str] = []
+    for c in checks:
+        if str(c.get("type")) != "numeric":
+            continue
+        if _hit_numeric(text, c)[0] >= 1.0:
+            bad.append(str(c.get("id") or "numeric"))
+    return bad
 
 
 def verify_case(case: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -417,14 +572,14 @@ def verify_case(case: dict[str, Any]) -> tuple[bool, list[str]]:
     if wsum <= 0:
         problems.append("权重和为 0")
     else:
-        # numeric 权重占比是**尺子的分辨率**：堆词假答案在 numeric 上恒得 0 分，
-        # 其余断言它几乎全拿。实测（tools/gameability.py）旧配比下假答案能拿真实基线的
-        # 81%，八成分数不区分好坏。提示词已要求 55–80，这里兜一道硬下限，
-        # 低于 45 的题直接打回重生成（一题多花一次调用，比拿钝尺子量一整轮划算）。
+        # numeric 权重占比由 `rebalance_numeric` 在 normalize_checks 里归一化到目标值，
+        # 所以这里只是**兜底断言**：正常路径永远不会触发，触发说明有人绕过了归一化
+        # 直接塞 checks。门槛压在 40（低于归一目标 60 一大截），避免重演上一版的错误：
+        # 把门槛设在模型自然产出的众数上，好题被大批打回重出（见 rebalance_numeric）。
         share = sum(float(c.get("weight") or 0) for c in checks if str(c.get("type")) == "numeric")
-        if share / wsum < 0.45:
+        if share / wsum < 0.40:
             problems.append(
-                f"numeric 权重占比 {share / wsum:.0%} < 45%：尺子分辨率不足（堆词即可拿高分）"
+                f"numeric 权重占比 {share / wsum:.0%} < 40%：未经权重归一化（尺子分辨率不足）"
             )
 
     for c in checks:
@@ -452,6 +607,13 @@ def verify_case(case: dict[str, Any]) -> tuple[bool, list[str]]:
             pass
         if abs(got - target) > tol:
             problems.append(f"{cid}: computation={got:.4f} 与 target={target} 不一致，判为出题错误")
+
+    leaked = leaks_numeric(checks)
+    if leaked:
+        problems.append(
+            "关键词表泄露了 numeric 标准答案（" + "、".join(leaked[:3]) + "）："
+            "must_include / lead_with 的同义词里不能出现该数值，否则抄关键词就白拿数值分"
+        )
 
     user_text = "\n".join(m["content"] for m in case.get("messages") or [] if m.get("role") == "user")
     if len(_numbers_in(normalize(user_text))) < 3:

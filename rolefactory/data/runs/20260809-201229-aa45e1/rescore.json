@@ -2,125 +2,125 @@
   "run_id": "20260809-201229-aa45e1",
   "role": "软件开发工程师",
   "evaluations_rescored": 114,
-  "score_changed": 5,
+  "score_changed": 53,
   "champion_arm": "g1_ba4cca5a89ae",
   "arms": [
     {
       "arm": "baseline",
       "old_train": 80.21,
-      "new_train": 83.54,
+      "new_train": 82.9,
       "old_holdout": 92.92,
-      "new_holdout": 92.92
+      "new_holdout": 94.52
     },
     {
       "arm": "g0_09faff5be8fa",
       "old_train": 85.21,
-      "new_train": 91.04,
+      "new_train": 93.84,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_11e7359e837d",
       "old_train": 84.38,
-      "new_train": 84.38,
+      "new_train": 82.9,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_a83137f89087",
       "old_train": 79.58,
-      "new_train": 79.58,
+      "new_train": 80.96,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_ca0958c1447a",
       "old_train": 81.25,
-      "new_train": 81.25,
+      "new_train": 81.34,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_f60d0cad8244",
       "old_train": 86.88,
-      "new_train": 86.88,
+      "new_train": 90.81,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g0_f88d90416b69",
       "old_train": 89.79,
-      "new_train": 89.79,
+      "new_train": 92.19,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_0b8bb78eb9b0",
       "old_train": 87.71,
-      "new_train": 87.71,
+      "new_train": 90.67,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_15cda2fae103",
       "old_train": 82.5,
-      "new_train": 82.5,
+      "new_train": 86.52,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_ab41ca95a53a",
       "old_train": 87.71,
-      "new_train": 87.71,
+      "new_train": 89.33,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_b3b34b3ead9d",
       "old_train": 89.17,
-      "new_train": 95.83,
+      "new_train": 96.4,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g1_ba4cca5a89ae",
       "old_train": 91.04,
-      "new_train": 91.04,
+      "new_train": 93.64,
       "old_holdout": 89.44,
-      "new_holdout": 89.44
+      "new_holdout": 92.73
     },
     {
       "arm": "g2_1c53f802bd97",
       "old_train": 86.88,
-      "new_train": 86.88,
+      "new_train": 90.67,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g2_24506b366873",
       "old_train": 82.71,
-      "new_train": 82.71,
+      "new_train": 81.42,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g2_5e8257bd06fd",
       "old_train": 85.62,
-      "new_train": 85.62,
+      "new_train": 88.5,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g2_d4eeaf8ce641",
       "old_train": 88.75,
-      "new_train": 88.75,
+      "new_train": 92.17,
       "old_holdout": null,
       "new_holdout": null
     },
     {
       "arm": "g2_f23580b185ff",
       "old_train": 80.42,
-      "new_train": 80.42,
+      "new_train": 81.57,
       "old_holdout": null,
       "new_holdout": null
     }
@@ -129,7 +129,7 @@
   "new_top": "g1_b3b34b3ead9d",
   "champion_still_top": false,
   "old_holdout_delta": -3.48,
-  "new_holdout_delta": -3.48,
+  "new_holdout_delta": -1.79,
   "old_train_delta": 10.83,
-  "new_train_delta": 7.5
+  "new_train_delta": 10.74
 }

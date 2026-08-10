@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 RUNS = ROOT / "data" / "runs"
 
+from app import objective  # noqa: E402
 from app.objective import score_answer  # noqa: E402
 
 
@@ -77,26 +78,17 @@ def fake_answers(checks: list[dict[str, Any]]) -> dict[str, str]:
 
 
 def reweight(checks: list[dict[str, Any]], numeric_share: float) -> list[dict[str, Any]]:
-    """把 numeric 类权重整体缩放到目标占比，其余按比例压缩（总权重不变）。
+    """按目标占比重排权重，用来回答「占比抬到 X 时堆词地板降到多少」。
 
-    用来回答「若出题时要求 numeric 占比 ≥ X，堆词地板会降到多少」——
-    不必真的重新出题，因为堆词答案在 numeric 上恒得 0 分，
-    地板几乎就是「非 numeric 权重 × 它在这些断言上的命中率」。
+    实现直接借 `objective.rebalance_numeric`（出题时也用它），避免两处各写一份缩放
+    公式、答案对不上。
     """
-    out = [dict(c) for c in checks]
-    total = sum(float(c.get("weight") or 0) for c in out)
-    num = sum(float(c.get("weight") or 0) for c in out if str(c.get("type")) == "numeric")
-    if total <= 0 or num <= 0 or num / total >= numeric_share:
-        return out
-    want_num = total * numeric_share
-    k_num, k_rest = want_num / num, (total - want_num) / (total - num)
-    for c in out:
-        w = float(c.get("weight") or 0)
-        c["weight"] = w * (k_num if str(c.get("type")) == "numeric" else k_rest)
-    return out
+    return objective.rebalance_numeric([dict(c) for c in checks], target=numeric_share)
 
 
-def analyse(run_id: str, *, target_share: float | None = None) -> dict[str, Any] | None:
+def analyse(
+    run_id: str, *, target_share: float | None = None, raw: bool = False
+) -> dict[str, Any] | None:
     sp = RUNS / run_id / "state.json"
     if not sp.is_file():
         return None
@@ -108,7 +100,12 @@ def analyse(run_id: str, *, target_share: float | None = None) -> dict[str, Any]
     per_kind: dict[str, list[float]] = {}
     shares: list[float] = []
     for case in cases:
-        checks = case["checks"]
+        # 出题时 normalize_checks 会把 numeric 占比归一化，落盘的老题库没经过这一步。
+        # 默认按**实跑路径**量，否则报出来的地板是历史配比下的、跟现在的尺子无关。
+        checks = (
+            case["checks"] if raw
+            else objective.normalize_checks([dict(c) for c in case["checks"]])
+        )
         total = sum(float(c.get("weight") or 0) for c in checks)
         num = sum(float(c.get("weight") or 0) for c in checks if str(c.get("type")) == "numeric")
         if total > 0:
@@ -147,10 +144,17 @@ def main() -> int:
         metavar="占比",
         help="假设出题时要求 numeric 权重占比达到该值（如 0.6），算堆词地板会降到多少",
     )
+    ap.add_argument(
+        "--raw", action="store_true",
+        help="按题库落盘的原始权重量（不过 normalize_checks），用于对比归一化前后的地板",
+    )
     args = ap.parse_args()
     ids = args.runs or sorted(d.name for d in RUNS.iterdir() if (d / "state.json").is_file())
 
-    rows = [d for rid in ids if (d := analyse(rid, target_share=args.target_numeric))]
+    rows = [
+        d for rid in ids
+        if (d := analyse(rid, target_share=args.target_numeric, raw=args.raw))
+    ]
     if not rows:
         print("没有可分析的客观题 run")
         return 2
