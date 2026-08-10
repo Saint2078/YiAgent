@@ -58,8 +58,27 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | GET | `/api/case/{role_id}` | 沉淀的题库（`data/case/role/<role_id>/testcases.jsonl`） |
 
 启动参数（`POST /api/run`）：`role`（必填）、`scoring_mode`（`objective` 默认 / `judge`）、
-`judge_shadow`、`per_dim`、`generations`、`variants_per_gen`、`reps`、`elite`、`min_gain`、
-`patience`、`concurrency`、`budget_tokens`、`budget_seconds`、`seed`。
+`judge_shadow`、`per_dim`、`generations`、`variants_per_gen`、`reps`、`holdout_reps`、`elite`、
+`min_gain`、`patience`、`concurrency`、`budget_tokens`、`budget_seconds`、`seed`。
+
+两个参数值得单独说：
+
+- `variants_per_gen` 建议 **10–12**（默认 6）。32 并发下 5 个变体只用掉约一波，闸门在闲着；
+  受控对照里变体数 5→12 让同相位评测数翻倍而墙钟只多 10.6%（[PERF.md](PERF.md) §8）。
+  代价是 token 随变体数线性涨。
+- `holdout_reps` 默认 **3**（与 `reps` 分开）。holdout 只有 2 个臂 × 5–6 题，是全流程最便宜的
+  一段，却是「有没有泛化」的唯一判据；多跑几次只多一个批次，换来能判定的结论。
+
+## 命令行工具
+
+| 工具 | 用途 |
+| --- | --- |
+| `tools/genome_card.py <run_id>` | 生成基因组卡：内容哈希 / 逐槽消融 / 泛化判定 / 复现配方（json + md） |
+| `tools/genome_card.py verify <run_id> <genome.json>` | 校验落盘基因组是否就是该次实跑的冠军 |
+| `tools/perf_summary.py [run_id...]` | 性能画像：并发利用率、阶段耗时、purpose 级 token/秒 |
+| `tools/build_devteam.py [席位...]` | 批量构建 Develop 六席并写登记表 |
+| `tools/build_devteam.py adopt <席位> <run_id>` | 采纳一次已完成的 run 为该席位基因组，不重跑 |
+| `tools/build_devteam.py registry` | 只按现有落盘基因组重写登记表 |
 
 ## 评分口径
 
@@ -69,6 +88,18 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 - 题级分 = 重复采样均值；维度分 = 该维度题均值；`weighted` = 按蓝图维度权重加权。
 - `composite = weighted − 0.5 × σ(题级分)`，选种用 composite，避免只赢在个别题上。
 - `holdout` 不参与选种，用于看是否过拟合；报告里给 `generalization_gap` 与 paired 明细。
+
+### 什么时候才算「这套基因更强」
+
+`delta_train_weighted` **不是战绩** —— 它算在被用来选冠军的同一批题上，天然偏乐观。
+判定只看 holdout 的配对差值，且必须过区间：
+
+- `paired.mean_delta_ci95`：对题重采样 2000 次的自助 95% 区间，固定 seed 可复算。
+- 区间整体在 0 以上 → 站得住；整体在 0 以下 → 未通过（train 增益是过拟合）；
+  **跨 0 → 判「判不了」，不许当赢**。换一组题就可能翻符号。
+- 判定写进基因组卡的 `verdict`，也写进落盘 `genome.json` 的 `source.verdict`，三处同口径。
+
+自测：`python -m tests.test_stats`（离线，守住「跨 0 不许判赢」与旧 run 的退化路径）。
 
 ## 实测（两次全链路）
 

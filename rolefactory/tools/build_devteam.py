@@ -170,7 +170,7 @@ def report_to_genome(seat: str, meta: dict, report: dict) -> dict[str, Any]:
             "allele_id": choice.get(slot),
             "allele_label": labels.get(slot) or alabel,
         }
-    return {
+    genome = {
         "schema": "opc.agentteam.genome",
         "version": "0.2",
         "role": seat,
@@ -194,6 +194,11 @@ def report_to_genome(seat: str, meta: dict, report: dict) -> dict[str, Any]:
             "params": report.get("params"),
         },
     }
+    # 血统写进落盘文件本身：任何消费方（bridge / 控制台 / 人）不必翻 run 目录，
+    # 就能看出这份基因来自哪次实跑、内容哈希是多少、有没有通过泛化鉴定。
+    genome["source"]["genome_hash"] = _genome_hash(genome)
+    genome["source"]["verdict"] = _verdict(scores)
+    return genome
 
 
 def write_genome(seat: str, genome: dict) -> list[Path]:
@@ -244,6 +249,16 @@ def _genome_hash(genome: dict) -> str:
         return ""
 
 
+def _verdict(scores: dict) -> dict:
+    """复用 genome_card 的泛化判定，保证登记表 / 卡片 / 落盘基因组三处口径一致。"""
+    try:
+        from genome_card import verdict  # 同目录
+
+        return verdict(scores, scores.get("holdout") or {})
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def write_registry(rows: list[dict]) -> None:
     REG_PATH.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -255,26 +270,33 @@ def write_registry(rows: list[dict]) -> None:
         "- 工作台副本：`A002.YiAgent/工作台/AgentTeam/Develop/{Role}/genome.json`",
         "- 基因组卡（含内容哈希 / 逐槽消融 / 复现配方）：`YiAgent/rolefactory/data/runs/{run_id}/genome_card.md`",
         "",
-        "| 席位 | factory 角色名 | run_id | 冠军加权 | Δ基线(train) | holdout Δ | genome_hash | 路径 |",
-        "|------|----------------|--------|----------|--------------|-----------|-------------|------|",
+        "| 席位 | factory 角色名 | run_id | 冠军加权 | Δ基线(train) | holdout Δ | **泛化鉴定** | genome_hash |",
+        "|------|----------------|--------|----------|--------------|-----------|--------------|-------------|",
     ]
     for r in rows:
         src = r.get("source") or {}
         hold = src.get("holdout") or {}
-        h = _genome_hash(r)
+        h = src.get("genome_hash") or _genome_hash(r)
+        vd = (src.get("verdict") or _verdict({"holdout": hold, **src})).get("label") or "未鉴定"
         lines.append(
             f"| {r.get('role')} | {r.get('factory_role')} | `{src.get('run_id')}` | "
             f"{src.get('champion_weighted')} | {src.get('delta_train_weighted')} | "
-            f"{hold.get('delta_weighted')} | `{h[:16] or '—'}` | "
-            f"`AgentTeam/Develop/{r.get('role')}/genome.json` |"
+            f"{hold.get('delta_weighted')} | {vd} | `{h[:16] or '—'}` |"
         )
     lines += [
         "",
-        "## 说明",
+        "落盘路径：`AgentTeam/Develop/{席位}/genome.json`。",
         "",
-        "- 分数来自 rolefactory 客观断言实跑，非冻结演示。",
+        "## 怎么读这张表",
+        "",
+        "- **`Δ基线(train)` 不是战绩**：那是在被用来选冠军的同一批题上算的，天然偏乐观。",
+        "  能不能说「这套基因更强」，只看 `holdout Δ` 与 `泛化鉴定`。",
+        "- **泛化鉴定**取自基因组卡：有配对自助 95% 区间时以区间为准（跨 0 判「判不了」，",
+        "  不许当赢）；早期 run 没有区间，退回「Δ 符号 + 升降计数」的粗判，卡片里会注明。",
+        "- 分数来自 rolefactory 客观断言实跑，非冻结演示；`SCORING.md` 给复算口径。",
         "- bridge `developRoles` 读取 runtime `_workbench/AgentTeam/Develop/*/genome.json`。",
-        "- `genome_hash` 取前 16 位展示；校验落盘基因组是否就是该次实跑的冠军：",
+        "- `genome_hash` 取前 16 位展示，只由 `role_id + 每槽 allele_id + 槽文本 sha256` 决定",
+        "  （不含分数与时间戳）。校验落盘基因组是否就是该次实跑的冠军：",
         "  `python tools/genome_card.py verify <run_id> <genome.json>`。",
         "",
     ]
@@ -324,10 +346,49 @@ def build_one(meta: dict, *, attempts: int = 3) -> dict:
     raise RuntimeError(f"{seat} failed after {attempts} attempts: {last_err}")
 
 
+def adopt(seat: str, run_id: str) -> int:
+    """把一次**已完成**的 run 采纳为某席位的基因组，不重跑。
+
+    用途：手工调参跑出更好的一轮（或换了判定口径要重算血统）时，直接采纳落盘，
+    省掉二十分钟的重跑。报告从本机 run 目录读，读不到再退回服务端。
+    """
+    meta = next((m for m in TEAM if m["seat"] == seat), None)
+    if not meta:
+        raise SystemExit(f"未知席位 {seat}，可选：{[m['seat'] for m in TEAM]}")
+    local = HERE / "data" / "runs" / run_id / "report.json"
+    if local.exists():
+        report = json.loads(local.read_text(encoding="utf-8"))
+    else:
+        report = _http("GET", f"/api/run/{run_id}?full=1")
+    if (report.get("status") or "") != "done":
+        raise SystemExit(f"run {run_id} 状态为 {report.get('status')}，只采纳 done 的")
+    genome = report_to_genome(seat, meta, report)
+    write_genome(seat, genome)
+    src = genome["source"]
+    print(
+        f"adopted {seat} ← {run_id} champ={src.get('champion_weighted')} "
+        f"holdoutΔ={(src.get('holdout') or {}).get('delta_weighted')} "
+        f"verdict={(src.get('verdict') or {}).get('label')} hash={(src.get('genome_hash') or '')[:16]}",
+        flush=True,
+    )
+    write_registry(list(load_existing_genomes().values()))
+    return 0
+
+
 def main() -> int:
     import sys
 
-    only = {a for a in sys.argv[1:] if not a.startswith("-")}
+    argv = sys.argv[1:]
+    if argv and argv[0] == "adopt":
+        if len(argv) < 3:
+            raise SystemExit("用法：build_devteam.py adopt <席位> <run_id>")
+        return adopt(argv[1], argv[2])
+    if argv and argv[0] == "registry":
+        # 只按现有落盘基因组重写登记表（换了判定口径后刷新用，不动 run）
+        write_registry(list(load_existing_genomes().values()))
+        return 0
+
+    only = {a for a in argv if not a.startswith("-")}
     hz = _http("GET", "/healthz")
     if not hz.get("ok") or not hz.get("key_present"):
         raise SystemExit(f"rolefactory not ready: {hz}")

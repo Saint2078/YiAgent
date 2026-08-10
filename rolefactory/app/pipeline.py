@@ -581,6 +581,95 @@ async def execute(run: Run, api_key: str) -> None:
         run.persist()
 
 
+async def reholdout(run_id: str, api_key: str, *, reps: int = 3) -> dict[str, Any]:
+    """对一次**已完成**的 run 只重跑 holdout 相位，结果单独落盘，不改原报告。
+
+    为什么值得一条单独的路径：holdout 是「这套基因到底有没有泛化」的唯一判据，
+    却只有 2 个臂 × 5–6 题 —— 重跑一次约 90s，重跑整条流水线要十分钟。
+    而 `reps=1` 判出的结论噪声大到会翻符号（实测项目经理 Δ 从 −2.74 变 +1.46），
+    所以旧 run 需要一个便宜的复核入口。
+
+    原报告保持不可变（审计要求），复核结果写 `reholdout.json`；
+    `tools/genome_card.py` 发现该文件时优先采用，并在卡片上标注 holdout 来源。
+    """
+    d = store.run_dir(run_id)
+    state = store.read_json(d / "state.json")
+    if not isinstance(state, dict):
+        raise RuntimeError(f"run {run_id} 没有 state.json，无法复核")
+    if (state.get("status") or "") != "done":
+        raise RuntimeError(f"run {run_id} 状态为 {state.get('status')}，只复核 done 的")
+    champ = state.get("champion") or {}
+    if not champ.get("system"):
+        raise RuntimeError(f"run {run_id} 没有冠军基因组，无法复核")
+    hold_ids = set(state.get("holdout_ids") or [])
+    hold = [c for c in (state.get("cases") or []) if c.get("id") in hold_ids]
+    if not hold:
+        raise RuntimeError(f"run {run_id} 没有 holdout 题，无法复核")
+
+    p = dict(state.get("params") or {})
+    reps = max(1, int(reps))
+    # role_id 是从 blueprint 推出的只读属性，给了 blueprint 就自然对上
+    run = Run(run_id=f"{run_id}-reholdout", role=str(state.get("role") or ""), params=p)
+    run.blueprint = state.get("blueprint") or {}
+    run.cases = hold
+    run.phase = "holdout"
+    session = Session(
+        api_key,
+        p.get("model"),
+        concurrency=p.get("concurrency"),
+        budget_tokens=p.get("budget_tokens"),
+        budget_seconds=p.get("budget_seconds"),
+    )
+    run.session = session
+    champ_arm = {
+        "id": champ.get("id") or "champion",
+        "sig": champ.get("sig") or "champion",
+        "system": champ["system"],
+        "choice": champ.get("choice") or {},
+        "labels": champ.get("labels") or {},
+    }
+    base_arm = genes.baseline_variant()
+    t0 = time.monotonic()
+    got = await eval_batch(
+        run, session, [champ_arm, base_arm], hold, reps, shadow_judge=False
+    )
+    if run.eval_failed:
+        # 关键防线：部分失败会静默降级成「只剩缓存那一次重复」，算出来的区间看着更硬其实是假的。
+        # 宁可不写，也不能让半截数据混进证据链（额度耗尽 / 限流时就会走到这）。
+        raise RuntimeError(
+            f"复核失败 {run.eval_failed}/{run.eval_total} 条，不写结果（避免把半截采样当证据）："
+            + "；".join(run.logs[-3:])
+        )
+    champ_h = aggregate(got[champ_arm["id"]], run.blueprint)
+    base_h = aggregate(got[base_arm["id"]], run.blueprint)
+    prev = ((state.get("holdout") or {}).get("delta_weighted"))
+    out = {
+        "schema": "yiagent.rolefactory.reholdout/1",
+        "run_id": run_id,
+        "role": state.get("role"),
+        "checked_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "cases": sorted(hold_ids),
+        "reps": reps,
+        "previous": {"reps": (state.get("holdout") or {}).get("reps") or 1, "delta_weighted": prev},
+        "champion": champ_h,
+        "baseline": base_h,
+        "delta_weighted": (
+            round((champ_h.get("weighted") or 0) - (base_h.get("weighted") or 0), 2)
+            if champ_h.get("weighted") is not None and base_h.get("weighted") is not None
+            else None
+        ),
+        "paired": paired_delta(champ_h, base_h),
+        "evals": {"done": run.eval_done, "failed": run.eval_failed, "total": run.eval_total},
+        "seconds": round(time.monotonic() - t0, 1),
+        "tokens": session.meter.total_tokens,
+        # 复核最容易踩的坑是「大部分评测静默失败、结果看起来跟原来一样」，所以把日志带出来
+        "logs": run.logs[-20:],
+        "llm": session.meter.snapshot(),
+    }
+    store.write_json(d / "reholdout.json", out)
+    return out
+
+
 def scoring_summary(run: Run) -> dict[str, Any]:
     """评分体系说明 + 区分度实测：客观分与影子裁判分各自的分布跨度。"""
     mode = str(run.params.get("scoring_mode") or "judge")
@@ -738,6 +827,15 @@ def write_report(run: Run) -> None:
         report["caveats"].append(
             f"长尾对冲：补发 {llm['hedges']} 次、其中 {llm.get('hedge_wins') or 0} 次由补发先返回；"
             "被丢弃那份的服务端 token 未计入本地计量，实际用量略高于报告值。"
+        )
+    if run.eval_failed:
+        # 单点失败不拖垮整批（设计如此），但失败的那几条不会进 aggregate ——
+        # 分数是从更少的样本上算出来的，这件事必须写在脸上，不能只留一个计数。
+        rate = run.eval_failed / run.eval_total if run.eval_total else 0
+        report["caveats"].insert(
+            0,
+            f"⚠ 有 {run.eval_failed}/{run.eval_total} 条评测失败（{rate:.0%}，多见于额度耗尽或限流）："
+            "失败条目未计入均值，相关分数的实际样本量小于名义值，分差与区间都要打折看。",
         )
     store.write_json(store.run_dir(run.run_id) / "report.json", report)
 

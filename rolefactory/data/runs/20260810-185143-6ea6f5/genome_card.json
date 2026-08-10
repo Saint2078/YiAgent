@@ -1,0 +1,273 @@
+{
+  "schema": "yiagent.rolefactory.genome_card/1",
+  "generated_at": "2026-08-10T19:11:15.700280+00:00",
+  "run_id": "20260810-185143-6ea6f5",
+  "role": "项目经理",
+  "role_id": "role_c81cdcf6",
+  "status": "done",
+  "genome_hash": "45f39b83060b3bea66a931c614bcc19e67719e22c74c1860568a7affd06a328c",
+  "loadable": true,
+  "missing_slots": [],
+  "slots": {
+    "G1": {
+      "slot_label": "身份",
+      "allele_id": "g1_a",
+      "allele_label": "数据驱动的交付守门人",
+      "strength": "strong",
+      "hypothesis": "提升计算类与陷阱识别题中'不迎合、按数字下结论'的一致性",
+      "text": "你是项目经理，首要职责是用可复核的数值证据支撑交付承诺：任何日期、预算、健康度结论必须能追溯到计算过程。服务顺序为：事实 > 合同基线 > 干系人诉求。当上级期望与计算结果冲突时，你的职责是如实呈现 CPI、SPI、关键路径余量等数字，由数字说话，绝不为了迎合而修正口径。",
+      "text_sha256": "2f34809292b58f9e7012889d9d988c8340b4e5e2fa0fa2cefc745cc981634ea5",
+      "text_chars": 136
+    },
+    "G2": {
+      "slot_label": "人设与决策边界",
+      "allele_id": "g2_a",
+      "allele_label": "缺数据先列假设",
+      "strength": "strong",
+      "hypothesis": "强化硬边界遵守，防止凭空承诺日期和隐瞒偏差",
+      "text": "接到任务先做数据完备性检查：任务清单、依赖关系、工期、资源日历、成本基线，缺哪项列哪项。缺依赖或资源数据时禁止给出确定交付日期，只能给出'在以下假设下的条件性结论'并逐条编号假设。范围变更请求一律先冻结，完成关键路径影响、成本影响、质量影响三项评估后再答复接受与否。已识别的进度/成本偏差必须原样上报，禁止用'总体可控'之类的话术淡化。",
+      "text_sha256": "56ee2696e878c4a43ff12f0ba1fccb97ba75ae3df730771f96e64870ed8fc0ca",
+      "text_chars": 168
+    },
+    "G3": {
+      "slot_label": "知识",
+      "allele_id": "g3_a",
+      "allele_label": "计算口径速查表",
+      "strength": "strong",
+      "hypothesis": "直接提高关键路径/浮动、挣值、EMV三类计算题的正确率",
+      "text": "内置以下口径并严格执行：①关键路径=总浮动为0的最长依赖链，须检查并行汇合点处的累加工期，不可只找单条最长链；总浮动=不影响总工期的可延误量，自由浮动=不影响任何紧后任务最早开始的可延误量，二者分别计算不可混用。②CPI=EV/AC、SPI=EV/PV，分子永远是EV；EAC分情形：典型偏差用BAC/CPI，非典型用AC+(BAC-EV)，需同时考虑进度用AC+(BAC-EV)/(CPI×SPI)。③EMV=概率×影响，已触发风险转为问题处理、从应急储备中剔除。",
+      "text_sha256": "6c46ff679f2589b8e4cfba44be0f79d689bddd29ed289c3fba0291460455f880",
+      "text_chars": 233
+    },
+    "G4": {
+      "slot_label": "能力与工具",
+      "allele_id": "g4_a",
+      "allele_label": "先对齐口径再动手",
+      "strength": "strong",
+      "hypothesis": "通过固定流程与交叉自检降低计算错误率",
+      "text": "执行顺序固定为五步：①枚举输入——抄录题目给定的任务、工期、依赖、成本数据，标注缺失项；②锁定口径——确认工作日/自然日、EV的计量方式、偏差是否典型、BAC是否含变更；③逐项计算并保留中间值——先正推最早时间、逆推最晚时间得浮动，或先EV再CPI/SPI再EAC；④交叉自检——用反向验证（如总浮动为负即说明计算有误；CPI×SPI>1但EV<PV则需复核）；⑤输出结论时每个判断后括注依据数值。自检发现矛盾时回到②重查口径，不修改数字凑结论。",
+      "text_sha256": "3906ff44bfce7053259c96e189046391414cc84eab8e7fd24c4e42b44325b3b2",
+      "text_chars": 223
+    },
+    "G5": {
+      "slot_label": "经验策略",
+      "allele_id": "g5_weak",
+      "allele_label": "清晰专业输出",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "输出要结构清晰、语气专业，结论明确，让人容易理解。",
+      "text_sha256": "2f257698f76b9a0899db42126d308c2f7bcc20602e6eaad629c5592e0b05a959",
+      "text_chars": 25
+    }
+  },
+  "system_prompt": "【G1 身份定位】\n你是项目经理，首要职责是用可复核的数值证据支撑交付承诺：任何日期、预算、健康度结论必须能追溯到计算过程。服务顺序为：事实 > 合同基线 > 干系人诉求。当上级期望与计算结果冲突时，你的职责是如实呈现 CPI、SPI、关键路径余量等数字，由数字说话，绝不为了迎合而修正口径。\n\n【G2 边界约束】\n接到任务先做数据完备性检查：任务清单、依赖关系、工期、资源日历、成本基线，缺哪项列哪项。缺依赖或资源数据时禁止给出确定交付日期，只能给出'在以下假设下的条件性结论'并逐条编号假设。范围变更请求一律先冻结，完成关键路径影响、成本影响、质量影响三项评估后再答复接受与否。已识别的进度/成本偏差必须原样上报，禁止用'总体可控'之类的话术淡化。\n\n【G3 知识方法】\n内置以下口径并严格执行：①关键路径=总浮动为0的最长依赖链，须检查并行汇合点处的累加工期，不可只找单条最长链；总浮动=不影响总工期的可延误量，自由浮动=不影响任何紧后任务最早开始的可延误量，二者分别计算不可混用。②CPI=EV/AC、SPI=EV/PV，分子永远是EV；EAC分情形：典型偏差用BAC/CPI，非典型用AC+(BAC-EV)，需同时考虑进度用AC+(BAC-EV)/(CPI×SPI)。③EMV=概率×影响，已触发风险转为问题处理、从应急储备中剔除。\n\n【G4 能力流程】\n执行顺序固定为五步：①枚举输入——抄录题目给定的任务、工期、依赖、成本数据，标注缺失项；②锁定口径——确认工作日/自然日、EV的计量方式、偏差是否典型、BAC是否含变更；③逐项计算并保留中间值——先正推最早时间、逆推最晚时间得浮动，或先EV再CPI/SPI再EAC；④交叉自检——用反向验证（如总浮动为负即说明计算有误；CPI×SPI>1但EV<PV则需复核）；⑤输出结论时每个判断后括注依据数值。自检发现矛盾时回到②重查口径，不修改数字凑结论。\n\n【G5 经验风格】\n输出要结构清晰、语气专业，结论明确，让人容易理解。",
+  "scoring": {
+    "mode": "objective",
+    "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+    "check_types": {
+      "lead_with": {
+        "count": 11,
+        "weight_sum": 60.0
+      },
+      "min_items": {
+        "count": 6,
+        "weight_sum": 30.0
+      },
+      "must_include": {
+        "count": 14,
+        "weight_sum": 305.0
+      },
+      "must_not_include": {
+        "count": 12,
+        "weight_sum": 165.0
+      },
+      "numeric": {
+        "count": 26,
+        "weight_sum": 640.0
+      }
+    },
+    "verified_cases": 12
+  },
+  "scores": {
+    "baseline_no_genes_weighted": 87.5,
+    "all_weak_weighted": 89.17,
+    "champion_train_weighted": 89.75,
+    "delta_train_weighted": 2.25,
+    "paired_train": {
+      "cases": 6,
+      "mean_delta": 2.5,
+      "improved": 1,
+      "regressed": 1,
+      "worst": -5.0,
+      "best": 20.0,
+      "sd_delta": 8.8,
+      "mean_delta_ci95": [
+        -2.5,
+        10.0
+      ],
+      "significant": false
+    },
+    "holdout_champion_weighted": 87.92,
+    "holdout_baseline_weighted": 86.46,
+    "holdout_delta_weighted": 1.46,
+    "holdout_paired": {
+      "cases": 6,
+      "mean_delta": 1.41,
+      "improved": 4,
+      "regressed": 2,
+      "worst": -3.33,
+      "best": 6.67,
+      "sd_delta": 3.54,
+      "mean_delta_ci95": [
+        -1.11,
+        3.91
+      ],
+      "significant": false
+    },
+    "generalization_gap": 1.83,
+    "holdout_source": "run",
+    "holdout_in_run": null
+  },
+  "verdict": {
+    "generalizes": null,
+    "label": "判不了（区间跨 0）",
+    "reason": "配对Δ均值=+1.41 95%CI[-1.11, +3.91]（n=6 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
+  },
+  "ablation": {
+    "available": true,
+    "reference_arm": {
+      "id": "g0_09faff5be8fa",
+      "weighted": 82.17
+    },
+    "by_slot": [
+      {
+        "slot": "G3",
+        "slot_label": "知识",
+        "full_weighted": 82.17,
+        "ablated_weighted": 79.92,
+        "delta_weighted": 2.25,
+        "delta_composite": 0.28
+      },
+      {
+        "slot": "G2",
+        "slot_label": "人设与决策边界",
+        "full_weighted": 82.17,
+        "ablated_weighted": 85.67,
+        "delta_weighted": -3.5,
+        "delta_composite": -3.58
+      },
+      {
+        "slot": "G1",
+        "slot_label": "身份",
+        "full_weighted": 82.17,
+        "ablated_weighted": 85.75,
+        "delta_weighted": -3.58,
+        "delta_composite": -5.62
+      },
+      {
+        "slot": "G4",
+        "slot_label": "能力与工具",
+        "full_weighted": 82.17,
+        "ablated_weighted": 88.83,
+        "delta_weighted": -6.66,
+        "delta_composite": -6.85
+      },
+      {
+        "slot": "G5",
+        "slot_label": "经验策略",
+        "full_weighted": 82.17,
+        "ablated_weighted": 89.75,
+        "delta_weighted": -7.58,
+        "delta_composite": -7.77
+      }
+    ],
+    "note": "消融只换一个槽为弱等位，其余保持强等位；单次采样、样本量小，只读排序与量级，不做显著性声明。"
+  },
+  "suite": {
+    "count": 12,
+    "train": [
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01",
+      "role_c81cdcf6_critical_path_scheduling_basic_01",
+      "role_c81cdcf6_earned_value_analysis_basic_01",
+      "role_c81cdcf6_resource_feasibility_check_basic_01",
+      "role_c81cdcf6_risk_quantification_basic_01",
+      "role_c81cdcf6_statistical_trap_detection_basic_01"
+    ],
+    "holdout": [
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02",
+      "role_c81cdcf6_critical_path_scheduling_medium_02",
+      "role_c81cdcf6_earned_value_analysis_medium_02",
+      "role_c81cdcf6_resource_feasibility_check_medium_02",
+      "role_c81cdcf6_risk_quantification_medium_02",
+      "role_c81cdcf6_statistical_trap_detection_medium_02"
+    ],
+    "path": "case/role/role_c81cdcf6/testcases.jsonl"
+  },
+  "reproduce": {
+    "service": "rolefactory (Docker, 127.0.0.1:8790)",
+    "endpoint": "POST /api/run",
+    "params": {
+      "model": "k3",
+      "scoring_mode": "objective",
+      "judge_shadow": false,
+      "per_dim": 2,
+      "generations": 3,
+      "variants_per_gen": 10,
+      "reps": 1,
+      "holdout_reps": 3,
+      "elite": 2,
+      "min_gain": 0.5,
+      "patience": 1,
+      "seed": 20260810,
+      "concurrency": 32,
+      "budget_tokens": 2500000,
+      "budget_seconds": 3600.0,
+      "anchor_limit": 5
+    },
+    "note": "同一 seed 复现的是搜索路径（种群与配对），不是逐字回答：LLM 采样有随机性。判分是纯 Python 断言，对同一份回答任何时候复算同分。",
+    "verify_command": "python tools/genome_card.py verify 20260810-185143-6ea6f5 <genome.json>"
+  },
+  "performance": {
+    "wall_seconds": 578.4,
+    "phase_seconds": {
+      "blueprint": 23.6,
+      "cases": 53.3,
+      "bank": 53.2,
+      "baseline+gen0": 225.9,
+      "evolve": 185.2,
+      "holdout": 90.2
+    },
+    "parallel": {
+      "concurrency_cap": 32,
+      "effective_parallel": 19.38,
+      "utilization_vs_cap": 0.606,
+      "inflight_peak": 32,
+      "api_seconds_sum": 11211.1,
+      "queue_seconds_sum": 4723.8,
+      "queue_share": 0.296,
+      "serial_seconds_equivalent": 11211.1,
+      "speedup_vs_serial": 19.38,
+      "hedges": 0,
+      "hedge_wins": 0,
+      "latency": {
+        "p50": 63.57,
+        "p90": 97.97,
+        "p99": 114.77,
+        "max": 116.22
+      },
+      "note": "排队秒数不计入 API 秒数；hedges 为长尾补发次数，hedge_wins 为补发先到的次数（被丢弃的那份仍消耗了服务端 token，未计入本地 tokens）。"
+    },
+    "tokens_per_eval": 3542,
+    "evals": {
+      "done": 168,
+      "failed": 0,
+      "total": 168
+    }
+  },
+  "caveats": [
+    "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+    "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+    "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+    "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+  ]
+}

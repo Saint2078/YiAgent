@@ -157,6 +157,20 @@ def verdict(scores: dict[str, Any], hold: dict[str, Any]) -> dict[str, Any]:
         return {"generalizes": None, "label": "判不了（区间跨 0）",
                 "reason": f"{band}：换一组题就可能翻符号，需加题量或重复次数"}
 
+    # 没有区间且每题只跑了一次 → 一律不给定论。
+    # 实测依据：项目经理这一席把 holdout 采样从 1 次提到 3 次，Δ 就从 −2.74 翻成 +1.46
+    # （PERF.md §9）。reps=1 时 Δ 的符号本身不稳定，说「过拟合」或「站得住」都是过度解读。
+    if (reps or 1) <= 1:
+        return {
+            "generalizes": None,
+            "label": "reps=1 判不了（待复核）",
+            "reason": (
+                f"holdout Δ={d:+}，配对 {imp} 升 / {reg} 降（{sample}）：每题只采样一次，"
+                "符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。"
+                f"复核：POST /api/run/{{run_id}}/reholdout {{\"reps\":3}}"
+            ),
+        }
+
     note = "（该 run 无置信区间，粗判）"
     if d > 0 and imp > reg:
         return {"generalizes": True, "label": "holdout 站得住",
@@ -170,6 +184,20 @@ def verdict(scores: dict[str, Any], hold: dict[str, Any]) -> dict[str, Any]:
             "reason": f"holdout Δ={d:+} 但配对 {imp} 升 / {reg} 降（{sample}），方向不一致{note}"}
 
 
+def _read_reholdout(run_id: str) -> dict[str, Any] | None:
+    """holdout 复核结果（POST /api/run/{id}/reholdout 生成）。
+
+    原报告不可变，复核单独落盘；这里优先采用复核，因为它采样更足、带置信区间。
+    """
+    p = RUNS / run_id / "reholdout.json"
+    if not p.is_file():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 复核文件坏了不该让卡片生不出来
+        return None
+
+
 def build_card(run_id: str) -> dict[str, Any]:
     report = _read_report(run_id)
     role_id = str(report.get("role_id") or "")
@@ -179,6 +207,12 @@ def build_card(run_id: str) -> dict[str, Any]:
     base = scores.get("baseline_no_genes") or {}
     weak = scores.get("all_weak_genes") or {}
     hold = scores.get("holdout") or {}
+    recheck = _read_reholdout(run_id)
+    hold_source = "run"
+    if recheck and recheck.get("delta_weighted") is not None:
+        # 复核采样更足：泛化判定与 holdout 分数都以它为准，原报告的数留在 holdout_in_run
+        hold = {**hold, **{k: recheck[k] for k in ("reps", "champion", "baseline", "delta_weighted", "paired")}}
+        hold_source = "reholdout"
     perf = report.get("performance") or {}
     params = report.get("params") or {}
     missing = [s for s in SLOTS if not slots[s]["text"]]
@@ -211,6 +245,12 @@ def build_card(run_id: str) -> dict[str, Any]:
             "holdout_delta_weighted": hold.get("delta_weighted"),
             "holdout_paired": hold.get("paired"),
             "generalization_gap": hold.get("generalization_gap"),
+            "holdout_source": hold_source,
+            "holdout_in_run": (
+                {"reps": (scores.get("holdout") or {}).get("reps") or 1,
+                 "delta_weighted": (scores.get("holdout") or {}).get("delta_weighted")}
+                if hold_source == "reholdout" else None
+            ),
         },
         "verdict": verdict({**scores}, hold),
         "ablation": ablation(report),
@@ -258,6 +298,14 @@ def card_md(card: dict[str, Any]) -> str:
         f"| holdout 冠军 / 基线 / Δ | {sc.get('holdout_champion_weighted')} / "
         f"{sc.get('holdout_baseline_weighted')} / {sc.get('holdout_delta_weighted')} |",
         f"| 泛化差(train−holdout) | {sc.get('generalization_gap')} |",
+    ]
+    if sc.get("holdout_source") == "reholdout":
+        old = sc.get("holdout_in_run") or {}
+        lines.append(
+            f"| holdout 来源 | **复核**（`reholdout.json`，采样更足）；"
+            f"原 run 那次 reps={old.get('reps')} 得 Δ={old.get('delta_weighted')} |"
+        )
+    lines += [
         "",
         "## 冠军等位",
         "",

@@ -5,7 +5,7 @@
 | role_id | `role_b2267ae0` |
 | genome_hash | `fcd551a11a53be8f82cbec9b891e0b5b51e1e55a96302ccd0150baa0173a839a` |
 | 可加载 | 是 |
-| **泛化鉴定** | **证据不足** —— holdout Δ=+1.76 但配对 2 升 / 2 降（n=6），方向不一致 |
+| **泛化鉴定** | **reps=1 判不了（待复核）** —— holdout Δ=+1.76，配对 2 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {"reps":3} |
 | 判分 | objective |
 | 自校通过题数 | 12 |
 | 冠军(train) | 91.0 |

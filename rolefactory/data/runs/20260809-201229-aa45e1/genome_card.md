@@ -5,7 +5,7 @@
 | role_id | `role_cbf11840` |
 | genome_hash | `eb8422af9b560b6cad4e9e34574c0e2df6acd73cff2d5c7404446139bbda67cc` |
 | 可加载 | 是 |
-| **泛化鉴定** | **未通过泛化鉴定** —— holdout Δ=-3.12，配对 0 升 / 2 降（n=6）：train 上的增益（7.5）大概率是过拟合，不能宣称该基因组更强 |
+| **泛化鉴定** | **reps=1 判不了（待复核）** —— holdout Δ=-3.12，配对 0 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {"reps":3} |
 | 判分 | objective |
 | 自校通过题数 | 12 |
 | 冠军(train) | 93.12 |

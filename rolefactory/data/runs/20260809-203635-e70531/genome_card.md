@@ -5,7 +5,7 @@
 | role_id | `devops` |
 | genome_hash | `623dfa11cb6e5accc6f5b13e06831eabb81b7ce6b3002b990ea6e24ab23f35f6` |
 | 可加载 | 是 |
-| **泛化鉴定** | **holdout 站得住** —— holdout Δ=+6.81，配对 3 升 / 0 降（n=5） |
+| **泛化鉴定** | **reps=1 判不了（待复核）** —— holdout Δ=+6.81，配对 3 升 / 0 降（n=5 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {"reps":3} |
 | 判分 | objective |
 | 自校通过题数 | 10 |
 | 冠军(train) | 92.55 |

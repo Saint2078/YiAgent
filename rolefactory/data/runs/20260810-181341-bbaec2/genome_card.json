@@ -1,6 +1,6 @@
 {
   "schema": "yiagent.rolefactory.genome_card/1",
-  "generated_at": "2026-08-10T18:41:11.230313+00:00",
+  "generated_at": "2026-08-10T19:11:16.049586+00:00",
   "run_id": "20260810-181341-bbaec2",
   "role": "评测工程师",
   "role_id": "role_b2267ae0",
@@ -116,12 +116,14 @@
       "worst": -10.0,
       "best": 20.0
     },
-    "generalization_gap": -1.04
+    "generalization_gap": -1.04,
+    "holdout_source": "run",
+    "holdout_in_run": null
   },
   "verdict": {
     "generalizes": null,
-    "label": "证据不足",
-    "reason": "holdout Δ=+1.76 但配对 2 升 / 2 降（n=6），方向不一致"
+    "label": "reps=1 判不了（待复核）",
+    "reason": "holdout Δ=+1.76，配对 2 升 / 2 降（n=6 题）：每题只采样一次，符号不稳定（实测提到 3 次后有席位 Δ 直接翻正）。复核：POST /api/run/{run_id}/reholdout {\"reps\":3}"
   },
   "ablation": {
     "available": true,

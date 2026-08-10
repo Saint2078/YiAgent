@@ -87,9 +87,21 @@ v = verdict({"delta_train_weighted": 8.0},
                         "mean_delta_ci95": [-11.0, -1.0]}})
 check("区间为负 → 未通过", v["generalizes"] is False, str(v))
 
-# 旧 run 没有区间 → 退回粗判，且 reason 要注明
+# reps=1 且无区间 → 一律不给定论（符号本身不稳定，实测会翻）
 v = verdict({"delta_train_weighted": 8.0},
             {"delta_weighted": -2.74, "paired": {"cases": 6, "improved": 1, "regressed": 2}})
+check("reps=1 → 判不了", v["generalizes"] is None and "reps=1" in v["label"], str(v))
+
+# reps=1 时哪怕 Δ 很正也不许判赢（DevOps 那种 3 升 0 降的漂亮数也一样）
+v = verdict({"delta_train_weighted": 5.5},
+            {"delta_weighted": 6.81, "reps": 1,
+             "paired": {"cases": 5, "improved": 3, "regressed": 0}})
+check("reps=1 且 Δ 为正 → 仍判不了", v["generalizes"] is None, str(v))
+
+# reps≥2 但无区间 → 退回粗判，且 reason 要注明
+v = verdict({"delta_train_weighted": 8.0},
+            {"delta_weighted": -2.74, "reps": 3,
+             "paired": {"cases": 6, "improved": 1, "regressed": 2}})
 check("无区间 → 粗判", v["generalizes"] is False and "粗判" in v["reason"], str(v))
 
 # 没有 holdout → 未鉴定，不能崩

@@ -13,9 +13,10 @@ from fastapi.responses import JSONResponse
 
 from . import anchors as anchors_mod
 from . import judge as judge_mod
+from . import pipeline
 from . import store
 from .config import SETTINGS
-from .llm import Session, close_client
+from .llm import Budget, Session, close_client
 from .pipeline import MANAGER, PHASES
 
 app = FastAPI(title="YiAgent RoleFactory", version="0.1.0")
@@ -314,6 +315,32 @@ async def shadow_compare(run_id: str, payload: dict[str, Any] = Body(default={})
     }
     store.write_json(store.run_dir(run_id) / "shadow.json", out)
     return out
+
+
+@app.get("/api/run/{run_id}/reholdout")
+async def get_reholdout(run_id: str) -> Any:
+    """读已存的 holdout 复核结果（由 POST 同路径生成）。"""
+    out = store.read_json(store.run_dir(run_id) / "reholdout.json")
+    if out is None:
+        raise HTTPException(404, "未做 holdout 复核（先 POST 同路径）")
+    return out
+
+
+@app.post("/api/run/{run_id}/reholdout")
+async def post_reholdout(run_id: str, payload: dict[str, Any] = Body(default={})) -> Any:
+    """只重跑 holdout 相位（默认重复 3 次），给出配对自助区间。
+
+    原报告不动，结果落 `reholdout.json`。用途：旧 run 的 holdout 只跑了 1 次，
+    Δ 的符号不稳定；重跑一次约 90s，比重跑整条流水线（约 10 分钟）便宜得多。
+    """
+    reps = max(1, min(8, int(payload.get("reps") or 3)))
+    try:
+        return await pipeline.reholdout(run_id, _key(payload.get("api_key")), reps=reps)
+    except Budget as exc:
+        # 额度耗尽 / Key 失效：说清楚是外部原因，别让调用方以为是这次 run 的数据有问题
+        raise HTTPException(503, f"上游不可用，未写复核结果：{exc}") from exc
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.post("/api/run/{run_id}/abort")

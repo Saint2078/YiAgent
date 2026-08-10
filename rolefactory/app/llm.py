@@ -347,6 +347,11 @@ class Session:
 
             body = resp.text[:400]
             last_err = f"HTTP {resp.status_code}: {body}"
+            # 401/403 是「今天别想跑了」：Key 无效或额度耗尽。重试与后续调用都注定失败，
+            # 继续跑只会把一整轮变成几百条静默失败。直接中止整个 Session，让 run 干净收场。
+            if resp.status_code in (401, 403):
+                self.abort(f"http_{resp.status_code}")
+                raise Budget(f"{purpose} HTTP {resp.status_code}: {body}")
             if resp.status_code == 400 and "temperature" in payload and _TEMP_ERR.search(body):
                 _TEMP_UNSUPPORTED["flag"] = True
                 payload.pop("temperature", None)
