@@ -1,6 +1,6 @@
 {
   "schema": "yiagent.rolefactory.genome_card/1",
-  "generated_at": "2026-08-10T22:15:35.359029+00:00",
+  "generated_at": "2026-08-10T23:00:07.274496+00:00",
   "run_id": "20260809-191310-a7b2bd",
   "role": "产品经理",
   "role_id": "role_775f14fc",
@@ -132,6 +132,17 @@
     "generalizes": null,
     "label": "判不了（区间跨 0）",
     "reason": "配对Δ均值=+6.07 95%CI[-15.55, +38.12]（n=5 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
+  },
+  "holdout_headroom": {
+    "cases": 5,
+    "baseline_mean": 74.36,
+    "cases_at_full_marks": 0,
+    "cases_without_5pt_room": 1,
+    "usable_cases": 4,
+    "usable_share": 0.8,
+    "mean_upside": 25.64,
+    "mean_downside": 74.36,
+    "upside_over_downside": 0.345
   },
   "ablation": {
     "available": true,

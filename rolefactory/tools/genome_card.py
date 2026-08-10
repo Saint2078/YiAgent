@@ -127,6 +127,65 @@ def ablation(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+CEILING = 95.0  # 基线高于此分，就没有 5 分可涨空间
+
+
+def headroom(hold: dict[str, Any]) -> dict[str, Any] | None:
+    """holdout 里有多少题**根本没有可涨空间**，以及量尺偏得多厉害。
+
+    为什么要挂在判定旁边：判定只报 Δ 和区间，读者会把「41 题」当成 41 题的判定力。
+    实测 v3 试跑 41 题里有 **10 道基线就是满分 100** —— 那些题无论基因多好都
+    显示不出提升，有效题量只有 31（PERF.md §18.3）。
+
+    还有一层比"少了方差"更要紧：基线 95 分的题，冠军最多 +5、却可以 −95。
+    **上下不对称**，波动在上方被截断、在下方不被截断，于是即便基因完全无害，
+    量出来的 Δ 也倾向为负。所以高基线席位上的负号不能直接读成"基因有害"。
+
+    只看基线、不看冠军 —— 因此不构成事后择优。
+    """
+    base = ((hold.get("baseline") or {}).get("by_case")) or {}
+    vals = [float(v) for v in base.values() if isinstance(v, (int, float))]
+    if not vals:
+        return None
+    n = len(vals)
+    mean = sum(vals) / n
+    full = sum(1 for v in vals if v >= 99.99)
+    tight = sum(1 for v in vals if v > CEILING)
+    up, down = 100.0 - mean, mean
+    return {
+        "cases": n,
+        "baseline_mean": round(mean, 2),
+        "cases_at_full_marks": full,
+        "cases_without_5pt_room": tight,
+        "usable_cases": n - tight,
+        "usable_share": round((n - tight) / n, 3),
+        "mean_upside": round(up, 2),
+        "mean_downside": round(down, 2),
+        "upside_over_downside": round(up / down, 3) if down else None,
+    }
+
+
+def headroom_caveat(hr: dict[str, Any] | None, delta: float | None) -> str:
+    """天花板严重到会改变结论读法时给出的告警。空串表示没问题。"""
+    if not hr:
+        return ""
+    bits = []
+    if hr["usable_share"] < 0.7:
+        bits.append(
+            f"{hr['cases']} 题里只有 {hr['usable_cases']} 题留得下 5 分可涨空间"
+            f"（{hr['cases_at_full_marks']} 题基线满分）—— **有效题量不是名义题量**"
+        )
+    ratio = hr.get("upside_over_downside")
+    if ratio is not None and ratio < 0.1:
+        s = (f"基线均分 {hr['baseline_mean']}，平均只剩 {hr['mean_upside']} 分可涨、"
+             f"却有 {hr['mean_downside']} 分可跌（上行/下行={ratio}）：量尺上下不对称，"
+             "Δ 会被**系统性压向负数**")
+        if delta is not None and delta < 0:
+            s += "。**因此这个负号不足以说明基因有害**"
+        bits.append(s)
+    return "；".join(bits)
+
+
 def verdict(scores: dict[str, Any], hold: dict[str, Any]) -> dict[str, Any]:
     """泛化判定：train 上赢不算数，只看 holdout 的配对差值。
 
@@ -279,6 +338,9 @@ def build_card(run_id: str) -> dict[str, Any]:
             ),
         },
         "verdict": verdict({**scores}, hold),
+        # 判定旁边必须挂「这些题有没有能力显示提升」：只报 Δ 和区间，
+        # 读者会把名义题量当判定力（实测 41 题里 10 题基线满分）。
+        "holdout_headroom": headroom(hold),
         "ablation": ablation(report),
         "suite": report.get("suite"),
         "reproduce": {
@@ -343,6 +405,17 @@ def card_md(card: dict[str, Any]) -> str:
             f"| holdout 来源 | **复核**（`reholdout.json`，采样更足）；"
             f"原 run 那次 reps={old.get('reps')} 得 Δ={old.get('delta_weighted')} |"
         )
+    hr = card.get("holdout_headroom") or {}
+    if hr:
+        lines.append(
+            f"| holdout 可涨空间 | 基线均分 {hr['baseline_mean']}｜"
+            f"{hr['usable_cases']}/{hr['cases']} 题留得下 5 分（{hr['usable_share']:.0%}）｜"
+            f"{hr['cases_at_full_marks']} 题基线满分｜"
+            f"上行 {hr['mean_upside']} vs 下行 {hr['mean_downside']} |"
+        )
+        cav = headroom_caveat(hr, sc.get("holdout_delta_weighted"))
+        if cav:
+            lines.append(f"| ⚠ 天花板 | {cav}（PERF.md §18） |")
     vt, vh = sc.get("scorer_version_train"), sc.get("scorer_version_holdout")
     if vt != vh:
         lines.append(

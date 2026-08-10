@@ -1,6 +1,6 @@
 {
   "schema": "yiagent.rolefactory.genome_card/1",
-  "generated_at": "2026-08-10T22:15:35.459904+00:00",
+  "generated_at": "2026-08-10T23:00:07.364165+00:00",
   "run_id": "20260810-185143-6ea6f5",
   "role": "项目经理",
   "role_id": "role_c81cdcf6",
@@ -135,6 +135,17 @@
     "generalizes": null,
     "label": "判不了（区间跨 0）",
     "reason": "配对Δ均值=+1.41 95%CI[-1.11, +3.91]（n=6 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
+  },
+  "holdout_headroom": {
+    "cases": 6,
+    "baseline_mean": 85.97,
+    "cases_at_full_marks": 0,
+    "cases_without_5pt_room": 0,
+    "usable_cases": 6,
+    "usable_share": 1.0,
+    "mean_upside": 14.03,
+    "mean_downside": 85.97,
+    "upside_over_downside": 0.163
   },
   "ablation": {
     "available": true,
