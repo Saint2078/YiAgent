@@ -22,6 +22,12 @@
 4. 宣称纪律：未证明泛化（`generalizes is not True`）时，`claim` 里不许出现「更强」
 5. 对照件：全弱 variant 必须自带血统且 `generalizes` 不为真（不许继承冠军战绩）
 6. 载体来源路径可移植：`markers.source.path` 不能是绝对路径（换机器就不可复现）
+7. holdout 数字同源：载体 / bank 里的 `reps`、两个 Δ、配对区间必须与卡片当前采用的那份
+   holdout 逐个相等；且**复核存在时卡片必须在用复核**（否则就是忘了重生成卡片）
+
+第 7 条是补上来的：前六条只核哈希与判定标签，于是出现过「Δ 取自 reps=3 的复核、
+reps 却还标 1」—— 判定标签一致、哈希一致，全绿，但表上那行数自相矛盾。
+同一件事的几个字段必须整块同源，光核其中一个字段核不出来。
 
 用法：
     python scripts/verify_chain.py              # 六席全核，有问题退出码 1
@@ -64,6 +70,52 @@ def verdict_of(obj: Any) -> tuple[Any, str]:
     v = (obj or {}).get("verdict") or {}
     g = v.get("generalizes")
     return (g if isinstance(g, bool) else None), str(v.get("label") or "")
+
+
+def check_holdout_numbers(
+    run_id: str, card: dict[str, Any] | None, bank_pr: dict[str, Any], vec_pr: dict[str, Any]
+) -> list[str]:
+    """载体/bank 带的 holdout 数字，必须整块等于卡片当前采用的那份。
+
+    两类错都在这儿抓：
+      · 下游从两个来源各取一半（Δ 取卡片、reps 取原报告）→ 数字互相矛盾
+      · 复核跑完忘了重生成卡片 → 卡片还在用原报告，下游跟着一起旧
+    """
+    out: list[str] = []
+    if not card:
+        return out
+    cs = card.get("scores") or {}
+    want = {
+        "reps": cs.get("holdout_reps"),
+        "delta_weighted": cs.get("holdout_delta_weighted"),
+        "paired.mean_delta": (cs.get("holdout_paired") or {}).get("mean_delta"),
+    }
+    for name, pr in (("bank", bank_pr), ("vector", vec_pr)):
+        hold = (pr or {}).get("holdout") or {}
+        if not hold:
+            continue
+        got = {
+            "reps": hold.get("reps"),
+            "delta_weighted": hold.get("delta_weighted"),
+            "paired.mean_delta": (hold.get("paired") or {}).get("mean_delta"),
+        }
+        for key, w in want.items():
+            if w is None:
+                continue
+            if got[key] != w:
+                out.append(f"{name} 的 holdout.{key}={got[key]} 与卡片 {w} 不一致（数字不同源）")
+
+    # 复核存在就必须在用它：卡片没换 = 忘了重生成，下游拿到的是复核前的数
+    rh = load(RUNS / run_id / "reholdout.json") if run_id else None
+    if rh and rh.get("delta_weighted") is not None:
+        if cs.get("holdout_source") != "reholdout":
+            out.append(
+                f"run {run_id} 有 reholdout.json，但卡片仍在用原报告"
+                "（复核后没重生成卡片：python tools/genome_card.py <run_id>）"
+            )
+        elif cs.get("holdout_delta_weighted") != rh.get("delta_weighted"):
+            out.append("卡片标称用复核，但 Δ 与 reholdout.json 不等")
+    return out
 
 
 def check_seat(seat: str) -> dict[str, Any]:
@@ -186,6 +238,9 @@ def check_seat(seat: str) -> dict[str, Any]:
     spath = str((((vector or {}).get("markers") or {}).get("source") or {}).get("path") or "")
     if spath and (spath[1:3] == ":\\" or spath.startswith("/")):
         problems.append(f"载体来源是绝对路径，换机器不可复现：{spath}")
+
+    # ---- 7) holdout 数字同源 ----
+    problems += check_holdout_numbers(run_id, card, bank_pr, vec_pr)
 
     return {
         "seat": seat,

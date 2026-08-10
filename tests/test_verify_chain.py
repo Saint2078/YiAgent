@@ -152,6 +152,40 @@ class ChainVerifierTests(unittest.TestCase):
         (self.runs / run_id / "report.json").unlink()
         self._assert_catches("缺 report.json", self._run())
 
+    # ---- 数字同源（第 7 条）：这两例是真实踩过的坑，不是假想 ----
+
+    def test_catches_reps_from_other_source(self):
+        """Δ 来自 reps=3 的复核、reps 却标 1 —— 哈希与判定都对，只有这一栏矛盾。
+
+        实测发生过：导出血统时 Δ 从卡片取、reps 从原报告取。前六条检查全绿。
+        """
+        vp = self.develop / SEAT / "vector.json"
+        self._patch(vp, lambda v: v["markers"]["provenance"]["holdout"].update(reps=1))
+        r = self._run()
+        self._assert_catches("holdout.reps", r)
+        self.assertTrue(any("不同源" in p for p in r["problems"]))
+
+    def test_catches_delta_from_other_source(self):
+        vp = self.develop / SEAT / "vector.json"
+        self._patch(
+            vp, lambda v: v["markers"]["provenance"]["holdout"].update(delta_weighted=99.9)
+        )
+        self._assert_catches("holdout.delta_weighted", self._run())
+
+    def test_catches_card_not_regenerated_after_reholdout(self):
+        """复核落盘了、卡片没重生成 —— 下游拿到的全是复核前的数，且零报错。"""
+        run_id = json.loads((self.develop / SEAT / "genome.json").read_text(encoding="utf-8"))[
+            "source"
+        ]["run_id"]
+        (self.runs / run_id / "reholdout.json").write_text(
+            json.dumps({"reps": 3, "delta_weighted": 7.77,
+                        "paired": {"mean_delta": 7.5, "cases": 6}}),
+            encoding="utf-8",
+        )
+        cp = self.runs / run_id / "genome_card.json"
+        self._patch(cp, lambda c: c["scores"].update(holdout_source="run"))
+        self._assert_catches("卡片仍在用原报告", self._run())
+
 
 class AllSeatsConsistentTests(unittest.TestCase):
     """六席证据链必须全自洽 —— 把对账从「记得跑一下」变成测试会挂的事。
