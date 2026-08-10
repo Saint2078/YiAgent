@@ -1,0 +1,88 @@
+{
+  "synced_at": "2026-08-10T05:22:03.589906+00:00",
+  "mode": "additive_enriched",
+  "seats": [
+    {
+      "seat": "Product",
+      "base_pack": "product_manager",
+      "pack_id": "product_manager_v1_1",
+      "run_id": "20260809-191310-a7b2bd",
+      "alleles_base": 54,
+      "alleles_factory_added": 15,
+      "alleles_total": 69,
+      "dimensions": [
+        "指标定义与护栏设计",
+        "实验解读与统计陷阱识别",
+        "量化优先级与机会成本",
+        "需求规格与验收可判定性",
+        "漏斗异动归因与反事实校验"
+      ]
+    },
+    {
+      "seat": "PM",
+      "base_pack": "project_manager",
+      "pack_id": "project_manager_v1_1",
+      "run_id": "20260809-192927-dd1286",
+      "alleles_base": 54,
+      "alleles_factory_added": 15,
+      "alleles_total": 69,
+      "dimensions": [
+        "关键路径与工期计算",
+        "挣值与成本绩效计算",
+        "统计陷阱与进度数据误读识别",
+        "反直觉计划陷阱识别",
+        "资源冲突与计划可行性核查",
+        "风险量化与应对决策"
+      ]
+    },
+    {
+      "seat": "Architect",
+      "base_pack": "ai_architect",
+      "pack_id": "ai_architect_v1_1",
+      "run_id": "20260809-194427-8cfdb4",
+      "alleles_base": 56,
+      "alleles_factory_added": 15,
+      "alleles_total": 71,
+      "dimensions": [
+        "容量与成本定量核算",
+        "评估泄漏与统计陷阱识别",
+        "分布式失败语义与幂等设计",
+        "SLO 硬约束下的取舍求解",
+        "安全合规边界与高风险否决"
+      ]
+    },
+    {
+      "seat": "Dev",
+      "base_pack": "develop",
+      "pack_id": "develop_v1_1",
+      "run_id": "20260809-201229-aa45e1",
+      "alleles_base": 54,
+      "alleles_factory_added": 15,
+      "alleles_total": 69,
+      "dimensions": [
+        "代码缺陷定位与修复推断",
+        "边界条件与数值陷阱识别",
+        "复杂度与容量数值估算",
+        "测试推断与预期输出推导",
+        "数据统计推理与聚合陷阱",
+        "反直觉语义与并发行为判断"
+      ]
+    },
+    {
+      "seat": "DevOps",
+      "base_pack": "devops",
+      "pack_id": "devops_v1_1",
+      "run_id": "20260809-203635-e70531",
+      "alleles_base": 54,
+      "alleles_factory_added": 15,
+      "alleles_total": 69,
+      "dimensions": [
+        "SLO与错误预算计算",
+        "发布爆炸半径量化",
+        "可观测性与告警陷阱识别",
+        "流水线与IaC安全审查",
+        "事故因果纪律与止损"
+      ]
+    }
+  ]
+}

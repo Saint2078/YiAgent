@@ -1,0 +1,32 @@
+{
+  "id": "pm_scope_crm_kb_compare_001",
+  "level": "basic",
+  "title": "「客户管理」需求风暴 · 边界一页纸",
+  "description": "同一道产品边界题；对照取决于 G3 外挂的知识库（企业内部 vs 外向 GTM），不改产品经理身份基因。",
+  "dimension": "PM-Scope-KB",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是产品经理。请基于当前挂载的知识库约束，输出可执行的产品边界与优先级，不要空喊方法论。"
+    },
+    {
+      "role": "user",
+      "content": "下周评审要用。各部门/渠道甩来一堆「客户管理」诉求，请你产出边界一页纸：\n\n1）销售要跟进记录和公海池；\n2）要对接外部电商比价抓竞品；\n3）要经理「拍一拍」跳过额度校验；\n4）要做对外小程序给客户自助查单；\n5）要 AI 自动生成客户短名单；\n6）要给外包团队开通账号；\n7）要本机安装版客户端。\n\n另：有人说这是给内部用的，有人说这是要卖的 SaaS。请直接给出你的边界与本版切片，并写清依据。"
+    }
+  ],
+  "requirements": [
+    "先写清一句话问题，并标明服务对象假设来自何处（知识库/题干），区分原话与推断",
+    "给出能做/不做清单（≥4 条 Non-Goals），每条有延后或拒绝理由",
+    "写一段面向「主用户」的变更/发布说明；写不清价值则显式暂停对应需求",
+    "每条 P0 写可测验收（含关键约束：权限/审计或对外承诺/隐私等，随知识库）",
+    "标出必须升级给人审的项（人闸），不得擅自扩大范围",
+    "本版里程碑 ≤3，写依赖与完成定义"
+  ],
+  "criteria_ref": "pm_scope_crm_kb_compare_001.basic",
+  "source": {
+    "dataset": "YiAgent factory fixtures",
+    "note": "KB-contrast case · genome=product_manager"
+  },
+  "target_gene_types": ["product_manager"],
+  "tags": ["product", "kb_compare", "scope", "non_goals", "g3"]
+}

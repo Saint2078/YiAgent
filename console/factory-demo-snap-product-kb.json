@@ -1,0 +1,94 @@
+{
+  "id": "offline-frozen-demo-product-kb",
+  "phase": "done",
+  "status": "idle",
+  "model": "demo",
+  "oral": "演示：同一产品经理基因组 · 外挂不同知识库对照",
+  "frozen_demo": true,
+  "kb_compare": true,
+  "genome_pack": "product_manager",
+  "case": {
+    "id": "pm_scope_crm_kb_compare_001",
+    "title": "「客户管理」需求风暴 · 边界一页纸",
+    "description": "角色基因组不变；对照只来自 G3 外挂知识库（企业内部 vs 外向 GTM）。",
+    "messages": [
+      {
+        "role": "system",
+        "content": "你是产品经理。请基于当前挂载的知识库约束，输出可执行的产品边界与优先级，不要空喊方法论。"
+      },
+      {
+        "role": "user",
+        "content": "下周评审要用。各部门/渠道甩来一堆「客户管理」诉求，请你产出边界一页纸：\n\n1）销售要跟进记录和公海池；\n2）要对接外部电商比价抓竞品；\n3）要经理「拍一拍」跳过额度校验；\n4）要做对外小程序给客户自助查单；\n5）要 AI 自动生成客户短名单；\n6）要给外包团队开通账号；\n7）要本机安装版客户端。\n\n另：有人说这是给内部用的，有人说这是要卖的 SaaS。请直接给出你的边界与本版切片，并写清依据。"
+      }
+    ],
+    "requirements": [
+      "先写清一句话问题，并标明服务对象假设来自何处（知识库/题干）",
+      "给出能做/不做清单（≥4 条 Non-Goals）",
+      "写一段面向主用户的变更/发布说明",
+      "每条 P0 写可测验收（随知识库关键约束）",
+      "标出人闸；本版里程碑 ≤3"
+    ]
+  },
+  "target_text": "标题：「客户管理」需求风暴 · 边界一页纸\n题号：pm_scope_crm_kb_compare_001\n\nuser（原题）：\n下周评审要用……（客户管理诉求风暴，内部/SaaS 说法冲突）\n\n要求：问题定义 · Non-Goals · 发布/变更说明 · 可测验收 · 人闸 · 本版≤3\n",
+  "criteria_text": "裁判维：问题与服务对象假设 / Non-Goals与约束一致性 / 验收与人闸 / 本版切片 / 知识库依存（换库应可区分）。评分标准不进基因组。",
+  "baseline_summaries": [
+    {
+      "arm": "KB-企业内",
+      "variant_id": "kb_enterprise_internal",
+      "mean": 91.2,
+      "n": 3,
+      "note": "挂载企业内部软件知识库：砍外网比价/外包直开/拍一拍跳预算；验收盯 SSO·审计·UAT"
+    },
+    {
+      "arm": "KB-外向",
+      "variant_id": "kb_external_gtm",
+      "mean": 88.4,
+      "n": 3,
+      "note": "挂载外向 GTM 知识库：主用户=外部客户；砍未审商务与无 Demo 许诺；验收盯对外路径与隐私"
+    },
+    {
+      "arm": "A",
+      "variant_id": "A",
+      "mean": 54.0,
+      "n": 3,
+      "note": "无知识库挂载 · 愿望清单式全答应"
+    }
+  ],
+  "variants": [
+    {
+      "id": "var.pm_spine_kb_enterprise",
+      "title": "产品经理脊 · 企业内 KB",
+      "kb_id": "kb_enterprise_internal",
+      "slots": {
+        "G1": "g1.product_manager",
+        "G2": "g2.clarity_over_consensus",
+        "G3": "g3.prd_metrics",
+        "G4": "g4.boundary_onepager",
+        "G5": "g5.no_promise_drift"
+      }
+    },
+    {
+      "id": "var.pm_spine_kb_external",
+      "title": "产品经理脊 · 外向 KB",
+      "kb_id": "kb_external_gtm",
+      "slots": {
+        "G1": "g1.product_manager",
+        "G2": "g2.clarity_over_consensus",
+        "G3": "g3.prd_metrics",
+        "G4": "g4.boundary_onepager",
+        "G5": "g5.no_promise_drift"
+      }
+    }
+  ],
+  "prefilter_summaries": [
+    { "variant_id": "var.pm_spine_kb_enterprise", "mean": 90.1, "pass": true },
+    { "variant_id": "var.pm_spine_kb_external", "mean": 87.5, "pass": true }
+  ],
+  "champion_pool": ["var.pm_spine_kb_enterprise", "var.pm_spine_kb_external"],
+  "medals": {
+    "balanced": "var.pm_spine_kb_enterprise",
+    "effect": "var.pm_spine_kb_enterprise",
+    "stable": "var.pm_spine_kb_external"
+  },
+  "insight": "同一 G1 产品经理身份下，换 G3 知识库会改变 Non-Goals 与人闸——对照的是挂载知识，不是再发明一个角色。"
+}

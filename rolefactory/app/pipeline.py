@@ -1,0 +1,649 @@
+"""全链路流水线：角色名 → 锚点 → 蓝图 → 题组+裁判 → 基因库 → 基线 → 多代进化 → holdout → 冠军报告。
+
+并发模型：一次 run 一个 Session（共享信号量/缓存/预算）。同一代内所有
+(变体 × 题 × 重复) 的「作答→裁判」全部并行提交，由信号量限流。
+"""
+
+from __future__ import annotations
+
+import asyncio
+import random
+import statistics
+import time
+import uuid
+from dataclasses import dataclass, field
+from typing import Any
+
+from . import anchors as anchors_mod
+from . import genes, judge, roles, store
+from .config import SETTINGS
+from .llm import Budget, Session
+
+PHASES = ("anchors", "blueprint", "cases", "bank", "baseline", "evolve", "holdout", "done")
+
+
+# ------------------------------------------------------------------ 聚合
+
+
+def aggregate(rows: list[dict[str, Any]], blueprint: dict[str, Any]) -> dict[str, Any]:
+    """题级取重复均值 → 维度均值 → 按蓝图权重加权；composite 扣一个稳定性罚项。"""
+    if not rows:
+        return {"n": 0, "mean": None, "weighted": None, "composite": None, "by_dimension": {}, "std": None}
+    by_case: dict[str, list[float]] = {}
+    dim_of: dict[str, str] = {}
+    traps: list[bool] = []
+    judge_scores: list[float] = []
+    check_pass: list[float] = []
+    for r in rows:
+        by_case.setdefault(r["case"], []).append(float(r["score"]))
+        dim_of[r["case"]] = r["dimension_key"]
+        if r.get("hit_trap") is not None:
+            traps.append(bool(r.get("hit_trap")))
+        if r.get("judge_score") is not None:
+            judge_scores.append(float(r["judge_score"]))
+        if r.get("checks_count"):
+            check_pass.append(float(r.get("checks_passed") or 0) / float(r["checks_count"]))
+    case_means = {c: statistics.fmean(v) for c, v in by_case.items()}
+
+    by_dim: dict[str, list[float]] = {}
+    for case_id, m in case_means.items():
+        by_dim.setdefault(dim_of[case_id], []).append(m)
+    dim_means = {k: round(statistics.fmean(v), 2) for k, v in by_dim.items()}
+
+    weights = {d["key"]: float(d["weight"]) for d in blueprint["dimensions"]}
+    wsum = sum(weights.get(k, 0.0) for k in dim_means) or 0.0
+    weighted = (
+        round(sum(dim_means[k] * weights.get(k, 0.0) for k in dim_means) / wsum, 2) if wsum > 0 else None
+    )
+    vals = list(case_means.values())
+    mean = round(statistics.fmean(vals), 2)
+    std = round(statistics.pstdev(vals), 2) if len(vals) > 1 else 0.0
+    base = weighted if weighted is not None else mean
+    return {
+        "n": len(rows),
+        "cases": len(case_means),
+        "mean": mean,
+        "weighted": weighted,
+        "std": std,
+        "composite": round(base - 0.5 * std, 2),
+        "by_dimension": dim_means,
+        "by_case": {k: round(v, 2) for k, v in case_means.items()},
+        "trap_rate": round(sum(1 for t in traps if t) / len(traps), 3) if traps else None,
+        "min_case": round(min(vals), 2),
+        "max_case": round(max(vals), 2),
+        "spread": round(max(vals) - min(vals), 2),
+        "check_pass_rate": round(statistics.fmean(check_pass), 3) if check_pass else None,
+        "judge_shadow": round(statistics.fmean(judge_scores), 2) if judge_scores else None,
+    }
+
+
+def paired_delta(champ: dict[str, Any], base: dict[str, Any]) -> dict[str, Any]:
+    a, b = champ.get("by_case") or {}, base.get("by_case") or {}
+    common = sorted(set(a) & set(b))
+    if not common:
+        return {"cases": 0}
+    diffs = [a[c] - b[c] for c in common]
+    return {
+        "cases": len(common),
+        "mean_delta": round(statistics.fmean(diffs), 2),
+        "improved": sum(1 for d in diffs if d > 0.5),
+        "regressed": sum(1 for d in diffs if d < -0.5),
+        "worst": round(min(diffs), 2),
+        "best": round(max(diffs), 2),
+    }
+
+
+# ------------------------------------------------------------------ run 状态
+
+
+@dataclass
+class Run:
+    run_id: str
+    role: str
+    params: dict[str, Any]
+    created_at: float = field(default_factory=time.time)
+    status: str = "running"
+    phase: str = "anchors"
+    error: str = ""
+    logs: list[str] = field(default_factory=list)
+    anchors: list[dict] = field(default_factory=list)
+    blueprint: dict[str, Any] = field(default_factory=dict)
+    cases: list[dict] = field(default_factory=list)
+    train_ids: list[str] = field(default_factory=list)
+    holdout_ids: list[str] = field(default_factory=list)
+    bank: dict[str, list[dict]] = field(default_factory=dict)
+    generations: list[dict] = field(default_factory=list)
+    baseline: dict[str, Any] = field(default_factory=dict)
+    all_weak: dict[str, Any] = field(default_factory=dict)
+    champion: dict[str, Any] = field(default_factory=dict)
+    holdout: dict[str, Any] = field(default_factory=dict)
+    eval_done: int = 0
+    eval_total: int = 0
+    eval_failed: int = 0
+    session: Session | None = None
+    task: asyncio.Task | None = None
+
+    @property
+    def role_id(self) -> str:
+        return self.blueprint.get("role_id") or roles.slugify(self.role)
+
+    def log(self, msg: str) -> None:
+        line = f"[{time.strftime('%H:%M:%S')}] {msg}"
+        self.logs.append(line)
+        if len(self.logs) > 400:
+            del self.logs[: len(self.logs) - 400]
+        print(f"{self.run_id} {line}", flush=True)
+
+    def snapshot(self, *, full: bool = False) -> dict[str, Any]:
+        s = self.session
+        wall = (s.wall if s else time.time() - self.created_at)
+        llm = s.meter.snapshot() if s else {}
+        throughput = None
+        if llm.get("api_calls") and wall > 0:
+            throughput = round(llm["api_calls"] / wall, 2)
+        out: dict[str, Any] = {
+            "run_id": self.run_id,
+            "role": self.role,
+            "role_id": self.role_id,
+            "params": self.params,
+            "status": self.status,
+            "phase": self.phase,
+            "error": self.error,
+            "created_at": round(self.created_at, 3),
+            "wall_seconds": round(wall, 1),
+            "progress": {
+                "phases": list(PHASES),
+                "phase_index": PHASES.index(self.phase) if self.phase in PHASES else 0,
+                "eval_done": self.eval_done,
+                "eval_total": self.eval_total,
+                "eval_failed": self.eval_failed,
+            },
+            "llm": {**llm, "calls_per_second": throughput, "model": (s.model if s else SETTINGS.model),
+                    "concurrency": (s.concurrency if s else SETTINGS.concurrency)},
+            "anchors": self.anchors,
+            "blueprint": self.blueprint,
+            "cases_count": len(self.cases),
+            "train_ids": self.train_ids,
+            "holdout_ids": self.holdout_ids,
+            "bank_summary": {
+                slot: [
+                    {"id": a["id"], "label": a["label"], "strength": a["strength"]} for a in self.bank.get(slot, [])
+                ]
+                for slot, _ in genes.SLOTS
+            }
+            if self.bank
+            else {},
+            "generations": [
+                {
+                    "gen": g["gen"],
+                    "evaluated": g["evaluated"],
+                    "best": g["best"],
+                    "mean": g["mean"],
+                    "variants": g["variants"],
+                    "seconds": g["seconds"],
+                }
+                for g in self.generations
+            ],
+            "scoring": scoring_summary(self),
+            "baseline": self.baseline,
+            "all_weak": self.all_weak,
+            "champion": self.champion,
+            "holdout": self.holdout,
+            "logs": self.logs[-60:],
+        }
+        if full:
+            out["cases"] = self.cases
+            out["bank"] = self.bank
+            out["logs"] = self.logs
+        return out
+
+    def persist(self) -> None:
+        d = store.run_dir(self.run_id)
+        store.write_json(d / "state.json", self.snapshot(full=True))
+
+
+# ------------------------------------------------------------------ 评测批
+
+
+async def eval_batch(
+    run: Run,
+    session: Session,
+    variants: list[dict[str, Any]],
+    cases: list[dict[str, Any]],
+    reps: int,
+    *,
+    shadow_judge: bool = False,
+) -> dict[str, list[dict[str, Any]]]:
+    """并行跑 (变体 × 题 × 重复)，返回 variant_id → rows。"""
+    jobs: list[tuple[dict, dict, int]] = [
+        (v, c, r) for v in variants for c in cases for r in range(reps)
+    ]
+    run.eval_total += len(jobs)
+    out: dict[str, list[dict[str, Any]]] = {v["id"]: [] for v in variants}
+    rows_for_disk: list[dict[str, Any]] = []
+    lock = asyncio.Lock()
+
+    mode = str(run.params.get("scoring_mode") or "judge")
+
+    async def one(v: dict, c: dict, r: int) -> None:
+        try:
+            row = await judge.eval_one(
+                session, v, c, rep=r, mode=mode, shadow_judge=shadow_judge and mode == "objective"
+            )
+        except Budget:
+            raise
+        except Exception as exc:  # noqa: BLE001 单点失败不拖垮整批
+            async with lock:
+                run.eval_failed += 1
+                run.eval_done += 1
+            run.log(f"eval 失败 {v['id']}/{c['id']}#{r}: {type(exc).__name__}: {exc}")
+            return
+        async with lock:
+            out[v["id"]].append(row)
+            rows_for_disk.append(row)
+            run.eval_done += 1
+            done, total = run.eval_done, run.eval_total
+        if done % 5 == 0 or done == total:
+            run.log(f"评测进度 {done}/{total}｜tokens={session.meter.total_tokens}")
+
+    await asyncio.gather(*(asyncio.create_task(one(v, c, r)) for v, c, r in jobs))
+    if rows_for_disk:
+        store.append_jsonl(store.run_dir(run.run_id) / "results.jsonl", rows_for_disk)
+    return out
+
+
+# ------------------------------------------------------------------ 主流程
+
+
+async def execute(run: Run, api_key: str) -> None:
+    p = run.params
+    session = Session(
+        api_key,
+        p.get("model"),
+        concurrency=p.get("concurrency"),
+        budget_tokens=p.get("budget_tokens"),
+        budget_seconds=p.get("budget_seconds"),
+    )
+    run.session = session
+    rng = random.Random(int(p.get("seed") or 42))
+    reps = max(1, int(p.get("reps") or 1))
+    t_phase = time.time()
+
+    try:
+        # 1) 锚点
+        run.phase = "anchors"
+        run.anchors = anchors_mod.retrieve(run.role, limit=int(p.get("anchor_limit") or 5))
+        run.log(f"锚点命中 {len(run.anchors)} 条：{', '.join(a['id'] for a in run.anchors) or '（无）'}")
+        run.persist()
+
+        # 2) 蓝图
+        run.phase = "blueprint"
+        t_phase = time.time()
+        mode = str(p.get("scoring_mode") or "judge")
+        run.blueprint = await roles.plan_blueprint(session, run.role, run.anchors, mode=mode)
+        run.log(
+            f"蓝图 {len(run.blueprint['dimensions'])} 维度（{time.time() - t_phase:.1f}s）："
+            + "、".join(f"{d['name']}{d['weight']}" for d in run.blueprint["dimensions"])
+        )
+        run.persist()
+
+        # 3) 题组 + 裁判（维度级并行）
+        run.phase = "cases"
+        t_phase = time.time()
+
+        def on_case(case: dict | None, err: str | None) -> None:
+            if case:
+                run.cases.append(case)
+                run.log(f"出题 {len(run.cases)}：[{case['dimension']}/{case['level']}] {case['title']}")
+            elif err:
+                run.log(f"出题失败 {err}")
+
+        run.cases = []
+        cases = await roles.build_suite(
+            session,
+            run.blueprint,
+            run.anchors,
+            per_dim=int(p.get("per_dim") or 2),
+            on_case=on_case,
+            mode=mode,
+        )
+        if not cases:
+            raise RuntimeError("题组为空")
+        run.cases = cases
+        train, hold = roles.split_holdout(cases)
+        run.train_ids = [c["id"] for c in train]
+        run.holdout_ids = [c["id"] for c in hold]
+        store.save_suite(run.role_id, cases, run.blueprint)
+        run.log(
+            f"题组 {len(cases)} 道（{time.time() - t_phase:.1f}s）｜train {len(train)} / holdout {len(hold)}"
+        )
+        run.persist()
+
+        # 4) 基因库
+        run.phase = "bank"
+        t_phase = time.time()
+        run.bank = await genes.build_bank(session, run.blueprint, cases)
+        run.log(
+            f"基因库就绪（{time.time() - t_phase:.1f}s）："
+            + "｜".join(f"{s}×{len(run.bank[s])}" for s, _ in genes.SLOTS)
+        )
+        run.persist()
+
+        # 5) 基线（无基因 + 全弱基因）
+        run.phase = "baseline"
+        t_phase = time.time()
+        base_v = genes.baseline_variant()
+        weak_v = genes.all_weak_variant(run.bank)
+        shadow = bool(p.get("judge_shadow", True))
+        got = await eval_batch(run, session, [base_v, weak_v], train, reps, shadow_judge=shadow)
+        run.baseline = {"variant": base_v, **aggregate(got[base_v["id"]], run.blueprint)}
+        run.all_weak = {"variant": weak_v, **aggregate(got[weak_v["id"]], run.blueprint)}
+        run.log(
+            f"基线 weighted={run.baseline.get('weighted')}｜全弱基因 weighted={run.all_weak.get('weighted')}"
+            f"（{time.time() - t_phase:.1f}s）"
+        )
+        run.persist()
+
+        # 6) 多代进化
+        run.phase = "evolve"
+        max_gen = max(1, int(p.get("generations") or 3))
+        pop_n = max(2, int(p.get("variants_per_gen") or 6))
+        elite_k = max(1, int(p.get("elite") or 2))
+        min_gain = float(p.get("min_gain") or 0.5)
+
+        seen: set[str] = set()
+        hof: list[dict[str, Any]] = []
+        population = genes.seed_population(run.bank, pop_n, rng)
+        for v in population:
+            seen.add(v["sig"])
+        best_composite = float("-inf")
+        stagnant = 0
+
+        for gen in range(max_gen):
+            t_gen = time.time()
+            run.log(f"第 {gen} 代：{len(population)} 个变体 × {len(train)} 题 × {reps} 次")
+            got = await eval_batch(run, session, population, train, reps)
+            scored: list[dict[str, Any]] = []
+            for v in population:
+                agg = aggregate(got[v["id"]], run.blueprint)
+                if agg.get("composite") is None:
+                    continue
+                scored.append({**v, **agg})
+            if not scored:
+                raise RuntimeError(f"第 {gen} 代无有效评分")
+            scored.sort(key=lambda x: (-(x["composite"]), -(x["weighted"] or 0)))
+            hof.extend(scored)
+            hof.sort(key=lambda x: -(x["composite"]))
+            hof = hof[:12]
+
+            gen_rec = {
+                "gen": gen,
+                "evaluated": len(scored),
+                "best": scored[0]["composite"],
+                "best_weighted": scored[0]["weighted"],
+                "mean": round(statistics.fmean([s["composite"] for s in scored]), 2),
+                "seconds": round(time.time() - t_gen, 1),
+                "variants": [
+                    {
+                        "id": s["id"],
+                        "origin": s["origin"],
+                        "labels": s["labels"],
+                        "choice": s["choice"],
+                        "weighted": s["weighted"],
+                        "composite": s["composite"],
+                        "std": s["std"],
+                        "min_case": s["min_case"],
+                        "spread": s.get("spread"),
+                        "check_pass_rate": s.get("check_pass_rate"),
+                        "by_dimension": s["by_dimension"],
+                    }
+                    for s in scored
+                ],
+            }
+            run.generations.append(gen_rec)
+            run.champion = {
+                k: hof[0][k]
+                for k in (
+                    "id", "sig", "gen", "origin", "choice", "labels", "system",
+                    "weighted", "composite", "mean", "std", "min_case", "max_case", "spread",
+                    "by_dimension", "by_case", "trap_rate", "check_pass_rate", "judge_shadow",
+                    "n", "cases",
+                )
+                if k in hof[0]
+            }
+            run.log(
+                f"第 {gen} 代最优 composite={scored[0]['composite']} weighted={scored[0]['weighted']}"
+                f"｜{scored[0]['origin']}｜{time.time() - t_gen:.1f}s"
+            )
+            run.persist()
+
+            gain = scored[0]["composite"] - best_composite if best_composite > float("-inf") else 999.0
+            best_composite = max(best_composite, scored[0]["composite"])
+            if gain < min_gain:
+                stagnant += 1
+                run.log(f"增益 {gain:+.2f} < {min_gain}，停滞 {stagnant} 代")
+            else:
+                stagnant = 0
+            if stagnant >= int(p.get("patience") or 1):
+                run.log("触发早停：连续停滞")
+                break
+            if gen == max_gen - 1:
+                break
+            if session.meter.total_tokens > session.budget_tokens * 0.75:
+                run.log("预算用掉 75%，停止繁殖")
+                break
+            elites = hof[:elite_k]
+            population = genes.breed(elites, run.bank, pop_n, gen + 1, rng, seen)
+            if not population:
+                run.log("无新组合可繁殖，收敛")
+                break
+
+        # 7) holdout 鉴定
+        if hold and run.champion:
+            run.phase = "holdout"
+            t_phase = time.time()
+            champ_v = next((h for h in hof if h["id"] == run.champion["id"]), hof[0])
+            champ_slim = {
+                "id": champ_v["id"], "sig": champ_v["sig"], "system": champ_v["system"],
+                "choice": champ_v["choice"], "labels": champ_v["labels"],
+            }
+            got = await eval_batch(
+                run, session, [champ_slim, base_v], hold, reps, shadow_judge=bool(p.get("judge_shadow", True))
+            )
+            champ_h = aggregate(got[champ_slim["id"]], run.blueprint)
+            base_h = aggregate(got[base_v["id"]], run.blueprint)
+            run.holdout = {
+                "cases": run.holdout_ids,
+                "champion": champ_h,
+                "baseline": base_h,
+                "delta_weighted": (
+                    round((champ_h.get("weighted") or 0) - (base_h.get("weighted") or 0), 2)
+                    if champ_h.get("weighted") is not None and base_h.get("weighted") is not None
+                    else None
+                ),
+                "paired": paired_delta(champ_h, base_h),
+                "generalization_gap": (
+                    round((run.champion.get("weighted") or 0) - (champ_h.get("weighted") or 0), 2)
+                    if champ_h.get("weighted") is not None
+                    else None
+                ),
+                "seconds": round(time.time() - t_phase, 1),
+            }
+            run.log(
+                f"holdout 冠军={champ_h.get('weighted')} 基线={base_h.get('weighted')}"
+                f" Δ={run.holdout.get('delta_weighted')}｜泛化差={run.holdout.get('generalization_gap')}"
+            )
+
+        run.phase = "done"
+        run.status = "done"
+        write_report(run)
+        run.log(f"完成｜wall={session.wall:.1f}s｜tokens={session.meter.total_tokens}")
+        run.persist()
+
+    except Budget as exc:
+        run.status = "aborted"
+        run.error = str(exc)
+        run.log(f"中止：{exc}")
+        write_report(run)
+        run.persist()
+    except asyncio.CancelledError:
+        run.status = "aborted"
+        run.error = "cancelled"
+        run.log("已取消")
+        run.persist()
+        raise
+    except Exception as exc:  # noqa: BLE001
+        run.status = "failed"
+        run.error = f"{type(exc).__name__}: {exc}"
+        run.log(f"失败：{run.error}")
+        run.persist()
+
+
+def scoring_summary(run: Run) -> dict[str, Any]:
+    """评分体系说明 + 区分度实测：客观分与影子裁判分各自的分布跨度。"""
+    mode = str(run.params.get("scoring_mode") or "judge")
+    check_types: dict[str, dict[str, float]] = {}
+    for c in run.cases:
+        for chk in c.get("checks") or []:
+            row = check_types.setdefault(chk["type"], {"count": 0, "weight": 0.0})
+            row["count"] += 1
+            row["weight"] += float(chk.get("weight") or 0)
+
+    obj_vals: list[float] = []
+    judge_vals: list[float] = []
+    for src in (run.baseline, run.all_weak, run.champion):
+        if src.get("weighted") is not None:
+            obj_vals.append(float(src["weighted"]))
+        if src.get("judge_shadow") is not None:
+            judge_vals.append(float(src["judge_shadow"]))
+    variant_vals = [
+        v["weighted"] for g in run.generations for v in g.get("variants") or [] if v.get("weighted") is not None
+    ]
+
+    def spread(vals: list[float]) -> dict[str, Any]:
+        if not vals:
+            return {"n": 0}
+        return {
+            "n": len(vals),
+            "min": round(min(vals), 2),
+            "max": round(max(vals), 2),
+            "spread": round(max(vals) - min(vals), 2),
+            "std": round(statistics.pstdev(vals), 2) if len(vals) > 1 else 0.0,
+        }
+
+    return {
+        "mode": mode,
+        "how": (
+            "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），"
+            "纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。"
+            if mode == "objective"
+            else "主观：LLM 裁判按题目 rubric 逐项打分。"
+        ),
+        "check_types": {k: {"count": int(v["count"]), "weight_sum": round(v["weight"], 1)} for k, v in sorted(check_types.items())},
+        "verified_cases": sum(1 for c in run.cases if (c.get("verify") or {}).get("passed")),
+        "objective_spread_arms": spread(obj_vals),
+        "objective_spread_variants": spread(variant_vals),
+        "judge_shadow_spread_arms": spread(judge_vals),
+        "note": (
+            "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+        ),
+    }
+
+
+def write_report(run: Run) -> None:
+    s = run.session
+    llm = s.meter.snapshot() if s else {}
+    wall = s.wall if s else 0.0
+    champ = run.champion or {}
+    base = run.baseline or {}
+    delta = (
+        round((champ.get("weighted") or 0) - (base.get("weighted") or 0), 2)
+        if champ.get("weighted") is not None and base.get("weighted") is not None
+        else None
+    )
+    report = {
+        "run_id": run.run_id,
+        "role": run.role,
+        "role_id": run.role_id,
+        "status": run.status,
+        "params": run.params,
+        "created_at": run.created_at,
+        "wall_seconds": round(wall, 1),
+        "performance": {
+            "llm": llm,
+            "evals": {"done": run.eval_done, "failed": run.eval_failed, "total": run.eval_total},
+            "api_calls_per_second": round(llm.get("api_calls", 0) / wall, 2) if wall > 0 else None,
+            "evals_per_minute": round(run.eval_done / wall * 60, 1) if wall > 0 else None,
+            "tokens_per_eval": round(llm.get("total_tokens", 0) / run.eval_done) if run.eval_done else None,
+        },
+        "blueprint": run.blueprint,
+        "anchors": run.anchors,
+        "suite": {
+            "count": len(run.cases),
+            "train": run.train_ids,
+            "holdout": run.holdout_ids,
+            "path": f"case/role/{run.role_id}/testcases.jsonl",
+        },
+        "bank": run.bank,
+        "scoring": scoring_summary(run),
+        "scores": {
+            "baseline_no_genes": base,
+            "all_weak_genes": run.all_weak,
+            "champion_train": champ,
+            "delta_train_weighted": delta,
+            "paired_train": paired_delta(champ, base) if champ and base else {},
+            "holdout": run.holdout,
+        },
+        "generations": run.generations,
+        "champion_genome": {
+            "system": champ.get("system"),
+            "choice": champ.get("choice"),
+            "labels": champ.get("labels"),
+        },
+        "caveats": (
+            [
+                "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+                "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+                "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+                "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。",
+            ]
+            if str(run.params.get("scoring_mode")) == "objective"
+            else [
+                "裁判为同族模型（k3）自评，存在同源偏差；跨模型交叉裁判未做。",
+                "题目由 LLM 生成、benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+                "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。",
+            ]
+        ),
+    }
+    store.write_json(store.run_dir(run.run_id) / "report.json", report)
+
+
+# ------------------------------------------------------------------ 管理器
+
+
+class Manager:
+    def __init__(self) -> None:
+        self.runs: dict[str, Run] = {}
+
+    def start(self, role: str, params: dict[str, Any], api_key: str) -> Run:
+        run_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+        run = Run(run_id=run_id, role=role.strip(), params=params)
+        self.runs[run_id] = run
+        run.log(f"启动：角色「{run.role}」参数={params}")
+        run.task = asyncio.create_task(execute(run, api_key))
+        return run
+
+    def get(self, run_id: str) -> Run | None:
+        return self.runs.get(run_id)
+
+    def abort(self, run_id: str) -> bool:
+        run = self.runs.get(run_id)
+        if not run:
+            return False
+        if run.session:
+            run.session.abort("manual")
+        run.status = "aborting"
+        return True
+
+
+MANAGER = Manager()

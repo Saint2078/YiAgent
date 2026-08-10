@@ -272,6 +272,12 @@ button {
   color: var(--ink);
 }
 
+.chip-btn.active {
+  background: rgba(10, 132, 255, 0.22);
+  color: var(--blue);
+  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.45);
+}
+
 .chip-btn.accent,
 .btn.primary {
   background: var(--blue);
@@ -302,7 +308,8 @@ button {
 
 .ws-body:has(.chat-layout),
 .ws-body:has(.kb-layout),
-.ws-body:has(.genome-layout) {
+.ws-body:has(.genome-layout),
+.ws-body:has(.genome-wb) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -337,6 +344,201 @@ button {
   height: 100%;
   border: 0;
   background: #071018;
+}
+
+/* 多基因组：一级=主侧栏(.nav)；二级=角色栏(.genome-wb-side) —— 配色与一级对齐 */
+.genome-wb {
+  display: grid;
+  grid-template-columns: var(--nav-w) 1fr;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  background: #071018;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.genome-wb-side {
+  border-right: 1px solid var(--line);
+  background: rgba(248, 248, 250, 0.96);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.site-yiagent .genome-wb-side {
+  background: rgba(248, 248, 250, 0.96);
+  border-right-color: var(--line);
+}
+
+.genome-wb-side-head {
+  margin: 16px 10px 6px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--mute);
+  text-transform: none;
+}
+
+.genome-wb-roles {
+  overflow: auto;
+  padding: 4px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.genome-role {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  padding: 9px 10px;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.genome-role:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.genome-role.active {
+  background: var(--blue-soft);
+  color: var(--blue);
+  border-color: transparent;
+}
+
+.genome-role.active .genome-role-name {
+  color: var(--blue);
+}
+
+.genome-role.active .genome-role-meta {
+  color: rgba(0, 122, 255, 0.72);
+}
+
+.genome-role-av {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.genome-role-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: inherit;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.genome-role-meta {
+  font-size: 11px;
+  color: var(--mute);
+  margin-top: 2px;
+  font-family: inherit;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.genome-wb-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  background: #071018;
+}
+
+.genome-wb-dna .genome-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #071018;
+}
+
+/* 单基因工作台：二级=基因列表；右侧=基因正文 + 筛选台 */
+.gene-edit-wb .gene-edit-main {
+  background: var(--bg);
+  overflow: hidden;
+  position: relative;
+}
+
+.gene-edit-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 16px 20px 32px;
+}
+
+.gene-slot-head {
+  margin-top: 12px !important;
+}
+
+.gene-focus-card {
+  margin-bottom: 14px;
+}
+
+.gene-focus-title {
+  margin: 6px 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.gene-focus-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+@media (max-width: 860px) {
+  .genome-wb {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .genome-wb-side {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: 160px;
+  }
+  .genome-wb-roles {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .genome-role {
+    min-width: 168px;
+  }
+  .gene-edit-wb .genome-wb-side {
+    max-height: 220px;
+  }
+  .gene-edit-wb .genome-wb-roles {
+    flex-direction: column;
+  }
 }
 
 .pad {
@@ -2830,9 +3032,132 @@ button.linkish {
 
 .fb-mode-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 16px;
+}
+
+.fb-case-catalog {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.fb-case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.fb-case-row {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.fb-case-row:hover {
+  border-color: rgba(0, 122, 255, 0.35);
+}
+
+.fb-case-row.active {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.fb-msg { margin-top: 10px; }
+
+.fb-msg-role {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mute);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fb-req {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fb-crit {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--line);
+}
+
+.gene-case-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.gene-case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gene-case-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid rgba(245, 166, 35, 0.45);
+  background: rgba(245, 166, 35, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.gene-case-chip:hover {
+  border-color: rgba(245, 166, 35, 0.75);
+  background: rgba(245, 166, 35, 0.14);
+}
+
+.gene-case-star {
+  flex: 0 0 auto;
+  color: #c8871a;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.gene-case-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gene-case-title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 550;
+}
+
+.gene-case-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--mute);
+}
+
+.fb-case-row.is-gene {
+  border-color: rgba(52, 199, 89, 0.45);
 }
 
 .fb-mode-card {

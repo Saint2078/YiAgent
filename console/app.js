@@ -28,8 +28,8 @@ const SITE_META = {
     title: "YiAgent · Agent 编辑台",
     brand: "YiAgent",
     you: "Agent 编辑台",
-    home: "chat",
-    foot: "单基因 · 基因组 · 目标",
+    home: "tour",
+    foot: "开源 · DNA 可解释/可迭代/可量化/可溯源",
     /** 专属 Agent 编辑：单基因 / 基因组 + 知识库 + 目标拆解 + Provider */
     hide: [
       "today",
@@ -100,15 +100,27 @@ const NAV_FULL = [
 /** YiAgent 门：Agent 编辑台（目标拆解 + 单基因 / 基因组 + 知识库） */
 const NAV_YIAGENT = [
   {
+    sec: "导览",
+    items: [{ id: "tour", label: "DNA 全链路", color: "#6bcf8e" }],
+  },
+  {
     sec: "规划",
     items: [{ id: "progress", label: "目标拆解", color: "#30d158" }],
   },
   {
     sec: "编辑",
     items: [
+      { id: "rolefactory", label: "角色工厂", color: "#ff375f" },
+      { id: "rflive", label: "角色工厂·实跑", color: "#ff6482" },
       { id: "chat", label: "单基因工作台", color: "#5ec8ff" },
       { id: "genome", label: "基因组工作台", color: "#3ecfbe" },
+      { id: "optimize", label: "优化闭环", color: "#d4785a" },
+      { id: "runagent", label: "可调用实体", color: "#c4a574" },
     ],
+  },
+  {
+    sec: "榜单",
+    items: [{ id: "codeboard", label: "编程榜", color: "#64d2ff" }],
   },
   {
     sec: "资料",
@@ -267,10 +279,11 @@ const DNA_GENOMES = [
     "id": "product",
     "role": "Product",
     "title": "产品 · 边界与优先级",
-    "status": "init",
+    "status": "ready",
     "path": "AgentTeam/Develop/Product",
     "agentId": "ag-product",
-    "slots": {
+    "genomePack": "product_manager",
+            "slots": {
       "G1": {
         "key": "identity",
         "label": "身份",
@@ -284,7 +297,7 @@ const DNA_GENOMES = [
       "G3": {
         "key": "knowledge",
         "label": "知识",
-        "text": "挂载优先:\n- 项目信息（源头）与项目调研顶层表述\n- 官网/ASE 对外口径（若任务涉及）\ndenylist: 把内部工程隐喻直接当对客主叙事"
+        "text": "挂载优先（可切换对照）:\n- kb_enterprise_internal · 企业内部软件约束\n- kb_external_gtm · 外向产品/GTM\n- 项目信息（源头）与调研顶层表述\ndenylist: 未挂载知识库却断言服务对象；把内部工程隐喻直接当对客主叙事\nsource: console/kb-packs-product.js"
       },
       "G4": {
         "key": "capability",
@@ -302,10 +315,11 @@ const DNA_GENOMES = [
     "id": "pm",
     "role": "PM",
     "title": "项目经理 · 节奏与阻塞",
-    "status": "init",
+    "status": "ready",
     "path": "AgentTeam/Develop/PM",
     "agentId": "ag-pm",
-    "slots": {
+    "genomePack": "project_manager",
+            "slots": {
       "G1": {
         "key": "identity",
         "label": "身份",
@@ -336,35 +350,72 @@ const DNA_GENOMES = [
   {
     "id": "architect",
     "role": "Architect",
-    "title": "架构 · 边界与可演进",
-    "status": "init",
+    "title": "AI 架构师 · 边界与可演进",
+    "status": "ready",
     "path": "AgentTeam/Develop/Architect",
     "agentId": "ag-arch",
-    "slots": {
+    "genomePack": "ai_architect",
+            "slots": {
       "G1": {
         "key": "identity",
         "label": "身份",
-        "text": "role_id: architect\n显示名: Architect\n编队: AgentTeam/Develop\n主责: 系统边界、模块职责、演进约束、关键接口\n自报: 开发团队 · Architect"
+        "text": "role: ai_software_architect\n显示名: AI 架构师 / Software Architect\n主责: 系统设计、域边界、权衡矩阵、ADR、可演进路径\n思维: bounded contexts · trade-off matrices · architectural decision records\n自报: 设计可维护、可扩展、与业务域对齐的系统\nsource: agency-agents/engineering/engineering-software-architect.md"
       },
       "G2": {
         "key": "persona",
         "label": "人设与决策边界",
-        "text": "语气: 结构化、权衡显式、少口号\nmay_decide:\n- 模块边界与接口草案（提交 CTO 确认）\n- 技术债登记与偿还建议\nmust_not:\n- 无门禁的「大重构」直接合入主路径\n- 把密钥/密钥路径写进仓\n- 违反「部署只许 Docker」\nhuman_gates:\n- 破坏性数据迁移\n- 跨系统权限模型变更"
+        "text": "语气: 结构化、少口号；每个抽象必须 justify 复杂度\nmay: 候选方案≤3、命名放弃了什么、标可逆性\nmust_not: 架构宇航员；用「业界最佳」掩盖未核证前提；用 prompt 当安全边界\nhuman_gates: 破坏性迁移、跨信任域权限、不可逆数据模型\nsource: agency-agents — Trade-offs over best practices"
       },
       "G3": {
         "key": "knowledge",
         "label": "知识",
-        "text": "挂载优先:\n- YiAgent docs/architecture.md\n- factory / hof / CLI 模块边界说明\n- opc 工作台挂载与路径约定\ndenylist: 过时副本当正本"
+        "text": "挂载优先:\n- ADR（WHY / 备选 / 后果）\n- 12-Factor Agents 原则集\n- Parnas 模块化准则 · Seam 词汇\n- YiAgent docs/architecture.md\ndenylist: 口头架构传说、过时副本当正本\nsource: addyosmani documentation-and-adrs · 12-factor-agents"
       },
       "G4": {
         "key": "capability",
         "label": "能力与工具",
-        "text": "规划: ①问题与约束 ②候选方案≤3 ③推荐与代价 ④验证方式\n产出: 架构笔记、接口草图、风险清单\n自检: 是否可演进、是否可测、是否可回滚"
+        "text": "结构: LLM 结构化输出 → 确定性代码执行 → 回灌 context\n配套: allow/ask/exclude 工具门控；不可逆动作升格 typed tool\n规划: ①约束 ②方案≤3 ③代价 ④验证/回滚\nsource: 12-factor-agents factor-04 · anthropics agent-design · continue permissions"
       },
       "G5": {
         "key": "experience",
         "label": "经验策略",
-        "text": "DO: 每个关键决策写「不选什么」。\nDO: 接口先契约后实现。\nAVOID: 过早微服务化。\nAVOID: 基因组里塞整份部署说明书。"
+        "text": "DO: SPECIFY→PLAN→TASKS→IMPLEMENT 门禁；契约优先切片；Expand–Contract 演进\nDO: 可观测先写 on-call 问题；自有控制流；小专注 Agent\nAVOID: 无 spec 直码、过早微服务、无门禁直合\nsource: addyosmani spec-driven · mattpocock to-tickets · 12-factor factor-08/10"
+      }
+    }
+  },
+  {
+    "id": "evals",
+    "role": "Evals",
+    "title": "Evals 专员 · 评测与门禁",
+    "status": "ready",
+    "path": "AgentTeam/Develop/Evals",
+    "agentId": "ag-evals",
+    "genomePack": "evals_specialist",
+    "slots": {
+      "G1": {
+        "key": "identity",
+        "label": "身份",
+        "text": "role: evals_specialist\n显示名: Evals 专员\n主责: 评测集、裁判标准、可复现门禁、通过率与证据\n自报: 质量门禁搭档；不替产品拍业务决策\nsource: 12-factor-agents · anthropics skill-creator"
+      },
+      "G2": {
+        "key": "persona",
+        "label": "人设与决策边界",
+        "text": "语气: 证据优先、可复现\nmay: 标 FAIL 与缺证点、提弱断言改进\nmust_not: 用空壳文件冒充完成\nhuman_gates: 改晋升门禁语义、改裁判口径"
+      },
+      "G3": {
+        "key": "knowledge",
+        "label": "知识",
+        "text": "挂载: transcript / outputs / expectation / rubric\ndenylist: 无来源数字、口头『差不多能过』"
+      },
+      "G4": {
+        "key": "capability",
+        "label": "能力与工具",
+        "text": "规划: Draft→跑测→定量定性→改写→扩集\n产出: evals 定义、裁判证据、通过率报告"
+      },
+      "G5": {
+        "key": "experience",
+        "label": "经验策略",
+        "text": "DO: 举证责任在通过方；mean/sdv 与 n·reps\nAVOID: 表面合规骗裁判"
       }
     }
   },
@@ -372,10 +423,11 @@ const DNA_GENOMES = [
     "id": "dev",
     "role": "Dev",
     "title": "开发 · 实现与单测",
-    "status": "init",
+    "status": "ready",
     "path": "AgentTeam/Develop/Dev",
     "agentId": "ag-dev",
-    "slots": {
+    "genomePack": "develop",
+            "slots": {
       "G1": {
         "key": "identity",
         "label": "身份",
@@ -407,10 +459,11 @@ const DNA_GENOMES = [
     "id": "devops",
     "role": "DevOps",
     "title": "DevOps · 容器与可运行",
-    "status": "init",
+    "status": "ready",
     "path": "AgentTeam/Develop/DevOps",
     "agentId": "ag-devops",
-    "slots": {
+    "genomePack": "devops",
+            "slots": {
       "G1": {
         "key": "identity",
         "label": "身份",
@@ -424,17 +477,17 @@ const DNA_GENOMES = [
       "G3": {
         "key": "knowledge",
         "label": "知识",
-        "text": "挂载优先:\n- docker-compose / Dockerfile\n- opc 挂载约定（WORKBENCH=/workbench）\n- factory :8787 · hof :8788 运行说明\ndenylist: 口头「环境差不多」"
+        "text": "挂载优先:\n- docker-compose / Dockerfile\n- 端口与挂载约定\n- 健康检查与日志落点说明\ndenylist: 口头「环境差不多」"
       },
       "G4": {
         "key": "capability",
         "label": "能力与工具",
-        "text": "规划: ①声明依赖与端口 ②compose up 可复现 ③healthz ④回滚步骤\n产出: compose 片段、运行手册短页、故障排查三条\n自检: 新人按文档能否 15 分钟起服"
+        "text": "规划: ①依赖与端口 ②compose up 可复现 ③healthz ④回滚步骤\n产出: 运行手册短页、故障排查三条"
       },
       "G5": {
         "key": "experience",
         "label": "经验策略",
-        "text": "DO: 一切验收路径写进 compose/文档。\nDO: 密钥只 bind-mount 或环境注入。\nAVOID: 在镜像里 bake key。\nAVOID: 无 healthcheck 的「大概起来了」。"
+        "text": "DO: 密钥注入；AVOID: 镜像 bake key、无 healthcheck 的「大概起来了」"
       }
     }
   }
@@ -854,9 +907,9 @@ const REPLIES = {
   "dm-ag-sales": [{ from: "Sales", text: "好，真人侧按你的口径跟。" }],
 };
 
-/** 工作台内嵌 bench（非 Agent 频道列表） */
+/** 工作台内嵌 bench（非 Agent 频道列表）；单基因仅单题 factory */
 function isWorkbenchBenchMode(mode = state.workbenchMode) {
-  return SITE_GATE === "yiagent" && (mode === "factory" || mode === "evolve");
+  return SITE_GATE === "yiagent" && mode === "factory";
 }
 
 const TITLES = {
@@ -865,9 +918,15 @@ const TITLES = {
   todos: ["日程", "已与日程合并"],
   chat:
     SITE_GATE === "yiagent"
-      ? ["单基因工作台", "单题 / 题组搜索 · 筛最优等位组合"]
+      ? ["单基因工作台", "二级选基因 · 右侧编辑与单题筛选"]
       : ["消息", "对 Team 与数字员工说话"],
-  genome: ["基因组工作台", "双螺旋 · G1–G5 等位 · 悬停详情"],
+  rolefactory: ["角色工厂", "填角色名 → 题组+裁判 → 搜基因 → 冠军基因组"],
+  rflive: ["角色工厂·实跑", "独立高性能容器：并行出题与评测，分数全部实跑"],
+  codeboard: ["编程榜", "榜单区 · LiveCodeBench 沙箱 pass@1 · 仅 Kimi · 50 题抽样"],
+  genome: ["基因组工作台", "一级菜单进台 · 二级选角色 · 右侧 DNA"],
+  optimize: ["优化闭环", "失败样例 → 弱点 → 提案 → 前后对比 · US-002"],
+  runagent: ["可调用实体", "加载基因组 → 直接会话 · 类 Hermes · US-004"],
+  tour: ["DNA 全链路", "目的 → 四维 → 四菜单 · 开源一分钟叙事"],
   approvals: ["审批", "人审材料：引用等级 · 缺口 · 审计摘要"],
   projects: ["项目管理", "战略项目 · 客户项目 · 谁负责 · 卡在哪"],
   progress:
@@ -1012,13 +1071,22 @@ const TIER_LABEL = {
 };
 
 const _bootMgmt = loadAgentMgmt();
+const _bootParams = new URLSearchParams(location.search);
+const _bootPage = _bootParams.get("page");
+const _bootGene = _bootParams.get("gene");
+const _bootSlot = _bootParams.get("slot");
+const _bootGenome = _bootParams.get("genome");
 
 const state = {
-  page: SITE.home || "today",
+  page: _bootPage || SITE.home || "today",
   channelId: SITE_GATE === "yiagent" ? "ch-dev" : "team-review",
   teamScope: SITE_GATE === "yiagent" ? "ch-dev" : "team-review",
-  /** yiagent 工作台：factory 单题 | evolve 题组 */
+  /** yiagent 工作台：factory 单题（题组 DNA 已从单基因台移除） */
   workbenchMode: SITE_GATE === "yiagent" ? "factory" : "agent",
+  /** 从基因组详情「编辑」带入 */
+  focusGeneId: _bootGene || null,
+  focusGeneSlot: _bootSlot || null,
+  genomeRoleId: _bootGenome || "product_manager",
   chatTab: "channel",
   chatQ: "",
   kbFolder: "all",
@@ -4196,7 +4264,12 @@ function setPage(id) {
   render();
   if (id === "chat" && SITE_GATE === "yiagent" && state.workbenchMode === "factory") {
     if (typeof FactoryBench !== "undefined") {
-      FactoryBench.ensureDemo().catch(() => {});
+      // 单基因已定位时进选题目录（可看见 ★ 优先题），否则默认演示
+      if (state.focusGeneId && typeof FactoryBench.openPick === "function") {
+        FactoryBench.openPick();
+      } else {
+        FactoryBench.ensureDemo().catch(() => {});
+      }
     }
   }
   if (id === "settings" && state.settingsTab === "providers") {
@@ -4285,12 +4358,13 @@ function renderHead() {
         `<button class="chip-btn" type="button" id="btn-toggle-chats">${showing ? "进入对话" : "会话列表"}</button>`
       );
     } else if (state.workbenchMode === "factory") {
-      if (!(typeof FactoryBench !== "undefined" && FactoryBench.state?.runMode === "demo")) {
+      const fb = typeof FactoryBench !== "undefined" ? FactoryBench.state : null;
+      if (fb?.runMode === "demo") {
+        actions.push(`<button class="chip-btn" type="button" data-fb-action="open-pick">退出演示</button>`);
+        actions.push(`<button class="chip-btn accent" type="button" data-fb-action="start-demo">重新演示</button>`);
+      } else {
+        actions.push(`<button class="chip-btn accent" type="button" data-fb-action="start-demo">冻结演示</button>`);
         actions.push(`<button class="chip-btn" type="button" data-fb-action="open-settings">设置</button>`);
-      }
-    } else if (state.workbenchMode === "evolve") {
-      if (!(typeof EvolveBench !== "undefined" && EvolveBench.state?.runMode === "demo")) {
-        actions.push(`<button class="chip-btn" type="button" data-eb-action="open-settings">设置</button>`);
       }
     }
   }
@@ -4313,8 +4387,9 @@ function renderHead() {
   }
   if (state.page === "genome") {
     actions.push(`<button class="chip-btn" type="button" data-page="chat">单基因工作台</button>`);
+    const gid = encodeURIComponent(state.genomeRoleId || "product_manager");
     actions.push(
-      `<a class="btn primary" href="/dna-graph.html" target="_blank" rel="noopener">新窗口打开</a>`
+      `<a class="btn primary" href="/dna-graph.html?genome=${gid}" target="_blank" rel="noopener">双螺旋视图</a>`
     );
   }
   if (state.page === "projects") {
@@ -4685,43 +4760,10 @@ function renderApprovals() {
     </div>`;
 }
 
-function renderWorkbenchSideNav() {
-  if (SITE_GATE !== "yiagent") return "";
-  const items = [
-    { id: "factory", label: "单题DNA搜索", desc: "演示 / 真实运行" },
-    { id: "evolve", label: "题组DNA搜索", desc: "演示 / 真实运行" },
-  ];
-  return `<aside class="wb-side" aria-label="单基因工作台">
-    <div class="wb-side-head">单基因</div>
-    ${items
-      .map(
-        (it) => `<button class="wb-side-item ${state.workbenchMode === it.id ? "active" : ""}" type="button" data-workbench-mode="${it.id}">
-      <span class="wb-side-label">${it.label}</span>
-      <span class="wb-side-desc">${it.desc}</span>
-    </button>`
-      )
-      .join("")}
-  </aside>`;
-}
-
 function renderChat() {
   if (SITE_GATE === "yiagent") {
-    if (state.workbenchMode !== "factory" && state.workbenchMode !== "evolve") {
-      state.workbenchMode = "factory";
-    }
-    const side = renderWorkbenchSideNav();
-    if (state.workbenchMode === "evolve") {
-      const body =
-        typeof EvolveBench !== "undefined"
-          ? EvolveBench.render()
-          : `<div class="pad"><div class="card"><div class="empty">题组台脚本未加载</div></div></div>`;
-      return `<div class="wb-shell">${side}<div class="wb-main">${body}</div></div>`;
-    }
-    const body =
-      typeof FactoryBench !== "undefined"
-        ? FactoryBench.render()
-        : `<div class="pad"><div class="card"><div class="empty">筛选台脚本未加载</div></div></div>`;
-    return `<div class="wb-shell">${side}<div class="wb-main">${body}</div></div>`;
+    state.workbenchMode = "factory";
+    return renderSingleGeneWorkbench();
   }
 
   const resolvedId = resolveChannelAlias(state.channelId);
@@ -6704,16 +6746,256 @@ function renderReview() {
     </div>`;
 }
 
-function renderGenome() {
+function listPackGenes(packId) {
+  const packs = window.YIAGENT_GENOME_PACKS || {};
+  const pack = packs[packId] || packs.ai_architect || Object.values(packs)[0] || null;
+  if (!pack) return { pack: null, genes: [] };
+  const genes = [];
+  for (const slot of ["G1", "G2", "G3", "G4", "G5"]) {
+    for (const allele of pack.alleles?.[slot] || []) {
+      if (!allele?.id) continue;
+      genes.push({
+        id: allele.id,
+        label: allele.label || allele.id,
+        text: allele.text || "",
+        active: allele.active !== false,
+        slot,
+      });
+    }
+  }
+  return { pack, genes };
+}
+
+function syncChatGeneUrl() {
+  try {
+    const u = new URL(location.href);
+    u.searchParams.set("page", "chat");
+    if (state.genomeRoleId) u.searchParams.set("genome", state.genomeRoleId);
+    else u.searchParams.delete("genome");
+    if (state.focusGeneId) u.searchParams.set("gene", state.focusGeneId);
+    else u.searchParams.delete("gene");
+    if (state.focusGeneSlot) u.searchParams.set("slot", state.focusGeneSlot);
+    else u.searchParams.delete("slot");
+    history.replaceState(null, "", `${u.pathname}${u.search}`);
+  } catch {
+    /* ignore */
+  }
+}
+
+function ensureFocusedGene(genes) {
+  if (!genes.length) {
+    state.focusGeneId = null;
+    state.focusGeneSlot = null;
+    return null;
+  }
+  let cur = genes.find((g) => g.id === state.focusGeneId) || null;
+  if (!cur) {
+    cur = genes[0];
+    state.focusGeneId = cur.id;
+    state.focusGeneSlot = cur.slot;
+  } else if (!state.focusGeneSlot) {
+    state.focusGeneSlot = cur.slot;
+  }
+  return cur;
+}
+
+function renderSingleGeneWorkbench() {
+  const slotMeta = {
+    G1: { label: "身份", color: "#5ec8ff" },
+    G2: { label: "人设", color: "#3ecfbe" },
+    G3: { label: "知识", color: "#9fd356" },
+    G4: { label: "落地", color: "#f5a623" },
+    G5: { label: "经验", color: "#ff6b8a" },
+  };
+  const { pack, genes } = listPackGenes(state.genomeRoleId || "ai_architect");
+  if (pack?.id && state.genomeRoleId !== pack.id) state.genomeRoleId = pack.id;
+  const focused = ensureFocusedGene(genes);
+
+  let lastSlot = "";
+  const roleRows = genes
+    .map((g) => {
+      let sec = "";
+      if (g.slot !== lastSlot) {
+        lastSlot = g.slot;
+        const sm = slotMeta[g.slot] || { label: g.slot, color: "#8e8e93" };
+        sec = `<div class="genome-wb-side-head gene-slot-head">${escapeHtml(g.slot)} · ${escapeHtml(sm.label)}</div>`;
+      }
+      const on = focused && g.id === focused.id;
+      const accent = (slotMeta[g.slot] || {}).color || "#5ec8ff";
+      return `${sec}
+        <button class="genome-role ${on ? "active" : ""}" type="button" data-chat-gene="${escapeHtml(g.id)}" data-chat-slot="${escapeHtml(g.slot)}" style="--role-accent:${accent}" title="${escapeHtml(g.id)}">
+          <div class="genome-role-av" style="background:${accent}">${escapeHtml((g.slot || "G").slice(1) || "·")}</div>
+          <div style="min-width:0">
+            <div class="genome-role-name">${escapeHtml(g.label)}</div>
+            <div class="genome-role-meta">${escapeHtml(g.id)}</div>
+          </div>
+        </button>`;
+    })
+    .join("");
+
+  const factoryHtml =
+    typeof FactoryBench !== "undefined"
+      ? FactoryBench.render()
+      : `<div class="card"><div class="empty">筛选台脚本未加载</div></div>`;
+
+  const packShort = pack?.short || pack?.title || state.genomeRoleId || "基因组";
+  const linked =
+    (window.YIAGENT_GENE_CASE_LINKS &&
+      window.YIAGENT_GENE_CASE_LINKS.links &&
+      focused &&
+      window.YIAGENT_GENE_CASE_LINKS.links[focused.id]) ||
+    [];
+  if (typeof FactoryBench !== "undefined" && typeof FactoryBench.setFocusGene === "function") {
+    FactoryBench.setFocusGene(focused?.id || null, linked, pack?.id || state.genomeRoleId || null);
+  }
+  const linkRows = linked.length
+    ? linked
+        .map(
+          (c, i) => `<button class="gene-case-chip is-gene" type="button" data-gene-case="${escapeHtml(c.case_id)}" title="score ${escapeHtml(String(c.score))}">
+            <span class="gene-case-star" aria-hidden="true">★</span>
+            <span class="gene-case-body">
+              <span class="gene-case-title">${i === 0 ? "优先 · " : ""}${escapeHtml(c.title || c.case_id)}</span>
+              <span class="gene-case-meta">${escapeHtml(c.suite || "")} · ${escapeHtml(c.case_id)}</span>
+            </span>
+          </button>`
+        )
+        .join("")
+    : `<div class="meta">暂无标签匹配题（启发式）</div>`;
+  const focusCard = focused
+    ? `<div class="card gene-focus-card">
+        <div class="meta">${escapeHtml(focused.slot)} · ${escapeHtml((slotMeta[focused.slot] || {}).label || "")} · ${escapeHtml(packShort)} · ${escapeHtml(focused.id)}</div>
+        <h2 class="gene-focus-title">${escapeHtml(focused.label)}</h2>
+        <pre class="gene-focus-text">${escapeHtml(focused.text)}</pre>
+        <div class="gene-case-block">
+          <div class="meta" style="margin-bottom:8px">★ 对应评测题（Benchmark 标签匹配 · 最多 3 · 点开可跑）</div>
+          <div class="gene-case-list">${linkRows}</div>
+        </div>
+      </div>`
+    : `<div class="card"><div class="empty">当前基因组暂无基因</div></div>`;
+
   return `
-    <div class="genome-layout" aria-label="基因组工作台">
-      <iframe
-        class="genome-frame"
-        title="YiAgent 基因组双螺旋"
-        src="/dna-graph.html?embed=1&v=20260804-fde"
-        allow="fullscreen"
-      ></iframe>
+    <div class="genome-wb gene-edit-wb" aria-label="单基因工作台">
+      <aside class="genome-wb-side">
+        <div class="genome-wb-side-head">二级 · 基因 · ${escapeHtml(packShort)}</div>
+        <div class="genome-wb-roles">${roleRows || `<div class="empty">暂无基因</div>`}</div>
+      </aside>
+      <main class="genome-wb-main gene-edit-main">
+        <div class="gene-edit-scroll">
+          ${focusCard}
+          ${factoryHtml}
+        </div>
+      </main>
     </div>`;
+}
+
+function listGenomeWorkbenchRoles() {
+  const packs = window.YIAGENT_GENOME_PACKS || {};
+  const palette = ["#5ec8ff", "#3ecfbe", "#9fd356", "#f5a623", "#ff6b8a", "#c4a574"];
+  const roles = [];
+  let i = 0;
+
+  Object.values(packs).forEach((p) => {
+    if (!p?.id) return;
+    const n = Object.values(p.alleles || {}).reduce((acc, list) => acc + (list?.length || 0), 0);
+    const ver = p.version ? `v${p.version}` : "";
+    roles.push({
+      id: p.id,
+      name: p.short || p.title || p.id,
+      subtitle: p.title || "",
+      note: p.note || "",
+      geneCount: n,
+      version: p.version || "",
+      kind: "pack",
+      color: palette[i % palette.length],
+      pack: p,
+    });
+    i += 1;
+  });
+
+  return roles;
+}
+
+function renderGenome() {
+  const roles = listGenomeWorkbenchRoles();
+  let role = roles.find((r) => r.id === state.genomeRoleId) || roles[0] || null;
+  if (role && state.genomeRoleId !== role.id) state.genomeRoleId = role.id;
+
+  const roleRows = roles
+    .map((r) => {
+      const on = role && r.id === role.id;
+      const initial = (r.name || "?").replace(/DNA/i, "").trim().slice(0, 1) || "G";
+      const ver = r.version ? ` · v${escapeHtml(String(r.version))}` : "";
+      return `
+        <button class="genome-role ${on ? "active" : ""}" type="button" data-genome-role="${escapeHtml(r.id)}" style="--role-accent:${r.color}">
+          <div class="genome-role-av" style="background:${r.color}">${escapeHtml(initial)}</div>
+          <div style="min-width:0">
+            <div class="genome-role-name">${escapeHtml(r.name)}</div>
+            <div class="genome-role-meta">${r.geneCount} 基因${ver}</div>
+          </div>
+        </button>`;
+    })
+    .join("");
+
+  const gid = encodeURIComponent(role?.id || "ai_architect");
+  const detail = role
+    ? `<iframe
+        class="genome-frame"
+        title="${escapeHtml(role.name)} DNA"
+        src="/dna-graph.html?embed=1&genome=${gid}&v=20260806-gene-l2"
+        allow="fullscreen"
+      ></iframe>`
+    : `<div class="empty pad">请选择左侧角色</div>`;
+
+  return `
+    <div class="genome-wb" aria-label="多基因组工作台">
+      <aside class="genome-wb-side">
+        <div class="genome-wb-side-head">二级 · 角色</div>
+        <div class="genome-wb-roles">${roleRows || `<div class="empty">暂无角色基因组</div>`}</div>
+      </aside>
+      <main class="genome-wb-main genome-wb-dna">${detail}</main>
+    </div>`;
+}
+
+function renderOptimize() {
+  if (typeof OptimizeBench === "undefined") {
+    return `<div class="pad"><div class="card"><div class="empty">optimize-bench.js 未加载</div></div></div>`;
+  }
+  return OptimizeBench.render();
+}
+
+function renderRoleFactory() {
+  if (typeof RoleFactory === "undefined") {
+    return `<div class="pad"><div class="card"><div class="empty">role-factory.js 未加载</div></div></div>`;
+  }
+  return RoleFactory.render();
+}
+
+function renderRfLive() {
+  if (typeof RFLive === "undefined") {
+    return `<div class="pad"><div class="card"><div class="empty">rf-live.js 未加载</div></div></div>`;
+  }
+  return RFLive.render();
+}
+
+function renderCodeBoard() {
+  if (typeof CodeBenchBoard === "undefined") {
+    return `<div class="pad"><div class="card"><div class="empty">codebench-board.js 未加载</div></div></div>`;
+  }
+  return CodeBenchBoard.render();
+}
+
+function renderRunAgent() {
+  if (typeof AgentRunBench === "undefined") {
+    return `<div class="pad"><div class="card"><div class="empty">agent-run-bench.js 未加载</div></div></div>`;
+  }
+  return AgentRunBench.render();
+}
+
+function renderTour() {
+  if (typeof TourBench === "undefined") {
+    return `<div class="pad"><div class="card"><div class="empty">tour-bench.js 未加载</div></div></div>`;
+  }
+  return TourBench.render();
 }
 
 const PAGES = {
@@ -6722,6 +7004,12 @@ const PAGES = {
   todos: renderTodos,
   chat: renderChat,
   genome: renderGenome,
+  rolefactory: renderRoleFactory,
+  rflive: renderRfLive,
+  codeboard: renderCodeBoard,
+  optimize: renderOptimize,
+  runagent: renderRunAgent,
+  tour: renderTour,
   approvals: renderApprovals,
   projects: renderProjects,
   progress: renderProgress,
@@ -7416,23 +7704,22 @@ function bind() {
       return;
     }
 
-    const wbMode = e.target.closest("[data-workbench-mode]");
-    if (wbMode) {
-      e.preventDefault();
-      const next = wbMode.getAttribute("data-workbench-mode");
-      state.workbenchMode = next === "evolve" ? "evolve" : "factory";
-      $("app").classList.toggle("show-chats", false);
-      render();
-      if (state.workbenchMode === "factory" && typeof FactoryBench !== "undefined") {
-        FactoryBench.ensureDemo().catch(() => {});
-      }
-      return;
-    }
-
-    if (typeof FactoryBench !== "undefined" && FactoryBench.handleClick(e)) {
-      return;
-    }
-    if (typeof EvolveBench !== "undefined" && EvolveBench.handleClick(e)) {
+    // handleClick 必须同步返回 boolean；Promise 恒真会吞掉一级菜单
+    const handledBy = (mod) => {
+      if (typeof mod === "undefined" || typeof mod.handleClick !== "function") return false;
+      const r = mod.handleClick(e);
+      return r === true;
+    };
+    if (
+      handledBy(typeof RoleFactory !== "undefined" ? RoleFactory : undefined) ||
+      handledBy(typeof RFLive !== "undefined" ? RFLive : undefined) ||
+      handledBy(typeof CodeBenchBoard !== "undefined" ? CodeBenchBoard : undefined) ||
+      handledBy(typeof FactoryBench !== "undefined" ? FactoryBench : undefined) ||
+      handledBy(typeof EvolveBench !== "undefined" ? EvolveBench : undefined) ||
+      handledBy(typeof OptimizeBench !== "undefined" ? OptimizeBench : undefined) ||
+      handledBy(typeof AgentRunBench !== "undefined" ? AgentRunBench : undefined) ||
+      handledBy(typeof TourBench !== "undefined" ? TourBench : undefined)
+    ) {
       return;
     }
 
@@ -7458,6 +7745,8 @@ function bind() {
       const openDm = navEl.getAttribute("data-open-dm");
       const openProject = navEl.getAttribute("data-open-project");
       const openProgress = navEl.getAttribute("data-open-progress");
+      const genome = navEl.getAttribute("data-genome");
+      const kb = navEl.getAttribute("data-kb");
       if (openDm) {
         const id = resolveChannelAlias(openDm);
         state.channelId = id;
@@ -7474,6 +7763,23 @@ function bind() {
         openProjectProgress(openProgress);
         return;
       }
+      if (genome) {
+        state.genomeRoleId = genome;
+        if (typeof FactoryBench !== "undefined" && FactoryBench.state) {
+          FactoryBench.state.focusPackId = genome;
+        }
+      }
+      if (kb && typeof FactoryBench !== "undefined" && FactoryBench.state) {
+        FactoryBench.state.kbPackId = kb;
+      }
+      try {
+        const u = new URL(location.href);
+        if (genome) u.searchParams.set("genome", genome);
+        if (kb) u.searchParams.set("kb", kb);
+        history.replaceState(null, "", u.toString());
+      } catch {
+        /* ignore */
+      }
       setPage(page);
       return;
     }
@@ -7482,7 +7788,7 @@ function bind() {
     if (e.target.closest("#nav-scrim") || e.target.id === "nav-scrim") return;
 
     const t = e.target.closest(
-      "[data-chat-tab],[data-kb-folder],[data-kb-plane],[data-kb-doc],[data-kb-status],[data-approve],[data-reject],[data-project-open],[data-open-progress],[data-progress-project],[data-progress-goal],[data-progress-fold],[data-progress-fold-all],[data-progress-jump],[data-review-pack],[data-review-stage],[data-review-verdict],[data-project-channel],[data-project-channel-setup],[data-project-channel-edit],[data-pcw-toggle],[data-org-tab],[data-org-channel],[data-org-toggle-member],[data-org-del-channel],[data-org-del-agent],[data-dna-role],[data-dna-slot],#btn-org-add-channel,#btn-org-add-agent,#btn-org-save-ch,#btn-pcw-save,#btn-pcw-cancel,[data-project-filter],[data-project-category],[data-project-status],[data-schedule-day],[data-todo-toggle],[data-todo-del],[data-todo-filter],[data-settings-tab],[data-provider-edit],[data-provider-save],[data-provider-clear],[data-provider-enable],[data-asset-ssh],[data-asset-copy],[data-asset-probe],[data-secret-copy],[data-secret-reveal],[data-tool],[data-mention-pick],#send,#btn-toggle-chats,#btn-kb-folders,#btn-kb-new,#btn-kb-upload,#btn-kb-new2,#btn-kb-publish,#btn-kb-publish2,#btn-kb-edit,#btn-kb-share,#btn-crm-add,#btn-project-new,#btn-project-new-h,#btn-project-task,#btn-strat-edit,#btn-strat-edit-h,#btn-todo-add,#btn-todo-add-h,#btn-schedule-today,#btn-project-back,#btn-project-back2,#btn-project-edit,#btn-project-edit2,#btn-project-edit3,#btn-project-edit-save,#btn-project-edit-save2,#btn-project-edit-cancel,#btn-project-edit-cancel2,#btn-project-edit-cancel3,#btn-project-archive,#btn-project-archive2,#btn-project-archive-h,#btn-project-unarchive,#btn-project-unarchive2,#btn-project-unarchive-h,#btn-project-del,#btn-project-del2,#btn-project-del-h,#btn-providers-reload,#btn-providers-reload-h,#btn-it-secrets-reload,#btn-it-secrets-reload-h,#btn-provider-cancel"
+      "[data-chat-tab],[data-kb-folder],[data-kb-plane],[data-kb-doc],[data-kb-status],[data-approve],[data-reject],[data-project-open],[data-open-progress],[data-progress-project],[data-progress-goal],[data-progress-fold],[data-progress-fold-all],[data-progress-jump],[data-review-pack],[data-review-stage],[data-review-verdict],[data-project-channel],[data-project-channel-setup],[data-project-channel-edit],[data-pcw-toggle],[data-org-tab],[data-org-channel],[data-org-toggle-member],[data-org-del-channel],[data-org-del-agent],[data-dna-role],[data-genome-role],[data-chat-gene],[data-gene-case],[data-dna-slot],#btn-org-add-channel,#btn-org-add-agent,#btn-org-save-ch,#btn-pcw-save,#btn-pcw-cancel,[data-project-filter],[data-project-category],[data-project-status],[data-schedule-day],[data-todo-toggle],[data-todo-del],[data-todo-filter],[data-settings-tab],[data-provider-edit],[data-provider-save],[data-provider-clear],[data-provider-enable],[data-asset-ssh],[data-asset-copy],[data-asset-probe],[data-secret-copy],[data-secret-reveal],[data-tool],[data-mention-pick],#send,#btn-toggle-chats,#btn-kb-folders,#btn-kb-new,#btn-kb-upload,#btn-kb-new2,#btn-kb-publish,#btn-kb-publish2,#btn-kb-edit,#btn-kb-share,#btn-crm-add,#btn-project-new,#btn-project-new-h,#btn-project-task,#btn-strat-edit,#btn-strat-edit-h,#btn-todo-add,#btn-todo-add-h,#btn-schedule-today,#btn-project-back,#btn-project-back2,#btn-project-edit,#btn-project-edit2,#btn-project-edit3,#btn-project-edit-save,#btn-project-edit-save2,#btn-project-edit-cancel,#btn-project-edit-cancel2,#btn-project-edit-cancel3,#btn-project-archive,#btn-project-archive2,#btn-project-archive-h,#btn-project-unarchive,#btn-project-unarchive2,#btn-project-unarchive-h,#btn-project-del,#btn-project-del2,#btn-project-del-h,#btn-providers-reload,#btn-providers-reload-h,#btn-it-secrets-reload,#btn-it-secrets-reload-h,#btn-provider-cancel"
     );
     if (!t) return;
 
@@ -7595,6 +7901,37 @@ function bind() {
       state.dnaRoleId = t.dataset.dnaRole;
       state.dnaSlotId = state.dnaSlotId || "G1";
       render();
+      return;
+    }
+    if (t.dataset.genomeRole) {
+      state.genomeRoleId = t.dataset.genomeRole;
+      render();
+      return;
+    }
+    if (t.dataset.chatGene) {
+      state.focusGeneId = t.dataset.chatGene;
+      state.focusGeneSlot = t.dataset.chatSlot || state.focusGeneSlot || null;
+      syncChatGeneUrl();
+      if (typeof FactoryBench !== "undefined" && typeof FactoryBench.openPick === "function") {
+        FactoryBench.openPick();
+      }
+      render();
+      requestAnimationFrame(() => {
+        document.querySelector(".gene-edit-wb .genome-role.active")?.scrollIntoView({ block: "nearest" });
+      });
+      return;
+    }
+    if (t.dataset.geneCase) {
+      const caseId = t.dataset.geneCase;
+      if (typeof FactoryBench !== "undefined" && typeof FactoryBench.openCase === "function") {
+        FactoryBench.openCase(caseId);
+        render();
+        requestAnimationFrame(() => {
+          document.querySelector(".fb-page")?.scrollIntoView({ block: "start" });
+        });
+      } else {
+        toast(`题目 ${caseId}`);
+      }
       return;
     }
     if (t.dataset.dnaSlot) {
@@ -8000,6 +8337,10 @@ bind();
 (async () => {
   state.assets = loadAssets();
   await Promise.all([loadProjects(), loadItSecrets()]);
+  const knownPages = new Set(Object.keys(PAGES || {}));
+  if (_bootPage && !knownPages.has(_bootPage) && !TITLES[_bootPage]) {
+    state.page = SITE.home || "tour";
+  }
   render();
   if (
     SITE_GATE === "yiagent" &&
@@ -8007,7 +8348,18 @@ bind();
     state.workbenchMode === "factory" &&
     typeof FactoryBench !== "undefined"
   ) {
-    FactoryBench.ensureDemo().catch(() => {});
+    if (state.focusGeneId && typeof FactoryBench.openPick === "function") {
+      FactoryBench.openPick();
+    } else {
+      FactoryBench.ensureDemo().catch(() => {});
+    }
+  }
+  if (state.focusGeneId) {
+    toast(`已定位基因 ${state.focusGeneId}${state.focusGeneSlot ? " · " + state.focusGeneSlot : ""}`);
+    requestAnimationFrame(() => {
+      document.querySelector(".gene-edit-wb .genome-role.active")?.scrollIntoView({ block: "nearest" });
+    });
+    syncChatGeneUrl();
   }
 })();
 

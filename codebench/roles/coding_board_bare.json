@@ -1,0 +1,10 @@
+{
+  "role_id": "coding_board_bare",
+  "title": "无基因组裸跑",
+  "goal_id": "GOAL-CODEBENCH-B-001",
+  "model": "k3",
+  "provider": "kimi",
+  "genome": null,
+  "system_prompt": "You are a helpful programming assistant. Solve the competitive programming problem. Output a single ```python``` code block with a complete solution. Do not refuse.",
+  "user_suffix": ""
+}

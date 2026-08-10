@@ -1,0 +1,21 @@
+# 仅构建/启动 console 静态站（US-002/004 可交互原型不依赖 factory）
+# docker compose -f docker-compose.console.yml build
+# docker compose -f docker-compose.console.yml up -d
+name: yitech002-yiagent-console
+
+services:
+  ceo-console:
+    build:
+      context: .
+      dockerfile: Dockerfile.console
+    image: yitech002-yiagent-ceo-console:local
+    container_name: yitech002-yiagent-ceo-console
+    ports:
+      - "127.0.0.1:8188:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s

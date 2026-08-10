@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>YiAgent · Agent 编辑台</title>
-  <link rel="stylesheet" href="styles.css?v=20260804-extra-col" />
+  <link rel="stylesheet" href="styles.css?v=20260806-genestar" />
 </head>
 <body class="site-yiagent">
   <div class="shell" id="app">
@@ -22,7 +22,7 @@
           <div class="av-sm you">你</div>
           <div>
             <div class="nav-user-name">编辑者</div>
-            <div class="nav-user-meta">单基因 · 基因组</div>
+            <div class="nav-user-meta">单基因 · 基因组 · 优化 · 实体</div>
           </div>
         </div>
       </footer>
@@ -33,7 +33,7 @@
         <button class="icon-btn menu-btn" type="button" id="btn-menu" aria-label="菜单">☰</button>
         <div class="ws-titles">
           <h1 id="ws-title">单基因工作台</h1>
-          <p id="ws-sub">单题 / 题组搜索 · 筛最优等位组合</p>
+          <p id="ws-sub">单题 DNA 搜索 · 筛最优等位组合</p>
         </div>
         <div class="ws-actions" id="ws-actions"></div>
       </header>
@@ -44,10 +44,20 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="factory-bench.js?v=20260804-extra-col"></script>
-  <script src="evolve-bench.js?v=20260804-extra-col"></script>
-  <script src="kb-specs.js?v=20260804-extra-col"></script>
-  <script src="kb-manage.js?v=20260804-extra-col"></script>
-  <script src="app.js?v=20260804-fde"></script>
+  <script src="genome-packs.js?v=20260806-genestar"></script>
+  <script src="genome-packs-factory-v11.js?v=20260810-v11b"></script>
+  <script src="kb-packs-product.js?v=20260808-kbcompare"></script>
+  <script src="gene-case-links.js?v=20260806-genestar"></script>
+  <script src="role-factory.js?v=20260809-rolefactory"></script>
+  <script src="rf-live.js?v=20260809-rflive"></script>
+  <script src="codebench-board.js?v=20260809-local20"></script>
+  <script src="factory-bench.js?v=20260808-kbcompare"></script>
+  <script src="evolve-bench.js?v=20260805-proto"></script>
+  <script src="optimize-bench.js?v=20260805-proto"></script>
+  <script src="agent-run-bench.js?v=20260806-fixbind"></script>
+  <script src="tour-bench.js?v=20260808-kbcompare"></script>
+  <script src="kb-specs.js?v=20260805-proto"></script>
+  <script src="kb-manage.js?v=20260805-proto"></script>
+  <script src="app.js?v=20260810-v11"></script>
 </body>
 </html>

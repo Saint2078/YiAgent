@@ -1,0 +1,29 @@
+services:
+  codebench:
+    build: .
+    image: yiagent-codebench:local
+    container_name: yiagent-codebench
+    ports:
+      - "127.0.0.1:8791:8000"
+    environment:
+      CB_DATA_DIR: /data
+      CB_EXEC_TIMEOUT_S: "8"
+      CB_MEM_MB: "256"
+      CB_ALLOW_ORIGINS: "http://127.0.0.1:8188,http://localhost:8188"
+      CB_BASE_URL: ${CB_BASE_URL:-https://api.kimi.com/coding/v1}
+      CB_MODEL: ${CB_MODEL:-k3}
+      CB_KEY_FILE: /run/secrets/kimi.key
+      CB_LCB_ROOT: /lcb
+      CB_ROLES_DIR: /srv/roles
+      HF_HOME: /data/hf
+    volumes:
+      - ./data:/data
+      - ./roles:/srv/roles:ro
+      - ./app:/srv/app:ro
+      - ./tools:/srv/tools:ro
+      - ../secrets/kimi.key:/run/secrets/kimi.key:ro
+      - ../../Benchmark/upstream/livecodebench:/lcb:ro
+    cpus: "2.0"
+    # r2 抽样需解压 private tests；对照双臂跑时保持 6g
+    mem_limit: 6g
+    restart: unless-stopped

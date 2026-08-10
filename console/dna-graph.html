@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="dark" />
-  <title>YiAgent · FDE DNA</title>
+  <title>YiAgent · Genome DNA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -57,8 +57,9 @@
       margin: 0 0 8px;
       font-size: clamp(28px, 3.2vw, 40px);
       font-weight: 600;
-      letter-spacing: -0.03em;
-      line-height: 1.05;
+      letter-spacing: 0;
+      line-height: 1.25;
+      font-family: "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Instrument Sans", sans-serif;
     }
     .brand p {
       margin: 0;
@@ -110,7 +111,7 @@
       background: rgba(13, 24, 36, 0.92);
     }
 
-    /* 基因槽：三列同形异内容；每列最多表达1+对照3，完全展示不滚动 */
+    /* 基因槽：三列铺满最终表达基因 */
     .allele-rack {
       position: absolute;
       transform: translateY(-50%);
@@ -121,26 +122,29 @@
     }
     .allele-rack.dim { opacity: 0.28; }
     .allele-card {
-      width: 200px;
-      overflow: hidden;
+      width: 236px;
+      max-height: min(42vh, 320px);
+      overflow-x: hidden;
+      overflow-y: auto;
       padding: 4px 0;
       border-radius: 10px;
       background: rgba(13, 24, 36, 0.88);
       border: 1px solid var(--line);
-      font-size: 12px;
+      font-size: 12.5px;
       line-height: 1.45;
       user-select: none;
+      font-family: "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Instrument Sans", sans-serif;
     }
     .allele-row {
       display: flex;
       align-items: center;
       gap: 7px;
-      padding: 6px 9px;
+      padding: 5px 9px;
       border: 1px solid transparent;
       border-radius: 7px;
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
-      height: 32px;
+      min-height: 28px;
       box-sizing: border-box;
     }
     .allele-row .dot {
@@ -154,17 +158,35 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0;
     }
     .allele-row .tag {
       margin-left: auto;
       font-family: "JetBrains Mono", ui-monospace, monospace;
       font-size: 10px;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.02em;
       color: var(--muted);
       flex: none;
+      text-align: right;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .allele-row .tag .mu {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .allele-row .tag .sep {
+      opacity: 0.45;
+      margin: 0 3px;
+    }
+    .allele-row .tag .sd {
+      color: var(--accent);
+      font-weight: 500;
     }
     .allele-row.active { color: var(--ink); font-weight: 500; }
-    .allele-row.active .tag { color: inherit; opacity: 0.85; }
+    .allele-row.active .tag { opacity: 1; }
     .allele-row.weak { color: var(--muted); }
     .allele-row.lit { background: rgba(13, 24, 36, 0.92); }
     .allele-row.slot-empty {
@@ -178,7 +200,7 @@
 
     .panel {
       top: 118px; right: 20px;
-      width: min(300px, calc(100vw - 40px));
+      width: min(320px, calc(100vw - 40px));
       background: rgba(13, 24, 36, 0.94);
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -203,8 +225,67 @@
       white-space: pre-wrap;
       border-top: 1px solid var(--line);
       padding-top: 10px;
-      max-height: 38vh;
+      max-height: 28vh;
       overflow: auto;
+    }
+    .panel-score {
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      margin-bottom: 4px;
+    }
+    .panel-score-title {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .panel-score-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+    }
+    .panel-score-item {
+      background: rgba(7, 16, 24, 0.55);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 9px;
+    }
+    .panel-score-item .k {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .panel-score-item .v {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .panel-score-note {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .panel-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .panel-actions .chip.primary {
+      background: rgba(62, 207, 190, 0.18);
+      border-color: rgba(62, 207, 190, 0.55);
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .panel-actions .chip.primary:hover {
+      background: rgba(62, 207, 190, 0.28);
     }
 
     .legend {
@@ -234,12 +315,46 @@
       padding: 10px 12px;
     }
 
+    .genome-pick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      pointer-events: auto;
+    }
+    .genome-pick .chip.active {
+      border-color: rgba(62, 207, 190, 0.65);
+      background: rgba(62, 207, 190, 0.18);
+      color: var(--ink);
+    }
+    .controls select#genome-select {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: rgba(13, 24, 36, 0.92);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      max-width: 220px;
+    }
     html.embed .brand-kicker { display: none; }
-    html.embed .brand h1 { font-size: 20px; margin: 0; }
+    html.embed .brand h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0;
+      line-height: 1.3;
+      margin: 0;
+    }
     html.embed .brand p { display: none; }
-    html.embed .topbar { top: 12px; left: 14px; right: 14px; }
-    html.embed .legend { bottom: 12px; left: 14px; }
-    html.embed .hint { bottom: 12px; right: 14px; }
+    html.embed .genome-pick { display: none !important; }
+    html.embed #genome-select { display: none !important; }
+    html.embed #case-perf { display: none; }
+    html.embed .topbar { top: 10px; left: 12px; right: 12px; }
+    html.embed .legend { bottom: 10px; left: 12px; }
+    html.embed .hint { bottom: 10px; right: 12px; }
   </style>
 </head>
 <body>
@@ -253,11 +368,14 @@
 
   <div class="hud topbar">
     <div class="brand">
-      <div class="brand-kicker">YiAgent Genome · 演示基因组</div>
-      <h1>FDE DNA</h1>
-      <p>ASE 前线部署工程师 · G1–G5 等位嵌在螺旋链上 · 悬停查看基因详情</p>
+      <div class="brand-kicker">YiAgent Genome · 多基因组</div>
+      <h1 id="genome-title">Genome DNA</h1>
+      <p id="genome-desc">G1–G5 等位嵌在螺旋链上 · 悬停查看基因详情</p>
+      <div class="genome-pick" id="genome-pick" aria-label="选择基因组"></div>
+      <div id="case-perf" style="margin-top:10px;font-family:JetBrains Mono,ui-monospace,monospace;font-size:11px;color:var(--muted);line-height:1.5"></div>
     </div>
     <div class="controls">
+      <select id="genome-select" aria-label="基因组"></select>
       <button class="chip" type="button" id="btn-spin">旋转 · 关</button>
       <button class="chip" type="button" id="btn-particles">粒子 · 关</button>
       <button class="chip" type="button" id="btn-fit">适配</button>
@@ -268,7 +386,9 @@
     <div class="panel-type" id="d-type">NODE</div>
     <h2 id="d-title">—</h2>
     <div class="panel-meta" id="d-meta"></div>
+    <div class="panel-score" id="d-score" hidden></div>
     <div class="panel-body" id="d-body"></div>
+    <div class="panel-actions" id="d-actions" hidden></div>
   </aside>
 
   <div class="hud legend">
@@ -280,6 +400,8 @@
   </div>
   <div class="hud hint">拖拽平移 · 滚轮缩放 · 悬停查看</div>
 
+  <script src="genome-packs.js?v=20260806-type"></script>
+  <script src="genome-packs-factory-v11.js?v=20260810-v11b"></script>
   <script>
     const SLOTS = ["G1", "G2", "G3", "G4", "G5"];
     const SLOT_META = {
@@ -296,85 +418,169 @@
       G4: "#f5a623",
       G5: "#ff6b8a",
     };
-    const ALLELES = {
-      G1: [
-        { id: "g1.fde", label: "FDE 前线工程师", active: true, text: "role: ase_fde\n显示名: FDE / 前线部署工程师\n主责: 在客户现场把 ASE 单场景/一体机跑通，验证→关键动作人审→可复制扩展\n自报: 驻场工程搭档；不自称全栈万能、不冒充客户员工、不卖课硬广" },
-        { id: "g1.sa", label: "解决方案架构师", active: false, text: "备选：偏蓝图与选型；现场动手与排障弱于 FDE" },
-        { id: "g1.csm", label: "客户成功经理", active: false, text: "备选：关系与续约驱动；技术落地深度不足" },
-        { id: "g1.se", label: "售前工程师", active: false, text: "对照：演示与 PoC 导向，易停在「能看」不「能用」" },
-        { id: "g1.consultant", label: "驻场顾问人设", active: false, text: "对照：报告与会议优先，缺交付闭环" },
-        { id: "g1.ops", label: "纯运维值班", active: false, text: "对照：只守可用性，不推场景价值" },
-        { id: "g1.remote", label: "远程票务工程师", active: false, text: "对照：工单驱动、不到场，难拿场景真相" },
-      ],
-      G2: [
-        { id: "g2.partner", label: "现场搭档克制", active: true, text: "语气: 短句、可核对；先复述客户目标再动手\nmay: 画最小路径、当场验证、写人审清单\nmust_not: 夸大能力、绕过审批、替客户拍关键业务决策\nhuman_gates: 写库/对外发送/权限变更/合同口径" },
-        { id: "g2.coach", label: "教练式引导", active: false, text: "备选：多问少做，培养客户自运维；紧急排障时偏慢" },
-        { id: "g2.checklist", label: "清单先行", active: false, text: "备选：先对齐验收清单再动手；适合规范客户" },
-        { id: "g2.warroom", label: "作战室节奏", active: false, text: "备选：短周期同步+白板；适合多干系人" },
-        { id: "g2.hype", label: "销售腔", active: false, text: "对照：承诺路线图当现状，伤信任" },
-        { id: "g2.jargon", label: "黑话堆砌", active: false, text: "对照：内部隐喻直接对客，听不懂" },
-        { id: "g2.hero", label: "个人英雄主义", active: false, text: "对照：独吞键盘，不留可交接资产" },
-        { id: "g2.blame", label: "甩锅式沟通", active: false, text: "对照：先找人背锅，后找根因" },
-      ],
-      G3: [
-        { id: "g3.scene", label: "场景与一体机手册", active: true, text: "挂载: 目标场景边界、一体机/环境约束、验收口径、已知坑\n规则: 配置/版本/接口以可核文档为准；拿不准标「未核实」并要人确认\ndenylist: 编造客户内网拓扑、伪内部 SLA、把演示数据当生产真相" },
-        { id: "g3.runbook", label: "排障 Runbook", active: false, text: "备选：常见故障树与回滚步骤；偏运维" },
-        { id: "g3.api_contract", label: "接口契约表", active: false, text: "备选：请求/响应/错误码与人审点；偏集成" },
-        { id: "g3.security", label: "权限与安全基线", active: false, text: "备选：最小权限、密钥不落日志、变更双人" },
-        { id: "g3.ase_story", label: "ASE 对外口径", active: false, text: "备选：官网/案例可讲句；不对客泄露未发布路线" },
-        { id: "g3.metrics", label: "验收度量定义", active: false, text: "备选：时延/成功率/人审占比等可复核指标" },
-        { id: "g3.rumor", label: "道听途说配置", active: false, text: "对照：口头传说当真理，无出处" },
-        { id: "g3.dump", label: "全量文档倾倒", active: false, text: "对照：无主次，客户找不到下手点" },
-        { id: "g3.secret", label: "密钥明文惯犯", active: false, text: "对照：截图/聊天贴密钥，严重违规" },
-      ],
-      G4: [
-        { id: "g4.fde_loop", label: "验证→人审→扩展", active: true, text: "结构: ①锁单场景目标 ②最小可运行路径 ③当场验证 ④关键写操作列人审闸 ⑤可复制清单留给客户\n自检: 每步回答「这步失败怎么回滚」；扩展前必须有一次人审通过的关键动作" },
-        { id: "g4.spike", label: "尖刀 PoC", active: false, text: "备选：48h 内证明一件事；适合立项前" },
-        { id: "g4.shadow", label: "影子对照跑", active: false, text: "备选：新旧并行只读对照；适合怕切换的客户" },
-        { id: "g4.cutover", label: "切换演练", active: false, text: "备选：演练窗口+回滚演练；适合上线周" },
-        { id: "g4.handoff", label: "资产交接包", active: false, text: "备选：账号/脚本/验收表打包移交" },
-        { id: "g4.workshop", label: "现场工作坊", active: false, text: "备选：干系人对齐半天；决策多时有用" },
-        { id: "g4.bigbang", label: "一次全切", active: false, text: "对照：无灰度无回滚，风险爆炸" },
-        { id: "g4.ticket_only", label: "只提单不驻场", active: false, text: "对照：丢场景上下文，闭环极慢" },
-        { id: "g4.scope_creep", label: "范围漂移交付", active: false, text: "对照：样板未稳就加需求，永远不完" },
-      ],
-      G5: [
-        { id: "g5.human_gate", label: "关键动作人审", active: true, text: "DO: 写库/对外发送/权限变更前列清单等人确认；确认后留痕\nAVOID: 静默改生产、口头「应该没事」、用演示账号冒充生产结论" },
-        { id: "g5.verify", label: "当场验收三连", active: false, text: "备选：看日志 + 看指标 + 客户点头，缺一不算过" },
-        { id: "g5.rollback", label: "回滚肌肉记忆", active: false, text: "备选：改前先写回滚；演练过才动真格" },
-        { id: "g5.notes", label: "驻场笔记日清", active: false, text: "备选：当日决策/坑/待人审项不过夜" },
-        { id: "g5.teachback", label: "客户复述验收", active: false, text: "备选：请客户讲清「怎么开/怎么停/找谁」" },
-        { id: "g5.copy", label: "可复制检查", active: false, text: "备选：换人能否按清单重放；不能则未完成" },
-        { id: "g5.cowboy", label: "无备份直改", active: false, text: "对照：生产直接下手，出事无退路" },
-        { id: "g5.overpromise", label: "口头保证 SLA", active: false, text: "对照：未核资源就承诺时效" },
-        { id: "g5.hide", label: "藏风险不报", active: false, text: "对照：怕难看隐瞒阻塞，放大事故" },
-      ],
-    };
 
-    const GENOME = {
-      title: "ASE 前线部署工程师（FDE）",
-      id: "ase_fde",
-      note: "演示基因组：一体机/单场景验证 → 关键动作人审 → 可复制扩展；每槽 1 个当前表达，其余为备选/对照。",
-    };
+    const PACKS = window.YIAGENT_GENOME_PACKS || {};
+    let ALLELES = { G1: [], G2: [], G3: [], G4: [], G5: [] };
+    let GENOME = { id: "", title: "", note: "", short: "", casePerf: "" };
+    let GENE_BEADS = [];
 
-    /** 三列同形异内容；每列固定 4 行（表达1+对照3），完全展示 */
+    function applyGenome(id, opts = {}) {
+      const pack = PACKS[id] || PACKS.ai_architect || Object.values(PACKS)[0];
+      if (!pack) return;
+      GENOME = {
+        id: pack.id,
+        title: pack.title,
+        short: pack.short || pack.title,
+        note: pack.note || "",
+        casePerf: pack.casePerf || "",
+      };
+      ALLELES = pack.alleles;
+      GENE_BEADS = geneBeads();
+      const titleEl = document.getElementById("genome-title");
+      const descEl = document.getElementById("genome-desc");
+      const perfEl = document.getElementById("case-perf");
+      if (titleEl) titleEl.textContent = GENOME.short;
+      if (descEl) descEl.textContent = GENOME.note;
+      if (perfEl) {
+        perfEl.innerHTML =
+          (GENOME.casePerf ? escHtml(GENOME.casePerf) + " · " : "") +
+          `<a href="/" target="_top" style="color:var(--accent)">打开单基因工作台</a>`;
+      }
+      document.title = "YiAgent · " + GENOME.short;
+      syncGenomeControls(pack.id);
+      if (typeof buildLabels === "function") buildLabels();
+      if (typeof layoutLabels === "function") layoutLabels();
+      if (!opts.skipUrl) {
+        const u = new URL(location.href);
+        u.searchParams.set("genome", pack.id);
+        history.replaceState(null, "", u);
+      }
+      if (typeof clearFocus === "function") clearFocus();
+    }
+
+    function hashStr(s) {
+      let h = 2166136261;
+      const str = String(s || "");
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+
+    /** 单体得分：优先读字段，否则按 id 稳定伪造（展示用） */
+    function geneStats(al) {
+      const h = hashStr(al?.id || al?.label || "gene");
+      let mean = Number(al?.mean);
+      let sdv = Number(al?.sdv);
+      if (!Number.isFinite(mean)) mean = Math.round((72 + (h % 2300) / 100) * 10) / 10;
+      if (!Number.isFinite(sdv)) sdv = Math.round((0.4 + ((h >>> 8) % 360) / 100) * 100) / 100;
+      const n = Number.isFinite(Number(al?.n)) ? Number(al.n) : 3 + (h % 5);
+      const min = Number.isFinite(Number(al?.min))
+        ? Number(al.min)
+        : Math.round((mean - sdv * (1.2 + (h % 50) / 100)) * 10) / 10;
+      const max = Number.isFinite(Number(al?.max))
+        ? Number(al.max)
+        : Math.round((mean + sdv * (1.0 + ((h >>> 4) % 40) / 100)) * 10) / 10;
+      const composite = Number.isFinite(Number(al?.composite))
+        ? Number(al.composite)
+        : Math.round((mean - sdv * 0.85) * 10) / 10;
+      const reps = Number.isFinite(Number(al?.reps)) ? Number(al.reps) : n;
+      return { mean, sdv, n, min, max, composite, reps };
+    }
+
+    function formatGeneStatTag(al) {
+      const { mean, sdv } = geneStats(al);
+      return `<span class="tag" title="单体 mean / sdv（展示用）"><span class="mu">${mean.toFixed(1)}</span><span class="sep">·</span><span class="sd">${sdv.toFixed(2)}</span></span>`;
+    }
+
+    function scoreDetailHtml(al, slot) {
+      const st = geneStats(al);
+      const geneQ = encodeURIComponent(al?.id || "");
+      const slotQ = encodeURIComponent(slot || "");
+      const packQ = encodeURIComponent(GENOME.id || "");
+      return {
+        meta: `${slot} ${SLOT_META[slot]?.label || ""} · mean ${st.mean.toFixed(1)} · sdv ${st.sdv.toFixed(2)}`,
+        score: `
+          <div class="panel-score-title">得分详情</div>
+          <div class="panel-score-grid">
+            <div class="panel-score-item"><span class="k">mean</span><span class="v">${st.mean.toFixed(1)}</span></div>
+            <div class="panel-score-item"><span class="k">sdv</span><span class="v">${st.sdv.toFixed(2)}</span></div>
+            <div class="panel-score-item"><span class="k">min</span><span class="v">${st.min.toFixed(1)}</span></div>
+            <div class="panel-score-item"><span class="k">max</span><span class="v">${st.max.toFixed(1)}</span></div>
+            <div class="panel-score-item"><span class="k">composite</span><span class="v">${st.composite.toFixed(1)}</span></div>
+            <div class="panel-score-item"><span class="k">n / reps</span><span class="v">${st.n} / ${st.reps}</span></div>
+          </div>
+          <div class="panel-score-note">展示用伪造分 · 同源 id 稳定；正式分以后接单基因筛选实跑。</div>`,
+        actions: `
+          <a class="chip primary" href="/?page=chat&gene=${geneQ}&slot=${slotQ}&genome=${packQ}" target="_top" rel="noopener">编辑 · 单基因工作台</a>`,
+      };
+    }
+
+    function escHtml(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function syncGenomeControls(activeId) {
+      const pick = document.getElementById("genome-pick");
+      const sel = document.getElementById("genome-select");
+      if (pick) {
+        pick.innerHTML = Object.values(PACKS)
+          .map(
+            (p) =>
+              `<button class="chip ${p.id === activeId ? "active" : ""}" type="button" data-genome="${p.id}">${escHtml(
+                p.short || p.id
+              )}</button>`
+          )
+          .join("");
+      }
+      if (sel && !sel.dataset.bound) {
+        sel.innerHTML = Object.values(PACKS)
+          .map((p) => `<option value="${p.id}">${escHtml(p.title)}</option>`)
+          .join("");
+        sel.addEventListener("change", () => applyGenome(sel.value));
+        sel.dataset.bound = "1";
+      }
+      if (sel) sel.value = activeId;
+    }
+
+    // placeholders filled after helpers exist
+    function geneBeads() {
+      const beads = [];
+      SLOTS.forEach((slot, zi) => {
+        const list = ALLELES[slot] || [];
+        const t0 = zi / 5;
+        const t1 = (zi + 1) / 5;
+        list.forEach((al, j) => {
+          const u = (j + 1) / (list.length + 1);
+          const t = t0 + u * (t1 - t0);
+          const strand = j % 2; // 仅视觉分链；全部为最终表达基因
+          beads.push({ allele: al, slot, t, strand });
+        });
+      });
+      return beads;
+    }
+
+    /** 三列铺满最终表达基因；行数随数量动态，避免截断 */
     const SLOT_COLS = 3;
-    const ROWS_PER_CARD = 4; // 表达1 + 对照3
-    const CARD_W = 200;
+    const CARD_W = 220;
     const RACK_GAP = 8;
     const RACK_W = SLOT_COLS * CARD_W + (SLOT_COLS - 1) * RACK_GAP;
 
-    /** 列0：表达1+对照3；列1/2：后续对照（每列最多4），不足空槽 */
     function partitionAlleleColumns(slot) {
-      const list = ALLELES[slot] || [];
-      const active = list.filter((a) => a.active);
-      const rest = list.filter((a) => !a.active);
-      const col0 = [...active.slice(0, 1), ...rest.slice(0, 3)];
-      let rem = rest.slice(3);
-      const col1 = rem.slice(0, ROWS_PER_CARD);
-      rem = rem.slice(ROWS_PER_CARD);
-      const col2 = rem.slice(0, ROWS_PER_CARD);
-      return [col0, col1, col2];
+      const list = (ALLELES[slot] || []).filter((a) => a && a.active !== false);
+      const cols = [[], [], []];
+      if (!list.length) return cols;
+      const perCol = Math.max(1, Math.ceil(list.length / SLOT_COLS));
+      list.forEach((al, i) => {
+        const c = Math.min(SLOT_COLS - 1, Math.floor(i / perCol));
+        cols[c].push(al);
+      });
+      return cols;
     }
 
     // ---------- 工具 ----------
@@ -425,7 +631,7 @@
     }
     window.addEventListener("resize", resize);
 
-    // t∈[0,1]，phaseOff：0=表达链，π=对照链；返回屏幕坐标 + 深度 z∈[-1,1]
+    // t∈[0,1]，phaseOff：0/π 两条链（视觉）；基因均为最终表达
     function helixPoint(t, phaseOff) {
       const ang = t * HELIX.turns * Math.PI * 2 + phase + phaseOff;
       const wx = base.R * Math.cos(ang);
@@ -447,20 +653,19 @@
     function buildAlleleListCard(slot, color, alleles) {
       const card = document.createElement("div");
       card.className = "allele-card";
-      for (let i = 0; i < ROWS_PER_CARD; i++) {
-        const al = alleles[i];
+      const list = alleles || [];
+      if (!list.length) {
         const row = document.createElement("div");
-        if (!al) {
-          row.className = "allele-row slot-empty";
-          row.setAttribute("aria-label", `${slot} 空槽`);
-          card.appendChild(row);
-          continue;
-        }
-        row.className = "allele-row " + (al.active ? "active" : "weak");
+        row.className = "allele-row slot-empty";
+        row.setAttribute("aria-label", `${slot} 空槽`);
+        card.appendChild(row);
+        return card;
+      }
+      list.forEach((al) => {
+        const row = document.createElement("div");
+        row.className = "allele-row active";
         row._allele = al;
-        row.innerHTML = al.active
-          ? `<span class="dot" style="color:${color}">●</span><span class="name">${al.label}</span><span class="tag">表达</span>`
-          : `<span class="dot" style="color:#5b6d7d">○</span><span class="name">${al.label}</span><span class="tag">对照</span>`;
+        row.innerHTML = `<span class="dot" style="color:${color}">●</span><span class="name">${al.label}</span>${formatGeneStatTag(al)}`;
         row.addEventListener("mouseenter", () => setFocus({ kind: "allele", slot, allele: al }));
         row.addEventListener("mouseleave", clearFocus);
         row.addEventListener("click", (e) => {
@@ -468,7 +673,7 @@
           pinFocus({ kind: "allele", slot, allele: al });
         });
         card.appendChild(row);
-      }
+      });
       return card;
     }
     function buildLabels() {
@@ -525,8 +730,11 @@
 
     // ---------- 焦点 / 详情面板 ----------
     const detail = document.getElementById("detail");
+    const dScore = document.getElementById("d-score");
+    const dActions = document.getElementById("d-actions");
     let focus = null;   // {kind:'zone'|'allele', slot, allele?}
     let pinned = null;
+    let panelHold = false;
 
     function currentFocus() { return focus || pinned; }
 
@@ -535,6 +743,7 @@
       render();
     }
     function clearFocus() {
+      if (panelHold) return;
       focus = null;
       render();
     }
@@ -543,6 +752,14 @@
                pinned.allele === f.allele ? null : f;
       render();
     }
+
+    detail.addEventListener("mouseenter", () => {
+      panelHold = true;
+    });
+    detail.addEventListener("mouseleave", () => {
+      panelHold = false;
+      if (!pinned) clearFocus();
+    });
 
     function render() {
       const f = currentFocus();
@@ -570,45 +787,35 @@
       }
       if (f.kind === "zone") {
         const slot = f.slot;
-        const list = ALLELES[slot];
-        const active = list.filter((a) => a.active);
-        const rest = list.filter((a) => !a.active);
-        document.getElementById("d-type").textContent = "分区 · " + list.length + " 个等位";
+        const list = (ALLELES[slot] || []).filter((a) => a && a.active !== false);
+        document.getElementById("d-type").textContent = "分区 · " + list.length + " 个基因";
         document.getElementById("d-title").textContent = `${slot}  ${SLOT_META[slot].label}`;
-        document.getElementById("d-meta").textContent = SLOT_META[slot].note + " · " + GENOME.title;
-        document.getElementById("d-body").textContent =
-          `当前表达（${active.length}）\n` +
-          active.map((a) => `● ${a.label}\n  ${a.text}`).join("\n\n") +
-          `\n\n备选 / 对照（${rest.length}）\n` +
-          rest.map((a) => `○ ${a.label} — ${a.text.split("\n")[0]}`).join("\n");
+        document.getElementById("d-meta").textContent = SLOT_META[slot].note + " · " + GENOME.title + " · 最终表达";
+        dScore.hidden = true;
+        dScore.innerHTML = "";
+        dActions.hidden = true;
+        dActions.innerHTML = "";
+        document.getElementById("d-body").textContent = list
+          .map((a) => {
+            const st = geneStats(a);
+            return `● ${a.label}  ·  mean ${st.mean.toFixed(1)}  sdv ${st.sdv.toFixed(2)}\n  ${a.text}`;
+          })
+          .join("\n\n");
       } else {
-        document.getElementById("d-type").textContent = f.allele.active ? "活跃等位" : "对照等位";
+        const view = scoreDetailHtml(f.allele, f.slot);
+        document.getElementById("d-type").textContent = "最终表达基因";
         document.getElementById("d-title").textContent = f.allele.label;
-        document.getElementById("d-meta").textContent =
-          `${f.slot} ${SLOT_META[f.slot].label} · ${f.allele.active ? "当前表达" : "对照"}`;
+        document.getElementById("d-meta").textContent = view.meta;
+        dScore.hidden = false;
+        dScore.innerHTML = view.score;
+        dActions.hidden = false;
+        dActions.innerHTML = view.actions;
         document.getElementById("d-body").textContent = f.allele.text;
       }
       detail.classList.add("show");
     }
 
-    // ---------- 螺旋上的基因珠（等位直接嵌链） ----------
-    function geneBeads() {
-      const beads = [];
-      SLOTS.forEach((slot, zi) => {
-        const list = ALLELES[slot];
-        const t0 = zi / 5;
-        const t1 = (zi + 1) / 5;
-        list.forEach((al, j) => {
-          const u = (j + 1) / (list.length + 1);
-          const t = t0 + u * (t1 - t0);
-          const strand = al.active ? 0 : 1;
-          beads.push({ allele: al, slot, t, strand });
-        });
-      });
-      return beads;
-    }
-    const GENE_BEADS = geneBeads();
-
+    // geneBeads() defined with genome pack loader above
     // ---------- 粒子（沿链流动的小点，数量随基因增多） ----------
     const particles = [];
     for (let i = 0; i < 42; i++) {
@@ -954,7 +1161,18 @@
       kick();
     };
 
-    buildLabels();
+    const qGenome = new URLSearchParams(location.search).get("genome");
+    const bootId =
+      (qGenome && PACKS[qGenome] && qGenome) ||
+      (PACKS.ai_architect && "ai_architect") ||
+      Object.keys(PACKS)[0];
+    applyGenome(bootId, { skipUrl: !qGenome });
+    document.getElementById("genome-pick")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-genome]");
+      if (!btn) return;
+      applyGenome(btn.getAttribute("data-genome"));
+      kick();
+    });
     resize();
     kick();
   </script>

@@ -1,0 +1,26 @@
+services:
+  rolefactory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yitech/yiagent-rolefactory:0.1.0
+    container_name: yiagent-rolefactory
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8790:8000"
+    environment:
+      RF_BASE_URL: ${RF_BASE_URL:-https://api.kimi.com/coding/v1}
+      RF_MODEL: ${RF_MODEL:-k3}
+      RF_CONCURRENCY: ${RF_CONCURRENCY:-24}
+      RF_MAX_CONNECTIONS: ${RF_MAX_CONNECTIONS:-64}
+      RF_BUDGET_TOKENS: ${RF_BUDGET_TOKENS:-1500000}
+      RF_BUDGET_SECONDS: ${RF_BUDGET_SECONDS:-3600}
+      RF_CACHE: ${RF_CACHE:-1}
+      RF_ALLOW_ORIGINS: ${RF_ALLOW_ORIGINS:-http://127.0.0.1:8188,http://localhost:8188,http://127.0.0.1:8790,http://localhost:8790}
+    volumes:
+      - ./data:/data
+      - ../factory/fixtures/benchmark_index.json:/bench/benchmark_index.json:ro
+      - ../secrets/kimi.key:/run/secrets/kimi.key:ro
+    # 高并发下主要吃网络与 JSON 解析，给足 CPU 但设上限，避免抢占本机
+    cpus: "2.0"
+    mem_limit: 1g

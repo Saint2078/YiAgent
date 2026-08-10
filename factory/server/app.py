@@ -16,6 +16,14 @@ from jobs import MANAGER
 from llm_client import model_ok as _model_ok, models_public
 from case_library import LIBRARY
 from preflight import run_preflight
+from role_suite import (
+    ROLE_MANAGER,
+    count_suite_cases,
+    list_blueprints,
+    load_blueprint,
+    load_bench_index,
+    retrieve_anchors,
+)
 from testset import build_manifest, load_manifest, save_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -486,6 +494,87 @@ def testset_manifest_get(manifest_id: str):
         raise HTTPException(404, "manifest not found") from None
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+
+
+class RoleBuildBody(BaseModel):
+    api_key: str = Field(min_length=8)
+    model: str = "k3"
+    role: str = Field(min_length=2, description="角色名，如「数据分析专家」")
+    per_dim: int = Field(default=2, ge=1, le=4, description="每个能力维度出几道题")
+    size: int = Field(default=10, ge=1, le=60, description="进化集题数上限")
+    holdout_ratio: float = Field(default=0.3, ge=0, le=0.5)
+    seed: int = 42
+    replace: bool = True
+
+
+@app.get("/api/role/anchors")
+def role_anchors(role: str, q: str | None = None):
+    """锚点检索：benchmark 策展索引 + 本地题库。不发 LLM、无需 api_key。"""
+    queries = [x.strip() for x in (q or "").split(",") if x.strip()] or [role]
+    return retrieve_anchors(queries, role=role)
+
+
+@app.get("/api/role/benchmarks")
+def role_benchmarks():
+    """benchmark 策展索引全量（角色工厂的题型/判分口径参考来源）。"""
+    return load_bench_index()
+
+
+@app.get("/api/roles")
+def roles_list():
+    return {"ok": True, "roles": list_blueprints()}
+
+
+@app.post("/api/role/build")
+def role_build(body: RoleBuildBody):
+    """角色名 → 能力维度蓝图 → 题组（含裁判）→ suite 落盘 → manifest。后台跑。
+
+    完成后用返回的 manifest_id 调 POST /api/evolve/start 做基因搜索与 holdout 鉴定。
+    """
+    if not _model_ok(body.model):
+        raise HTTPException(400, f"model not supported: {body.model}")
+    try:
+        run = ROLE_MANAGER.start(
+            body.api_key.strip(),
+            body.model,
+            body.role.strip(),
+            per_dim=body.per_dim,
+            size=body.size,
+            holdout_ratio=body.holdout_ratio,
+            seed=body.seed,
+            replace=body.replace,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        raise _http_from_exc(e, "角色题组构建启动失败") from e
+    return run.snapshot()
+
+
+@app.get("/api/role/build/{run_id}")
+def role_build_get(run_id: str):
+    run = ROLE_MANAGER.get(run_id)
+    if not run:
+        raise HTTPException(404, "role build not found")
+    return run.snapshot()
+
+
+@app.post("/api/role/build/{run_id}/abort")
+def role_build_abort(run_id: str):
+    try:
+        run = ROLE_MANAGER.abort(run_id)
+    except KeyError:
+        raise HTTPException(404, "role build not found") from None
+    return run.snapshot()
+
+
+@app.get("/api/role/{role_id}")
+def role_get(role_id: str):
+    try:
+        bp = load_blueprint(role_id)
+    except KeyError:
+        raise HTTPException(404, "blueprint not found") from None
+    return {"ok": True, "blueprint": bp, "cases": count_suite_cases(role_id)}
 
 
 class EvolveStartBody(BaseModel):

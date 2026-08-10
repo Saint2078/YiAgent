@@ -1,0 +1,578 @@
+{
+  "compare_id": "20260809-142513-cmp-2b92",
+  "goal_id": "GOAL-CODEBENCH-B-001",
+  "sample_meta": {
+    "seed": 202608092,
+    "n": 50,
+    "release": "release_v5",
+    "quota": {
+      "easy": 20,
+      "medium": 20,
+      "hard": 10
+    },
+    "tests": "public_and_private",
+    "sample_tag": "r2_public_private_stratified",
+    "source": "local_hf_jsonl",
+    "index_size": 880,
+    "counts": {
+      "easy": 20,
+      "medium": 20,
+      "hard": 10
+    },
+    "n_public_tests_total": 125,
+    "n_private_tests_total": 979,
+    "contest_date_min": "2023-05-14T00:00:00",
+    "contest_date_max": "2024-12-21T06:30:00"
+  },
+  "genome": {
+    "run_id": "20260809-142513-cmp-2b92-genome",
+    "role_id": "coding_board_racer",
+    "title": "编程榜选手",
+    "pass_at_1": 94.0,
+    "n_pass": 47,
+    "n_total": 50,
+    "by_difficulty": {
+      "easy": {
+        "pass": 20,
+        "total": 20
+      },
+      "medium": {
+        "pass": 19,
+        "total": 20
+      },
+      "hard": {
+        "pass": 8,
+        "total": 10
+      }
+    },
+    "tokens": 99344
+  },
+  "bare": {
+    "run_id": "20260809-142513-cmp-2b92-bare",
+    "role_id": "coding_board_bare",
+    "title": "无基因组裸跑",
+    "pass_at_1": 94.0,
+    "n_pass": 47,
+    "n_total": 50,
+    "by_difficulty": {
+      "easy": {
+        "pass": 20,
+        "total": 20
+      },
+      "medium": {
+        "pass": 18,
+        "total": 20
+      },
+      "hard": {
+        "pass": 9,
+        "total": 10
+      }
+    },
+    "tokens": 102187
+  },
+  "delta_pass_at_1": 0.0,
+  "per_problem": [
+    {
+      "question_id": "3193",
+      "question_title": "maximum-strong-pair-xor-i",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc373_b",
+      "question_title": "1D Keyboard",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 20,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3463",
+      "question_title": "alternating-groups-i",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 37,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc313_a",
+      "question_title": "To Be Saikyo",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc336_a",
+      "question_title": "Long Loong",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 10,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3361",
+      "question_title": "latest-time-you-can-obtain-after-replacing-characters",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 27,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc307_b",
+      "question_title": "racecar",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3019",
+      "question_title": "furthest-point-from-origin",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc349_b",
+      "question_title": "Commencement",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 17,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3605",
+      "question_title": "construct-the-minimum-bitwise-array-i",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 33,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2791",
+      "question_title": "find-the-losers-of-the-circular-game",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc323_a",
+      "question_title": "Weak Beats",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc366_b",
+      "question_title": "Vertical Writing",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 20,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc385_a",
+      "question_title": "Equally",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 43,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc377_a",
+      "question_title": "Rearranging ABC",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 18,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc323_b",
+      "question_title": "Round",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 12,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3206",
+      "question_title": "find-common-elements-between-two-arrays",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc356_a",
+      "question_title": "Subsegment Reverse",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 18,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc340_b",
+      "question_title": "Append",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 13,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3349",
+      "question_title": "maximum-length-substring-with-two-occurrences",
+      "difficulty": "easy",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 27,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2856",
+      "question_title": "count-complete-subarrays-in-an-array",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc379_c",
+      "question_title": "Sowing Stones",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 42,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2755",
+      "question_title": "extra-characters-in-a-string",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3292",
+      "question_title": "earliest-second-to-mark-indices-i",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc342_d",
+      "question_title": "Square Pair",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc329_c",
+      "question_title": "Count xxx",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3659",
+      "question_title": "count-paths-with-the-given-xor-value",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 43,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3493",
+      "question_title": "maximum-number-of-operations-to-move-ones-to-the-end",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 37,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3437",
+      "question_title": "maximum-total-damage-with-spell-casting",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 37,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2854",
+      "question_title": "decremental-string-concatenation",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2869",
+      "question_title": "longest-non-decreasing-subarray-from-two-arrays",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2811",
+      "question_title": "determine-the-minimum-sum-of-a-k-avoiding-array",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc329_d",
+      "question_title": "Election Quick Report",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3528",
+      "question_title": "reach-end-of-array-with-max-score",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 42,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3653",
+      "question_title": "maximum-subarray-sum-with-length-divisible-by-k",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 43,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3654",
+      "question_title": "minimum-array-sum",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 42,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc356_c",
+      "question_title": "Keys",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 31,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc311_c",
+      "question_title": "Find it!",
+      "difficulty": "medium",
+      "genome_passed": false,
+      "bare_passed": false,
+      "n_tests": 1,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc326_c",
+      "question_title": "Peak",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3351",
+      "question_title": "maximize-happiness-of-selected-children",
+      "difficulty": "medium",
+      "genome_passed": true,
+      "bare_passed": false,
+      "n_tests": 28,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc352_d",
+      "question_title": "Permutation Subsequence",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 23,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc338_e",
+      "question_title": "Chords",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 15,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "3224",
+      "question_title": "count-the-number-of-infection-sequences",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc371_f",
+      "question_title": "Takahashi in Narrow Road",
+      "difficulty": "hard",
+      "genome_passed": false,
+      "bare_passed": false,
+      "n_tests": null,
+      "genome_detail": "llm_error:Server error '504 Gateway Time-out' for url 'https://api.kimi.com/coding/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504",
+      "bare_detail": "empty_code"
+    },
+    {
+      "question_id": "abc309_e",
+      "question_title": "Family and Insurance",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "2921",
+      "question_title": "count-stepping-numbers-in-range",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc326_d",
+      "question_title": "ABC Puzzle",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 14,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "arc182_c",
+      "question_title": "Sum of Number of Divisors of Product",
+      "difficulty": "hard",
+      "genome_passed": false,
+      "bare_passed": true,
+      "n_tests": 1,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc349_e",
+      "question_title": "Weighted Tic",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 22,
+      "genome_detail": null,
+      "bare_detail": null
+    },
+    {
+      "question_id": "abc346_e",
+      "question_title": "Paint",
+      "difficulty": "hard",
+      "genome_passed": true,
+      "bare_passed": true,
+      "n_tests": 28,
+      "genome_detail": null,
+      "bare_detail": null
+    }
+  ],
+  "finished_at": "2026-08-09T18:52:33.812939+00:00",
+  "retried_timeouts_at": "2026-08-09T18:52:33.812957+00:00"
+}
