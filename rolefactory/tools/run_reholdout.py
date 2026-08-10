@@ -10,6 +10,7 @@
 
 用法：
     python tools/run_reholdout.py <run_id> [--reps 3] [--seat PM] [--no-adopt]
+    python tools/run_reholdout.py <run_id> --reps 3 --wait-quota   # 额度封顶时挂着等
 """
 from __future__ import annotations
 
@@ -58,13 +59,44 @@ def tool(*argv: str) -> bool:
     return r.returncode == 0
 
 
+def wait_for_quota(every: int) -> bool:
+    """探到额度可用才返回 True。
+
+    探针只证明「密钥和通道没坏」，**不保证跑得完一轮** —— 实测 05:58 探针通过、
+    06:00 发复核就吃 403，因为上一轮实跑已经把余量用光。所以探通之后仍可能中途 503，
+    那种情况下服务端拒绝落盘，重跑即可。
+    """
+    probe = str(HERE / "quota_probe.py")
+    n = 0
+    while True:
+        r = subprocess.run([sys.executable, probe], cwd=str(ROOT), capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+        if r.returncode == 0:
+            log(f"额度可用（探了 {n + 1} 次）：{(r.stdout or '').strip()[:80]}")
+            return True
+        if n % 6 == 0:  # 每小时报一次，别把日志刷满
+            waited = n * every // 60
+            log(
+                f"额度仍封顶（已等 {waited} 分钟）：{(r.stdout or '').strip()[:60]}"
+                if waited else f"额度封顶，开始等：{(r.stdout or '').strip()[:60]}"
+            )
+        n += 1
+        time.sleep(every)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="重跑 holdout 并传导结果")
     ap.add_argument("run_id")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--seat", default=None, help="给了席位名就顺带 adopt + 重导 bank/实体")
     ap.add_argument("--no-adopt", action="store_true", help="只复核，不改下游产物")
+    ap.add_argument("--wait-quota", action="store_true",
+                    help="额度封顶时每 10 分钟探一次，恢复后再跑")
+    ap.add_argument("--probe-every", type=int, default=600, help="探额度间隔秒")
     args = ap.parse_args()
+
+    if args.wait_quota and not wait_for_quota(args.probe_every):
+        return 2
 
     log(f"复核开始 run={args.run_id} reps={args.reps}")
     t0 = time.monotonic()

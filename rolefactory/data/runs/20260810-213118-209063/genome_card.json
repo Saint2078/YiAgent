@@ -1,6 +1,6 @@
 {
   "schema": "yiagent.rolefactory.genome_card/1",
-  "generated_at": "2026-08-10T22:01:14.234197+00:00",
+  "generated_at": "2026-08-10T22:15:35.937334+00:00",
   "run_id": "20260810-213118-209063",
   "role": "项目经理",
   "role_id": "role_c81cdcf6",
@@ -110,6 +110,7 @@
     "holdout_champion_weighted": 85.69,
     "holdout_baseline_weighted": 84.03,
     "holdout_delta_weighted": 1.66,
+    "holdout_reps": 1,
     "holdout_paired": {
       "cases": 41,
       "mean_delta": 0.36,

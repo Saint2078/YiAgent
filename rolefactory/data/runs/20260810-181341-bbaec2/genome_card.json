@@ -1,6 +1,6 @@
 {
   "schema": "yiagent.rolefactory.genome_card/1",
-  "generated_at": "2026-08-10T21:37:54.322932+00:00",
+  "generated_at": "2026-08-10T22:15:35.829235+00:00",
   "run_id": "20260810-181341-bbaec2",
   "role": "评测工程师",
   "role_id": "role_b2267ae0",
@@ -108,6 +108,7 @@
     "holdout_champion_weighted": 96.51,
     "holdout_baseline_weighted": 94.87,
     "holdout_delta_weighted": 1.64,
+    "holdout_reps": 3,
     "holdout_paired": {
       "cases": 6,
       "mean_delta": 1.71,

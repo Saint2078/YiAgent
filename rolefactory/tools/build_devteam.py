@@ -296,18 +296,24 @@ def write_registry(rows: list[dict]) -> None:
         "- 工作台副本：`A002.YiAgent/工作台/AgentTeam/Develop/{Role}/genome.json`",
         "- 基因组卡（含内容哈希 / 逐槽消融 / 复现配方）：`YiAgent/rolefactory/data/runs/{run_id}/genome_card.md`",
         "",
-        "| 席位 | factory 角色名 | run_id | 冠军加权 | Δ基线(train) | holdout Δ | **泛化鉴定** | genome_hash |",
-        "|------|----------------|--------|----------|--------------|-----------|--------------|-------------|",
+        # 两个 holdout Δ 分列：加权是先按维度权重压成总分再相减，配对是逐题相减再平均。
+        # 只写一个「holdout Δ」，读者拿它去对别处的 95% 区间必然对不上（PERF.md §16.2）。
+        "| 席位 | factory 角色名 | run_id | 冠军加权 | Δ(train加权) | holdoutΔ(加权) | holdoutΔ(配对) | 配对95%CI | **泛化鉴定** | genome_hash |",
+        "|------|----------------|--------|----------|--------------|----------------|----------------|-----------|--------------|-------------|",
     ]
     for r in rows:
         src = r.get("source") or {}
         hold = src.get("holdout") or {}
+        paired = hold.get("paired") or {}
+        ci = paired.get("mean_delta_ci95")
         h = src.get("genome_hash") or _genome_hash(r)
         vd = (src.get("verdict") or _verdict({"holdout": hold, **src})).get("label") or "未鉴定"
         lines.append(
             f"| {r.get('role')} | {r.get('factory_role')} | `{src.get('run_id')}` | "
             f"{src.get('champion_weighted')} | {src.get('delta_train_weighted')} | "
-            f"{hold.get('delta_weighted')} | {vd} | `{h[:16] or '—'}` |"
+            f"{hold.get('delta_weighted')} (reps={hold.get('reps') or 1}) | "
+            f"{paired.get('mean_delta') if paired.get('mean_delta') is not None else '—'} | "
+            f"{f'[{ci[0]:+}, {ci[1]:+}]' if ci else '无区间'} | {vd} | `{h[:16] or '—'}` |"
         )
     lines += [
         "",
@@ -315,8 +321,10 @@ def write_registry(rows: list[dict]) -> None:
         "",
         "## 怎么读这张表",
         "",
-        "- **`Δ基线(train)` 不是战绩**：那是在被用来选冠军的同一批题上算的，天然偏乐观。",
-        "  能不能说「这套基因更强」，只看 `holdout Δ` 与 `泛化鉴定`。",
+        "- **`Δ(train加权)` 不是战绩**：那是在被用来选冠军的同一批题上算的，天然偏乐观。",
+        "  能不能说「这套基因更强」，只看 `holdoutΔ(配对)` 的区间与 `泛化鉴定`。",
+        "- **两个 holdout Δ 别混**：`加权` 先按维度权重压成总分再相减、**没有区间**；",
+        "  `配对` 逐题相减再平均，**区间只属于它**。两者实测能差几倍（PERF.md §16.2）。",
         "- **泛化鉴定**取自基因组卡：有配对自助 95% 区间时以区间为准（跨 0 判「判不了」，",
         "  不许当赢）；早期 run 没有区间，退回「Δ 符号 + 升降计数」的粗判，卡片里会注明。",
         "- 分数来自 rolefactory 客观断言实跑，非冻结演示；`SCORING.md` 给复算口径。",

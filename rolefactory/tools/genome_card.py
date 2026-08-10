@@ -259,6 +259,9 @@ def build_card(run_id: str) -> dict[str, Any]:
             "holdout_champion_weighted": (hold.get("champion") or {}).get("weighted"),
             "holdout_baseline_weighted": (hold.get("baseline") or {}).get("weighted"),
             "holdout_delta_weighted": hold.get("delta_weighted"),
+            # 复核后 reps 变了，必须跟着 Δ 一起走同一个来源。先前消费方（载体 provenance）
+            # 从原报告取 reps、从卡片取 Δ，于是登记表出现「Δ 是复核那份、却标 reps=1」。
+            "holdout_reps": hold.get("reps") or 1,
             "holdout_paired": hold.get("paired"),
             "generalization_gap": hold.get("generalization_gap"),
             "holdout_source": hold_source,

@@ -118,8 +118,10 @@ def provenance_of(report: dict[str, Any], card: dict[str, Any]) -> dict[str, Any
         "baseline_weighted": (scores.get("baseline_no_genes") or {}).get("weighted"),
         "delta_train_weighted": scores.get("delta_train_weighted"),
         "holdout": {
+            # 整块都从卡片取：卡片已按 effective_holdout 决定用原报告还是复核那份。
+            # 混着取（reps 取原报告、Δ 取卡片）会写出「Δ 来自 reps=3 的复核、却标 reps=1」。
             "source": cs.get("holdout_source") or "run",
-            "reps": hold.get("reps") or 1,
+            "reps": cs.get("holdout_reps") or hold.get("reps") or 1,
             "delta_weighted": cs.get("holdout_delta_weighted"),
             "paired": cs.get("holdout_paired"),
         },

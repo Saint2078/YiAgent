@@ -158,26 +158,35 @@ def write_registry(rows: list[dict[str, Any]]) -> None:
         "链路：rolefactory 实跑冠军 → yiagent 基因库 → 表达载体 → offline 出厂检验。",
         "",
         f"**当前 {proven}/{len(rows)} 席能宣称「基因让它更强」**。",
-        "「判不了」不是好消息也不是坏消息，是**证据不足**：holdout 只有 5–6 题，",
-        "`reps=1` 时配对区间跨 0，符号会翻（PM 实测 Δ 从 −2.74 翻到 +1.46）。",
+        "「判不了」不是好消息也不是坏消息，是**证据不足**：配对 95% 区间跨 0。",
+        "六席已按 `reps=3` 复核完，仍全部跨 0；且复核两次翻过符号",
+        "（PM −2.74→+1.46、Product −11.43→+4.73）—— 所以旧那组「几席过拟合」的结论已作废。",
+        "",
+        "**加题这条路已实测走过、没走通**：把 holdout 从 6 题加到 41 题后逐题 sd 由 4.23",
+        "涨到 16.31，区间半宽反而变大（`rolefactory/PERF.md` §16）。",
         "",
         "⚠ **下表的 train Δ 出自旧打分口径**（`must_not_include` 会把「引用错误说法去反驳」",
         "也扣光，实测 32% 的扣分属误判，见 `rolefactory/PERF.md` §12）。按修好的口径离线重算：",
         "2/9 个 run 的冠军会换人，项目经理 train Δ 由 +2.50 变 **−1.66**。",
         "holdout 分差无符号翻转，故「几席已证明」的结论不变。要拿到干净的冠军需重跑（花额度）。",
         "",
-        "| 席位 | 出厂检验 | gene_hash | train Δ | holdout Δ | 泛化鉴定 | 可宣称 |",
-        "|------|----------|-----------|---------|-----------|----------|--------|",
+        # 两个 Δ 都写、各自标名：`delta_weighted` 是按维度权重压成总分再相减，
+        # `paired.mean_delta` 是逐题相减再平均 —— 区间只属于后者（PERF.md §16.2）。
+        # 只写一个「holdout Δ」会让人拿它跟别处的区间对不上号。
+        "| 席位 | 出厂检验 | gene_hash | trainΔ(加权) | holdoutΔ(加权) | holdoutΔ(配对) | 泛化鉴定 | 可宣称 |",
+        "|------|----------|-----------|--------------|----------------|----------------|----------|--------|",
     ]
     for r in rows:
         pr = r["provenance"]
         hold = pr.get("holdout") or {}
         verdict = pr.get("verdict") or {}
         claim = "**可称更强**" if r["proven"] is True else "仅「由实跑冠军装配」"
+        paired = (hold.get("paired") or {}).get("mean_delta")
         lines.append(
             f"| {r['seat']} | {r['smoke']['status']} | `{str(pr.get('genome_hash'))[:12]}` "
             f"| {_int_or_dash(pr.get('delta_train_weighted'))} "
             f"| {_int_or_dash(hold.get('delta_weighted'))} (reps={hold.get('reps')}) "
+            f"| {_int_or_dash(paired)} "
             f"| {verdict.get('label') or '—'} | {claim} |"
         )
     lines += [

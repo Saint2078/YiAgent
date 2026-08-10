@@ -16,7 +16,7 @@
       "delta_train_weighted": 2.33,
       "holdout": {
         "source": "reholdout",
-        "reps": 1,
+        "reps": 3,
         "delta_weighted": 4.73,
         "paired": {
           "cases": 5,
