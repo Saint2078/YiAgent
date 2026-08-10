@@ -15,6 +15,11 @@
 关键量是 **r→∞ 时的半宽下限** `1.96·σ_b/√n`：重复次数再多也降不到它以下。
 下限已经大于实测分差，就说明加重复无用，必须加题。
 
+哪些题算 holdout，**以 `report.json` 的 `scores.holdout.cases` 为准**。别按题号猜：
+早期 holdout 恰好是每维一道 `medium_02`，按后缀筛能对上；`holdout_per_dim` 一开大，
+后缀就只能捞到其中一小撮，还会混进 train 题 —— 实测捞到 6 道 train 题、算出个
+完全无关的 Δ 且不报错（见 PERF.md §16）。
+
 用法：
     python tools/variance_decomp.py <run_id> [--holdout-suffix medium_02]
 """
@@ -44,21 +49,37 @@ def _var(xs: list[float]) -> float | None:
     return sum((x - m) ** 2 for x in xs) / (len(xs) - 1)
 
 
-def load_cells(run_id: str, suffix: str) -> tuple[dict[tuple[str, str], list[float]], str, str]:
-    """读逐条明细，聚成 (臂, 题) → 各次重复的分数。返回冠军臂与基线臂的名字。"""
+def holdout_cases(run_id: str, suffix: str) -> tuple[set[str], str]:
+    """该 run 的 holdout 题号集合。优先取报告里记下的那一份。"""
+    rep = RUNS / run_id / "report.json"
+    if rep.is_file():
+        hold = (json.loads(rep.read_text(encoding="utf-8")).get("scores") or {}).get("holdout") or {}
+        names = [str(c) for c in (hold.get("cases") or [])]
+        if names:
+            return set(names), "report.json"
+    return set(), f"后缀 {suffix!r}（报告里没记 holdout 题号，退回猜）"
+
+
+def load_cells(
+    run_id: str, suffix: str
+) -> tuple[dict[tuple[str, str], list[float]], str, str, str]:
+    """读逐条明细，聚成 (臂, 题) → 各次重复的分数。返回冠军臂、基线臂与题号来源。"""
     p = RUNS / run_id / "results.jsonl"
     if not p.is_file():
         raise SystemExit(
             f"缺逐条明细 {p}（results.jsonl 是运行时产物、未入库）。"
             "只有在跑过该 run 的机器上才能做分解。"
         )
+    names, origin = holdout_cases(run_id, suffix)
+    keep = (lambda c: c in names) if names else (lambda c: suffix in c)
+
     cells: dict[tuple[str, str], list[float]] = defaultdict(list)
     for line in p.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         r = json.loads(line)
         case = str(r.get("case") or "")
-        if suffix not in case:
+        if not keep(case):
             continue
         score = r.get("score")
         if isinstance(score, (int, float)):
@@ -66,9 +87,11 @@ def load_cells(run_id: str, suffix: str) -> tuple[dict[tuple[str, str], list[flo
 
     arms = {a for a, _ in cells}
     if "baseline" not in arms or len(arms) != 2:
-        raise SystemExit(f"holdout 臂不是「基线 + 冠军」两条：{sorted(arms)}")
+        raise SystemExit(
+            f"holdout 臂不是「基线 + 冠军」两条：{sorted(arms)}（题号来源：{origin}）"
+        )
     champ = next(a for a in arms if a != "baseline")
-    return cells, champ, "baseline"
+    return cells, champ, "baseline", origin
 
 
 def decompose(cells: dict[tuple[str, str], list[float]], champ: str, base: str) -> dict[str, Any]:
@@ -113,11 +136,16 @@ def half_width(var_b: float, var_w: float, n: int, r: int) -> float:
     return Z95 * math.sqrt(var_b + 2 * var_w / r) / math.sqrt(n)
 
 
-def report(run_id: str, d: dict[str, Any]) -> None:
+def report(run_id: str, d: dict[str, Any], origin: str = "report.json") -> None:
     n, r = d["cases"], d["reps"]
     print(f"run {run_id} · holdout {n} 题 × {r} 次重复 · 实测 Δ={d['mean_delta']}")
+    print(f"  （holdout 题号来源：{origin}）")
     if d.get("var_between") is None:
-        print("  数据不足，分解不了")
+        print(
+            "  数据不足，分解不了：拆开测量噪声要求**同一题同一臂至少跑 2 次**，"
+            f"这个 run 是 reps={r}。\n"
+            "  想分解就在同批题上复核一次：POST /api/run/{run_id}/reholdout {\"reps\":3}"
+        )
         return
 
     var_b, var_w = d["var_between"], d["var_within"]
@@ -182,8 +210,8 @@ def main() -> int:
     ap.add_argument("run_id")
     ap.add_argument("--holdout-suffix", default="medium_02", help="holdout 题 id 的标识子串")
     args = ap.parse_args()
-    cells, champ, base = load_cells(args.run_id, args.holdout_suffix)
-    report(args.run_id, decompose(cells, champ, base))
+    cells, champ, base, origin = load_cells(args.run_id, args.holdout_suffix)
+    report(args.run_id, decompose(cells, champ, base), origin)
     return 0
 
 

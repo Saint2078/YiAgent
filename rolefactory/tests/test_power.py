@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import json
 import math
 import sys
 import unittest
@@ -15,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 from power_check import Z95, _derive_sd, analyse  # noqa: E402
-from variance_decomp import decompose, half_width  # noqa: E402
+from variance_decomp import decompose, half_width, load_cells  # noqa: E402
 
 
 def row(**kw):
@@ -118,6 +119,57 @@ class VarianceDecompTests(unittest.TestCase):
             cost[r] = 2 * n * r
         self.assertLess(cost[1], cost[3])
         self.assertLess(cost[3], cost[10])
+
+
+class HoldoutSelectionTests(unittest.TestCase):
+    """holdout 题号必须取报告里那份名单，不许按题号后缀猜。
+
+    猜法曾经能对上：早期每维只留一道 `medium_02` 当 holdout。`holdout_per_dim` 一开大
+    就错了，而且**错得不报错** —— 捞到 6 道 train 题，照样算出个像真的 Δ（PERF.md §16）。
+    """
+
+    def setUp(self):
+        import tempfile
+        import variance_decomp as vd
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        run = Path(self.tmp.name) / "rid"
+        run.mkdir()
+        # holdout 是 h0..h2，train 是 t_medium_02 —— 后缀恰好长得像旧口径的 holdout
+        hold = ["h0", "h1", "h2"]
+        (run / "report.json").write_text(
+            json.dumps({"scores": {"holdout": {"cases": hold}}}), encoding="utf-8"
+        )
+        rows = []
+        for case, score in [("h0", 80.0), ("h1", 82.0), ("h2", 84.0), ("t_medium_02", 10.0)]:
+            for arm in ("baseline", "champ"):
+                rows.append({"case": case, "variant": arm, "rep": 0,
+                             "score": score + (2.0 if arm == "champ" else 0.0)})
+        (run / "results.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in rows), encoding="utf-8"
+        )
+        self._orig_runs = vd.RUNS
+        vd.RUNS = Path(self.tmp.name)
+        self.addCleanup(lambda: setattr(vd, "RUNS", self._orig_runs))
+
+    def test_uses_report_case_list_not_suffix(self):
+        cells, champ, base, origin = load_cells("rid", "medium_02")
+        self.assertEqual(origin, "report.json")
+        self.assertEqual(champ, "champ")
+        self.assertEqual({c for _, c in cells}, {"h0", "h1", "h2"})
+        # 那道 train 题必须被排除，否则 −70 分的离群值会把 sd 撑爆
+        self.assertNotIn(("champ", "t_medium_02"), cells)
+
+    def test_falls_back_to_suffix_when_report_has_no_list(self):
+        import variance_decomp as vd
+
+        (vd.RUNS / "rid" / "report.json").write_text(
+            json.dumps({"scores": {"holdout": {}}}), encoding="utf-8"
+        )
+        cells, _, _, origin = load_cells("rid", "medium_02")
+        self.assertIn("后缀", origin)  # 退路必须自报身份，别让人以为读的是名单
+        self.assertEqual({c for _, c in cells}, {"t_medium_02"})
 
 
 class DeriveSdTests(unittest.TestCase):

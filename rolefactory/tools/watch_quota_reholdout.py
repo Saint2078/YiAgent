@@ -142,10 +142,13 @@ def pilot(seat: str) -> str:
     if code == 200 and isinstance(rep, dict):
         hold = rep.get("holdout") or {}
         paired = hold.get("paired") or {}
+        # 两个 Δ 分开写：区间只属于配对 Δ。混着写会让人以为区间套在加权 Δ 上
+        # （实测这个 run 是 加权 1.66 / 配对 0.36，差 4.6 倍）。
         log(
-            f"  试跑完成 {rid}：train Δ={(rep.get('champion') or {}).get('delta_weighted')} "
-            f"holdout Δ={hold.get('delta_weighted')} "
-            f"CI95={paired.get('mean_delta_ci95')} sd={paired.get('sd_delta')} "
+            f"  试跑完成 {rid}：train Δ(加权)={(rep.get('champion') or {}).get('delta_weighted')} "
+            f"holdout Δ(加权)={hold.get('delta_weighted')} · "
+            f"holdout Δ(配对)={paired.get('mean_delta')} CI95={paired.get('mean_delta_ci95')} "
+            f"sd={paired.get('sd_delta')} ← 区间属于配对 Δ · "
             f"cases={len(hold.get('cases') or [])} scorer=v{(rep.get('scoring') or {}).get('scorer_version')}"
         )
         log("  注意：**未采纳**。要采纳跑 `python tools/build_devteam.py adopt "
@@ -188,8 +191,9 @@ def do_seat(seat: str, reps: int) -> str:
 
     paired = (body.get("paired") or {})
     log(
-        f"  {seat}: 复核完成 Δ={body.get('delta_weighted')} "
-        f"CI95={paired.get('mean_delta_ci95')} significant={paired.get('significant')}"
+        f"  {seat}: 复核完成 Δ(加权)={body.get('delta_weighted')} · "
+        f"Δ(配对)={paired.get('mean_delta')} CI95={paired.get('mean_delta_ci95')} "
+        f"significant={paired.get('significant')}（区间属于配对 Δ）"
     )
     # 复核结果要传导到**每一处**引用它的产物，否则判定只活在 run 目录里。
     # 少一步就断链：卡片忘了重生成，`verify_chain` 会报「genome_card 判定不一致」

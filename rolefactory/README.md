@@ -91,18 +91,25 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/check_contrib.py [run_id...]` | 把「冠军−基线」分差拆到每类断言，看谁在区分强弱、谁只是送分 |
 | `tools/rescore.py [--write]` | 用当前打分口径离线重算历史实跑，看冠军/分差会不会变（不花额度） |
 | `tools/power_check.py [--md]` | 判定力核算：现有题量能判出多大效应、判出实测效应要多少题（离线） |
-| `tools/variance_decomp.py <run_id>` | 方差分解：拆开题内噪声与题间差异，回答「该加重复还是加题」（离线） |
+| `tools/variance_decomp.py <run_id>` | 方差分解：拆开题内噪声与题间差异，回答「该加重复还是加题」（离线；需 reps≥2） |
+| `tools/run_reholdout.py <run_id> [--reps 3] [--seat PM]` | 单独重跑某 run 的 holdout（**要额度**），跑完打方差分解；给 `--seat` 就顺带传导到下游四处 |
+| `tools/holdout_table.py [--md]` | 六席 holdout 判定汇总（两个 Δ 分列 + 区间归属，有复核就用复核；离线） |
 | `tools/quota_probe.py` | 一次请求探上游额度是否可用（用服务端密钥，退出码 0=可用） |
-| `tools/watch_quota_reholdout.py` | 额度封顶时等待，恢复即自动把待复核席位的 holdout 按 `reps=3` 补齐 |
+| `tools/watch_quota_reholdout.py [--pilot 席位]` | 额度封顶时等待；恢复即补齐 holdout 复核，可再跑一次**只跑不采纳**的 v3 试跑 |
 
 ## 从实跑冠军到可运行 Agent
 
 实跑产出的是基因，不是能跑的东西。接上装配链路：
 
 ```bash
-python tools/export_yiagent_bank.py --all          # 六席 → data/yiagent_banks/*.bank.json
-cd .. && python scripts/build_agent_entities.py    # → 六席载体 + offline 出厂检验 + 登记表
+python tools/export_yiagent_bank.py --all             # 六席 → data/yiagent_banks/*.bank.json
+python tools/export_yiagent_bank.py --seat PM         # 单席，落点同上
+cd .. && python scripts/build_agent_entities.py --refresh   # → 载体 + offline 检验 + 登记表
+python scripts/verify_chain.py                        # 五处产物对账（断链退出码 1）
 ```
+
+**跑完复核就得把四处一起刷**（卡片 / 落盘基因组 / 席位基因库 / 载体）。少刷一处不会报错，
+只有 `verify_chain.py` 会报 —— 实测过一次五席断链。守护脚本已把这几步串在一起。
 
 导出的基因库里 `variant.hash` 就是基因组卡的规范哈希，所以载体的 `markers.gene_hash`
 能回溯到这次实跑；`meta.provenance` 带着泛化判定与一条 `claim`（这份基因允许对外说什么）。
@@ -127,6 +134,16 @@ cd .. && python scripts/build_agent_entities.py    # → 六席载体 + offline 
 - 区间整体在 0 以上 → 站得住；整体在 0 以下 → 未通过（train 增益是过拟合）；
   **跨 0 → 判「判不了」，不许当赢**。换一组题就可能翻符号。
 - 判定写进基因组卡的 `verdict`，也写进落盘 `genome.json` 的 `source.verdict`，三处同口径。
+
+**报告里有两个 holdout Δ，别混**：
+
+| 字段 | 算法 | 区间 |
+|---|---|---|
+| `holdout.delta_weighted` | 先按维度权重压成总分，再两臂相减 | **无** |
+| `holdout.paired.mean_delta` | 逐题相减再平均 | `mean_delta_ci95` **只属于它** |
+
+两者能差几倍（实测 1.66 对 0.36）。把区间挂到加权 Δ 上写，读的人会以为它快显著了 ——
+这正是区间纪律要防的事。凡两者同现处都分行标明算法（PERF.md §16.2）。
 
 自测：`python -m tests.test_stats`（离线，守住「跨 0 不许判赢」与旧 run 的退化路径）。
 

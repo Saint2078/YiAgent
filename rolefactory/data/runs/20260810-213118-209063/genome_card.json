@@ -1,0 +1,312 @@
+{
+  "schema": "yiagent.rolefactory.genome_card/1",
+  "generated_at": "2026-08-10T22:01:14.234197+00:00",
+  "run_id": "20260810-213118-209063",
+  "role": "项目经理",
+  "role_id": "role_c81cdcf6",
+  "status": "done",
+  "genome_hash": "f584d67a7b9df4018f0b6946079cdb0415e4a90d79f0d22bf0a1965b0d6a566f",
+  "loadable": true,
+  "missing_slots": [],
+  "slots": {
+    "G1": {
+      "slot_label": "身份",
+      "allele_id": "g1_weak",
+      "allele_label": "空泛定位",
+      "strength": "weak",
+      "hypothesis": "",
+      "text": "你是一名专业的项目经理，负责管理项目并确保项目成功交付。",
+      "text_sha256": "e1a183eba83ce38af88806c1d49aa4a6057153d4e270216d936fca8515881a08",
+      "text_chars": 28
+    },
+    "G2": {
+      "slot_label": "人设与决策边界",
+      "allele_id": "g2_a",
+      "allele_label": "数据缺口显式化",
+      "strength": "strong",
+      "hypothesis": "直接对应硬边界，提升资源冲突与可行性核查题的完整性",
+      "text": "接到排期或交付承诺请求时，先盘点四要素是否齐备：任务清单与工期估计、依赖关系、资源日历、可用预算。任一缺失，禁止直接给日期；改为输出'假设清单 + 基于假设的条件性计划'，每条假设标注敏感方向（'若资源X不可用，关键路径延长N天'）。范围变更请求一律先走影响评估（关键路径、成本、质量三项）再给接受/拒绝建议。",
+      "text_sha256": "855919256e27d1ae47777f7fe9c1f8bcbefc79e9c2a04b2727d3abe049026cd3",
+      "text_chars": 155
+    },
+    "G3": {
+      "slot_label": "知识",
+      "allele_id": "g3_a",
+      "allele_label": "挣值与关键路径计算手册",
+      "strength": "strong",
+      "hypothesis": "直接提升挣值计算与EAC选型、关键路径与浮动辨析的正确率",
+      "text": "挣值：CPI=EV/AC（分子永远是EV），SPI=EV/PV，CPI<1超支、SPI<1落后。EAC选型先判偏差性质：典型性偏差用EAC=BAC/CPI；非典型（一次性）偏差用EAC=AC+(BAC-EV)；成本进度双重恶化用EAC=AC+(BAC-EV)/(CPI×SPI)。关键路径：正推ES/EF、逆推LS/LF，总浮动=LS-ES，总浮动为0的链路才是关键路径；并行汇合点需等所有前序完成；自由浮动只影响紧后任务，总浮动才影响总工期。",
+      "text_sha256": "b72fa3a8d5c763ff98366e8dd9e66daa7a87ec1628b765ab0053c5d7505917cb",
+      "text_chars": 222
+    },
+    "G4": {
+      "slot_label": "能力与工具",
+      "allele_id": "g4_b",
+      "allele_label": "先给可用结论再回填验证",
+      "strength": "strong",
+      "hypothesis": "结论先行+反向验证，保证速度同时用对照计算拦截公式颠倒错误",
+      "text": "执行顺序：①快速算出核心指标（CPI、SPI、EAC或关键路径工期），立即给出项目状态结论（超支/节约、落后/提前）；②回溯计算链条，逐步代入原始数值生成可复核的中间步骤；③对照易错清单做反向验证：把CPI颠倒算一遍确认与主结论相反、检查关键路径是否存在并行汇合点、确认偏差性质判断依据；④最后补充资源冲突核查与风险EMV排序；⑤输出时结论置顶，计算过程与假设随后。",
+      "text_sha256": "df45cfd0bd920240154cc786f0de07a886919906d07cca531789d1271a4ffea4",
+      "text_chars": 183
+    },
+    "G5": {
+      "slot_label": "经验策略",
+      "allele_id": "g5_a",
+      "allele_label": "输入-计算-结论三段式",
+      "strength": "strong",
+      "hypothesis": "结构化数值链条，直接满足输出习惯要求并提升可复核性评分",
+      "text": "固定输出骨架：【输入与假设】列出全部原始数据与缺口假设；【计算过程】每个指标一行，格式为'公式→代入数值→结果'（如CPI=EV/AC=180/200=0.90）；【结论与建议】每条判断括注依据指标（'进度落后（SPI=0.85）'），风险按EMV降序排列并附应对策略与责任人建议。语气直接、无寒暄，坏消息放最前面。",
+      "text_sha256": "b4e2578877c9b859a100dd199b9a2e8868a6d6d73c1b45097c03d07b1f8f0157",
+      "text_chars": 158
+    }
+  },
+  "system_prompt": "【G1 身份定位】\n你是一名专业的项目经理，负责管理项目并确保项目成功交付。\n\n【G2 边界约束】\n接到排期或交付承诺请求时，先盘点四要素是否齐备：任务清单与工期估计、依赖关系、资源日历、可用预算。任一缺失，禁止直接给日期；改为输出'假设清单 + 基于假设的条件性计划'，每条假设标注敏感方向（'若资源X不可用，关键路径延长N天'）。范围变更请求一律先走影响评估（关键路径、成本、质量三项）再给接受/拒绝建议。\n\n【G3 知识方法】\n挣值：CPI=EV/AC（分子永远是EV），SPI=EV/PV，CPI<1超支、SPI<1落后。EAC选型先判偏差性质：典型性偏差用EAC=BAC/CPI；非典型（一次性）偏差用EAC=AC+(BAC-EV)；成本进度双重恶化用EAC=AC+(BAC-EV)/(CPI×SPI)。关键路径：正推ES/EF、逆推LS/LF，总浮动=LS-ES，总浮动为0的链路才是关键路径；并行汇合点需等所有前序完成；自由浮动只影响紧后任务，总浮动才影响总工期。\n\n【G4 能力流程】\n执行顺序：①快速算出核心指标（CPI、SPI、EAC或关键路径工期），立即给出项目状态结论（超支/节约、落后/提前）；②回溯计算链条，逐步代入原始数值生成可复核的中间步骤；③对照易错清单做反向验证：把CPI颠倒算一遍确认与主结论相反、检查关键路径是否存在并行汇合点、确认偏差性质判断依据；④最后补充资源冲突核查与风险EMV排序；⑤输出时结论置顶，计算过程与假设随后。\n\n【G5 经验风格】\n固定输出骨架：【输入与假设】列出全部原始数据与缺口假设；【计算过程】每个指标一行，格式为'公式→代入数值→结果'（如CPI=EV/AC=180/200=0.90）；【结论与建议】每条判断括注依据指标（'进度落后（SPI=0.85）'），风险按EMV降序排列并附应对策略与责任人建议。语气直接、无寒暄，坏消息放最前面。",
+  "scoring": {
+    "mode": "objective",
+    "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+    "check_types": {
+      "lead_with": {
+        "count": 25,
+        "weight_sum": 135.4
+      },
+      "min_items": {
+        "count": 3,
+        "weight_sum": 16.4
+      },
+      "must_include": {
+        "count": 62,
+        "weight_sum": 1098.0
+      },
+      "must_not_include": {
+        "count": 47,
+        "weight_sum": 630.2
+      },
+      "numeric": {
+        "count": 100,
+        "weight_sum": 2820.0
+      }
+    },
+    "verified_cases": 47
+  },
+  "scores": {
+    "baseline_no_genes_weighted": 74.85,
+    "all_weak_weighted": 81.3,
+    "champion_train_weighted": 89.2,
+    "delta_train_weighted": 14.35,
+    "paired_train": {
+      "cases": 6,
+      "mean_delta": 17.38,
+      "improved": 4,
+      "regressed": 1,
+      "worst": -13.33,
+      "best": 60.0,
+      "sd_delta": 25.35,
+      "mean_delta_ci95": [
+        0.63,
+        36.03
+      ],
+      "significant": true
+    },
+    "holdout_champion_weighted": 85.69,
+    "holdout_baseline_weighted": 84.03,
+    "holdout_delta_weighted": 1.66,
+    "holdout_paired": {
+      "cases": 41,
+      "mean_delta": 0.36,
+      "improved": 12,
+      "regressed": 16,
+      "worst": -21.43,
+      "best": 66.0,
+      "sd_delta": 16.31,
+      "mean_delta_ci95": [
+        -4.41,
+        5.31
+      ],
+      "significant": false
+    },
+    "generalization_gap": 3.51,
+    "holdout_source": "run",
+    "holdout_in_run": null,
+    "scorer_version_train": 3,
+    "scorer_version_holdout": 3
+  },
+  "verdict": {
+    "generalizes": null,
+    "label": "判不了（区间跨 0）",
+    "reason": "配对Δ均值=+0.36 95%CI[-4.41, +5.31]（n=41 题 × 1 次）：换一组题就可能翻符号，需加题量或重复次数"
+  },
+  "ablation": {
+    "available": true,
+    "reference_arm": {
+      "id": "g0_09faff5be8fa",
+      "weighted": 87.18
+    },
+    "by_slot": [
+      {
+        "slot": "G3",
+        "slot_label": "知识",
+        "full_weighted": 87.18,
+        "ablated_weighted": 75.68,
+        "delta_weighted": 11.5,
+        "delta_composite": 13.48
+      },
+      {
+        "slot": "G5",
+        "slot_label": "经验策略",
+        "full_weighted": 87.18,
+        "ablated_weighted": 75.86,
+        "delta_weighted": 11.32,
+        "delta_composite": 12.02
+      },
+      {
+        "slot": "G4",
+        "slot_label": "能力与工具",
+        "full_weighted": 87.18,
+        "ablated_weighted": 80.81,
+        "delta_weighted": 6.37,
+        "delta_composite": 9.65
+      },
+      {
+        "slot": "G2",
+        "slot_label": "人设与决策边界",
+        "full_weighted": 87.18,
+        "ablated_weighted": 84.55,
+        "delta_weighted": 2.63,
+        "delta_composite": 5.36
+      },
+      {
+        "slot": "G1",
+        "slot_label": "身份",
+        "full_weighted": 87.18,
+        "ablated_weighted": 87.77,
+        "delta_weighted": -0.59,
+        "delta_composite": -4.21
+      }
+    ],
+    "note": "消融只换一个槽为弱等位，其余保持强等位；单次采样、样本量小，只读排序与量级，不做显著性声明。"
+  },
+  "suite": {
+    "count": 47,
+    "train": [
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01",
+      "role_c81cdcf6_critical_path_scheduling_basic_01",
+      "role_c81cdcf6_earned_value_analysis_basic_01",
+      "role_c81cdcf6_resource_feasibility_check_basic_01",
+      "role_c81cdcf6_risk_quantification_basic_01",
+      "role_c81cdcf6_statistical_trap_detection_basic_01"
+    ],
+    "holdout": [
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03",
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04",
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05",
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06",
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07",
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08",
+      "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02",
+      "role_c81cdcf6_critical_path_scheduling_hard_03",
+      "role_c81cdcf6_critical_path_scheduling_hard_05",
+      "role_c81cdcf6_critical_path_scheduling_hard_06",
+      "role_c81cdcf6_critical_path_scheduling_hard_07",
+      "role_c81cdcf6_critical_path_scheduling_hard_08",
+      "role_c81cdcf6_critical_path_scheduling_medium_02",
+      "role_c81cdcf6_earned_value_analysis_hard_03",
+      "role_c81cdcf6_earned_value_analysis_hard_04",
+      "role_c81cdcf6_earned_value_analysis_hard_05",
+      "role_c81cdcf6_earned_value_analysis_hard_06",
+      "role_c81cdcf6_earned_value_analysis_hard_07",
+      "role_c81cdcf6_earned_value_analysis_hard_08",
+      "role_c81cdcf6_earned_value_analysis_medium_02",
+      "role_c81cdcf6_resource_feasibility_check_hard_03",
+      "role_c81cdcf6_resource_feasibility_check_hard_04",
+      "role_c81cdcf6_resource_feasibility_check_hard_05",
+      "role_c81cdcf6_resource_feasibility_check_hard_06",
+      "role_c81cdcf6_resource_feasibility_check_hard_07",
+      "role_c81cdcf6_resource_feasibility_check_hard_08",
+      "role_c81cdcf6_resource_feasibility_check_medium_02",
+      "role_c81cdcf6_risk_quantification_hard_03",
+      "role_c81cdcf6_risk_quantification_hard_04",
+      "role_c81cdcf6_risk_quantification_hard_05",
+      "role_c81cdcf6_risk_quantification_hard_06",
+      "role_c81cdcf6_risk_quantification_hard_07",
+      "role_c81cdcf6_risk_quantification_hard_08",
+      "role_c81cdcf6_risk_quantification_medium_02",
+      "role_c81cdcf6_statistical_trap_detection_hard_03",
+      "role_c81cdcf6_statistical_trap_detection_hard_04",
+      "role_c81cdcf6_statistical_trap_detection_hard_05",
+      "role_c81cdcf6_statistical_trap_detection_hard_06",
+      "role_c81cdcf6_statistical_trap_detection_hard_07",
+      "role_c81cdcf6_statistical_trap_detection_hard_08",
+      "role_c81cdcf6_statistical_trap_detection_medium_02"
+    ],
+    "path": "case/role/role_c81cdcf6/testcases.jsonl"
+  },
+  "reproduce": {
+    "service": "rolefactory (Docker, 127.0.0.1:8790)",
+    "endpoint": "POST /api/run",
+    "params": {
+      "model": "k3",
+      "scoring_mode": "objective",
+      "judge_shadow": false,
+      "per_dim": 8,
+      "generations": 3,
+      "variants_per_gen": 10,
+      "reps": 1,
+      "holdout_reps": 1,
+      "holdout_per_dim": 7,
+      "elite": 2,
+      "min_gain": 0.5,
+      "patience": 1,
+      "seed": 20260810,
+      "concurrency": 32,
+      "budget_tokens": 2500000,
+      "budget_seconds": 2400.0,
+      "anchor_limit": 5
+    },
+    "note": "同一 seed 复现的是搜索路径（种群与配对），不是逐字回答：LLM 采样有随机性。判分是纯 Python 断言，对同一份回答任何时候复算同分。",
+    "verify_command": "python tools/genome_card.py verify 20260810-213118-209063 <genome.json>"
+  },
+  "performance": {
+    "wall_seconds": 1373.0,
+    "phase_seconds": {
+      "blueprint": 28.0,
+      "cases": 442.4,
+      "bank": 393.3,
+      "baseline+gen0": 281.4,
+      "evolve": 329.2,
+      "holdout": 291.8
+    },
+    "parallel": {
+      "concurrency_cap": 32,
+      "effective_parallel": 13.87,
+      "utilization_vs_cap": 0.433,
+      "inflight_peak": 32,
+      "api_seconds_sum": 19039.0,
+      "queue_seconds_sum": 8630.2,
+      "queue_share": 0.312,
+      "serial_seconds_equivalent": 19039.0,
+      "speedup_vs_serial": 13.87,
+      "hedges": 0,
+      "hedge_wins": 0,
+      "latency": {
+        "p50": 57.41,
+        "p90": 100.61,
+        "p99": 134.36,
+        "max": 188.29
+      },
+      "note": "排队秒数不计入 API 秒数；hedges 为长尾补发次数，hedge_wins 为补发先到的次数（被丢弃的那份仍消耗了服务端 token，未计入本地 tokens）。"
+    },
+    "tokens_per_eval": 3899,
+    "evals": {
+      "done": 250,
+      "failed": 0,
+      "total": 250
+    }
+  },
+  "caveats": [
+    "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+    "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+    "must_not_include 自 2026-08-11 起区分「主张错误说法」与「引用它并否掉」（同句、词前 40 字内有否定线索才免扣）；此前的 run 未享此修正，其分数含约 2 分/条的误扣噪声，跨日期对比请先跑 tools/rescore.py 对齐口径。",
+    "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+    "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+  ]
+}

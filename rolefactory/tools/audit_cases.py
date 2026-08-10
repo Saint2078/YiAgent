@@ -61,6 +61,7 @@ def numeric_share(case: dict) -> float:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="历史题库对当前校验口径的通过率")
+    ap.add_argument("runs", nargs="*", help="只审这些 run（默认全部）")
     ap.add_argument("--by-run", action="store_true", help="逐 run 打印")
     ap.add_argument(
         "--raw", action="store_true",
@@ -68,8 +69,11 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    want = set(args.runs)
     rows: list[tuple[str, int, int, list[str], float]] = []
     for run_dir in sorted(p for p in RUNS.iterdir() if p.is_dir()):
+        if want and run_dir.name not in want:
+            continue
         cases = load_cases(run_dir)
         if not cases:
             continue

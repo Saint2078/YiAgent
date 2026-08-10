@@ -318,10 +318,22 @@ def card_md(card: dict[str, Any]) -> str:
         f"| 基线(无基因) | {sc.get('baseline_no_genes_weighted')} |",
         f"| 全弱基因 | {sc.get('all_weak_weighted')} |",
         f"| Δ(train) | {sc.get('delta_train_weighted')} |",
-        f"| holdout 冠军 / 基线 / Δ | {sc.get('holdout_champion_weighted')} / "
+        f"| holdout 冠军 / 基线 / Δ(加权) | {sc.get('holdout_champion_weighted')} / "
         f"{sc.get('holdout_baseline_weighted')} / {sc.get('holdout_delta_weighted')} |",
         f"| 泛化差(train−holdout) | {sc.get('generalization_gap')} |",
     ]
+    # 两个 Δ 不是一个东西，且能差出几倍（实测 1.66 对 0.36）：
+    # 加权 Δ 先按维度权重压成一个总分再相减，配对 Δ 是逐题相减再平均。
+    # 置信区间只属于**配对 Δ**。只写一个 Δ 再挂个区间，读的人必然把区间当成加权 Δ 的。
+    ph = sc.get("holdout_paired") or {}
+    if ph.get("mean_delta") is not None:
+        ci = ph.get("mean_delta_ci95")
+        band = f" 95%CI[{ci[0]:+}, {ci[1]:+}]" if ci else "（该 run 无区间）"
+        lines.append(
+            f"| holdout Δ(配对逐题) | **{ph['mean_delta']:+}**{band} —— "
+            f"{ph.get('improved')} 升 / {ph.get('regressed')} 降，sd={ph.get('sd_delta')}；"
+            "**区间属于这一行**，上一行的加权 Δ 是另一种算法，不共用区间 |"
+        )
     if sc.get("holdout_source") == "reholdout":
         old = sc.get("holdout_in_run") or {}
         lines.append(

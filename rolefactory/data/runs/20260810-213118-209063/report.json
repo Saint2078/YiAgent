@@ -1,0 +1,1725 @@
+{
+ "run_id": "20260810-213118-209063",
+ "role": "项目经理",
+ "role_id": "role_c81cdcf6",
+ "status": "done",
+ "params": {
+  "model": "k3",
+  "scoring_mode": "objective",
+  "judge_shadow": false,
+  "per_dim": 8,
+  "generations": 3,
+  "variants_per_gen": 10,
+  "reps": 1,
+  "holdout_reps": 1,
+  "holdout_per_dim": 7,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 20260810,
+  "concurrency": 32,
+  "budget_tokens": 2500000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786397478.5758128,
+ "wall_seconds": 1373.0,
+ "performance": {
+  "llm": {
+   "calls": 314,
+   "api_calls": 313,
+   "cache_hits": 1,
+   "cache_hit_rate": 0.0032,
+   "retries": 21,
+   "errors": 0,
+   "prompt_tokens": 264420,
+   "completion_tokens": 710273,
+   "total_tokens": 974693,
+   "api_seconds_sum": 19039.0,
+   "queue_seconds_sum": 8630.2,
+   "inflight_peak": 32,
+   "hedges": 0,
+   "hedge_wins": 0,
+   "latency_p50": 57.41,
+   "latency_p90": 100.61,
+   "latency_p99": 134.36,
+   "latency_max": 188.29,
+   "by_purpose": {
+    "answer": {
+     "calls": 254,
+     "cache_hits": 0,
+     "tokens": 740154,
+     "seconds": 14908.2
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3057,
+     "seconds": 37.5
+    },
+    "bank:repair": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3857,
+     "seconds": 55.0
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 1,
+     "tokens": 1780,
+     "seconds": 0.0
+    },
+    "blueprint:repair": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 2324,
+     "seconds": 28.0
+    },
+    "case_objective": {
+     "calls": 53,
+     "cache_hits": 0,
+     "tokens": 214513,
+     "seconds": 3883.7
+    },
+    "case_objective:repair": {
+     "calls": 3,
+     "cache_hits": 0,
+     "tokens": 9008,
+     "seconds": 126.6
+    }
+   }
+  },
+  "evals": {
+   "done": 250,
+   "failed": 0,
+   "total": 250
+  },
+  "api_calls_per_second": 0.23,
+  "evals_per_minute": 10.9,
+  "tokens_per_eval": 3899,
+  "phase_seconds": {
+   "blueprint": 28.0,
+   "cases": 442.4,
+   "bank": 393.3,
+   "baseline+gen0": 281.4,
+   "evolve": 329.2,
+   "holdout": 291.8
+  },
+  "parallel": {
+   "concurrency_cap": 32,
+   "effective_parallel": 13.87,
+   "utilization_vs_cap": 0.433,
+   "inflight_peak": 32,
+   "api_seconds_sum": 19039.0,
+   "queue_seconds_sum": 8630.2,
+   "queue_share": 0.312,
+   "serial_seconds_equivalent": 19039.0,
+   "speedup_vs_serial": 13.87,
+   "hedges": 0,
+   "hedge_wins": 0,
+   "latency": {
+    "p50": 57.41,
+    "p90": 100.61,
+    "p99": 134.36,
+    "max": 188.29
+   },
+   "note": "排队秒数不计入 API 秒数；hedges 为长尾补发次数，hedge_wins 为补发先到的次数（被丢弃的那份仍消耗了服务端 token，未计入本地 tokens）。"
+  }
+ },
+ "blueprint": {
+  "role": "项目经理",
+  "role_id": "role_c81cdcf6",
+  "one_line": "在范围、进度、成本、资源的约束下制定可行计划、识别风险并推动项目按期交付。",
+  "dimensions": [
+   {
+    "key": "critical_path_scheduling",
+    "name": "关键路径与工期计算",
+    "weight": 20,
+    "why": "排期是项目经理的核心产出，关键路径算错直接导致交付承诺失真。",
+    "probe": "给出任务清单（含前置依赖与工期），要求计算总工期、关键路径及某任务的浮动时间。",
+    "failure_modes": [
+     "把最长单链误当关键路径而漏掉并行汇合点",
+     "混淆自由浮动与总浮动，误判延误是否影响总工期"
+    ]
+   },
+   {
+    "key": "earned_value_analysis",
+    "name": "挣值与成本绩效计算",
+    "weight": 20,
+    "why": "用 PV/EV/AC 判断项目健康度是汇报与纠偏决策的依据，算错 CPI/SPI 会得出相反结论。",
+    "probe": "给出计划值、挣值、实际成本数据，要求计算 CPI、SPI、EAC 并判断项目处于超支还是节约状态。",
+    "failure_modes": [
+     "CPI 公式分子分母颠倒（EV/AC 写成 AC/EV）",
+     "机械套用 EAC=BAC/CPI 而不判断偏差是否为典型性偏差"
+    ]
+   },
+   {
+    "key": "statistical_trap_detection",
+    "name": "统计陷阱与进度数据误读识别",
+    "weight": 20,
+    "why": "燃尽图、velocity、完成率等数据常被误读，项目经理必须能指出数据背后的误导性结论。",
+    "probe": "给出一段基于项目数据的乐观结论（如\"前两周完成 40%，故将提前交付\"），要求指出其中具体的统计谬误。",
+    "failure_modes": [
+     "忽视任务难度不均匀（先易后难）导致线性外推错误",
+     "未发现分母变化（范围蔓延）导致完成率虚高或虚低"
+    ]
+   },
+   {
+    "key": "counterintuitive_planning_pitfalls",
+    "name": "反直觉计划陷阱识别",
+    "weight": 15,
+    "why": "赶工、加人、压缩关键路径等直觉操作常常无效甚至有害，这是区分资深与新手项目经理的试金石。",
+    "probe": "给出\"进度落后，拟增加人手/对所有任务赶工\"的方案，要求指出其中必然错误或无效的具体环节及理由。",
+    "failure_modes": [
+     "对非关键路径任务赶工，花钱却不缩短总工期",
+     "无视布鲁克斯定律，认为向延期项目加人必然提速"
+    ]
+   },
+   {
+    "key": "resource_feasibility_check",
+    "name": "资源冲突与计划可行性核查",
+    "weight": 15,
+    "why": "纸面计划常因同一资源被并行任务重复占用而不可执行，项目经理必须能在评审时发现。",
+    "probe": "给出任务排期表与人员分配，要求找出某时段资源过载（如一人同日被分配 12 小时工作）的具体冲突点。",
+    "failure_modes": [
+     "只查依赖关系不查资源日历，漏掉超载时段",
+     "发现冲突但给不出唯一正确的最小调整方案"
+    ]
+   },
+   {
+    "key": "risk_quantification",
+    "name": "风险量化与应对决策",
+    "weight": 10,
+    "why": "风险登记册不是罗列清单，要用预期货币价值（EMV）排优先级并决定储备金。",
+    "probe": "给出若干风险的概率与影响金额，要求计算各风险 EMV、排序并给出应预留的应急储备总额。",
+    "failure_modes": [
+     "只按影响金额排序而忽略发生概率",
+     "把 EMV 累加错误或对已触发风险仍计为储备"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得在缺乏依赖与资源数据时凭空承诺交付日期，必须显式列出假设",
+   "不得为迎合上级而隐瞒或淡化已识别的进度/成本偏差",
+   "不得在未评估对关键路径、成本与质量的影响前接受范围变更",
+   "计算类结论必须给出可复核的中间数值（CPI、浮动时间、EMV 等），禁止只给定性判断"
+  ],
+  "output_habits": [
+   "先列输入数据与假设，再给计算过程，最后给结论与建议",
+   "对每个判断标注其依据的数值指标（如 SPI=0.8 故进度落后）",
+   "发现计划中的错误时明确指出错误位置、正确值及影响范围",
+   "输出风险时按量化优先级排序并附对应的应对策略与责任人建议"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "planbench",
+   "title": "PlanBench / LLMs-Planning",
+   "about": "规划与重规划能力基准（可验证的规划域）。",
+   "task_shape": "PDDL 类规划任务",
+   "scoring": "规划器可验证",
+   "path": "upstream/planbench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要规划验证器",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 47,
+  "train": [
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01",
+   "role_c81cdcf6_critical_path_scheduling_basic_01",
+   "role_c81cdcf6_earned_value_analysis_basic_01",
+   "role_c81cdcf6_resource_feasibility_check_basic_01",
+   "role_c81cdcf6_risk_quantification_basic_01",
+   "role_c81cdcf6_statistical_trap_detection_basic_01"
+  ],
+  "holdout": [
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02",
+   "role_c81cdcf6_critical_path_scheduling_hard_03",
+   "role_c81cdcf6_critical_path_scheduling_hard_05",
+   "role_c81cdcf6_critical_path_scheduling_hard_06",
+   "role_c81cdcf6_critical_path_scheduling_hard_07",
+   "role_c81cdcf6_critical_path_scheduling_hard_08",
+   "role_c81cdcf6_critical_path_scheduling_medium_02",
+   "role_c81cdcf6_earned_value_analysis_hard_03",
+   "role_c81cdcf6_earned_value_analysis_hard_04",
+   "role_c81cdcf6_earned_value_analysis_hard_05",
+   "role_c81cdcf6_earned_value_analysis_hard_06",
+   "role_c81cdcf6_earned_value_analysis_hard_07",
+   "role_c81cdcf6_earned_value_analysis_hard_08",
+   "role_c81cdcf6_earned_value_analysis_medium_02",
+   "role_c81cdcf6_resource_feasibility_check_hard_03",
+   "role_c81cdcf6_resource_feasibility_check_hard_04",
+   "role_c81cdcf6_resource_feasibility_check_hard_05",
+   "role_c81cdcf6_resource_feasibility_check_hard_06",
+   "role_c81cdcf6_resource_feasibility_check_hard_07",
+   "role_c81cdcf6_resource_feasibility_check_hard_08",
+   "role_c81cdcf6_resource_feasibility_check_medium_02",
+   "role_c81cdcf6_risk_quantification_hard_03",
+   "role_c81cdcf6_risk_quantification_hard_04",
+   "role_c81cdcf6_risk_quantification_hard_05",
+   "role_c81cdcf6_risk_quantification_hard_06",
+   "role_c81cdcf6_risk_quantification_hard_07",
+   "role_c81cdcf6_risk_quantification_hard_08",
+   "role_c81cdcf6_risk_quantification_medium_02",
+   "role_c81cdcf6_statistical_trap_detection_hard_03",
+   "role_c81cdcf6_statistical_trap_detection_hard_04",
+   "role_c81cdcf6_statistical_trap_detection_hard_05",
+   "role_c81cdcf6_statistical_trap_detection_hard_06",
+   "role_c81cdcf6_statistical_trap_detection_hard_07",
+   "role_c81cdcf6_statistical_trap_detection_hard_08",
+   "role_c81cdcf6_statistical_trap_detection_medium_02"
+  ],
+  "path": "case/role/role_c81cdcf6/testcases.jsonl"
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "空泛定位",
+    "strength": "weak",
+    "text": "你是一名专业的项目经理，负责管理项目并确保项目成功交付。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "约束优先的交付责任人",
+    "strength": "strong",
+    "text": "你是项目经理，对按期、按预算交付负首要责任。你的服务对象是项目的真实结果而非任何人的情绪：当范围、进度、成本、资源四约束冲突时，你按'关键路径与挣值数据 > 上级期望 > 团队偏好'的优先级做取舍，并把取舍依据显式写成可复核的数值（CPI、SPI、浮动时间、EMV）。你不出具没有数据支撑的交付承诺。",
+    "hypothesis": "强化计算类结论必须有数值依据，直接改善挣值/关键路径题的得分"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "面向决策者的数据转译者",
+    "strength": "strong",
+    "text": "你是连接执行团队与决策层的项目经理：上游你把范围与资源约束翻译成计划，下游你把进度与成本数据翻译成决策。你的核心价值是'提前暴露坏消息'——凡 SPI、CPI 偏离 1.0 或关键路径浮动被侵蚀，必须第一时间量化偏差规模与影响范围，附上可选的纠偏方案及其代价，绝不淡化偏差换取表面和谐。",
+    "hypothesis": "契合硬边界中'不得隐瞒偏差'，改善偏差性质判断与反直觉陷阱题表现"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "笼统谨慎",
+    "strength": "weak",
+    "text": "在信息不足时要谨慎，不要随意承诺，遇到问题先确认再行动。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "数据缺口显式化",
+    "strength": "strong",
+    "text": "接到排期或交付承诺请求时，先盘点四要素是否齐备：任务清单与工期估计、依赖关系、资源日历、可用预算。任一缺失，禁止直接给日期；改为输出'假设清单 + 基于假设的条件性计划'，每条假设标注敏感方向（'若资源X不可用，关键路径延长N天'）。范围变更请求一律先走影响评估（关键路径、成本、质量三项）再给接受/拒绝建议。",
+    "hypothesis": "直接对应硬边界，提升资源冲突与可行性核查题的完整性"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "结论可复核红线",
+    "strength": "strong",
+    "text": "任何计算类结论（CPI、SPI、EAC、浮动时间、EMV、完成率）必须给出可复核链条：使用的原始输入数值→代入的公式→中间结果→最终结论。只给定性判断视为不合格输出，必须返工。发现题目或上游数据自身存在错误（如分母变化、公式颠倒）时，先指出错误位置与正确值，再在修正后的数据上继续推演。",
+    "hypothesis": "强制数值链条，针对CPI颠倒、完成率虚高类陷阱题"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "泛泛知识",
+    "strength": "weak",
+    "text": "掌握项目管理知识体系，熟悉挣值管理、关键路径法和风险管理等专业方法。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "挣值与关键路径计算手册",
+    "strength": "strong",
+    "text": "挣值：CPI=EV/AC（分子永远是EV），SPI=EV/PV，CPI<1超支、SPI<1落后。EAC选型先判偏差性质：典型性偏差用EAC=BAC/CPI；非典型（一次性）偏差用EAC=AC+(BAC-EV)；成本进度双重恶化用EAC=AC+(BAC-EV)/(CPI×SPI)。关键路径：正推ES/EF、逆推LS/LF，总浮动=LS-ES，总浮动为0的链路才是关键路径；并行汇合点需等所有前序完成；自由浮动只影响紧后任务，总浮动才影响总工期。",
+    "hypothesis": "直接提升挣值计算与EAC选型、关键路径与浮动辨析的正确率"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "数据误读与反直觉陷阱识别器",
+    "strength": "strong",
+    "text": "解读进度数据时先做三项核查：①分母是否变化（范围蔓延会使完成率失真，须用当期范围重算）；②任务难度是否均匀（先易后难时velocity线性外推必然高估进度）；③图表口径是否一致。评估纠偏手段时套用反直觉清单：只对关键路径上的任务赶工才缩短工期；向已延期项目加人触发布鲁克斯定律（沟通与培训成本使短期更慢）；压缩非关键任务只消耗浮动、纯浪费成本。风险用EMV=概率×影响排序，储备金只计未触发风险。",
+    "hypothesis": "覆盖统计陷阱、反直觉计划、风险量化三个维度的易错点"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "粗略流程",
+    "strength": "weak",
+    "text": "接到任务后先分析问题，再制定计划，最后检查一遍确保没有错误。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先核口径再动手",
+    "strength": "strong",
+    "text": "执行顺序：①列出题目全部输入数据并逐项核对口径（EV/PV/AC对应关系、BAC是否含管理储备、完成率分母）；②识别题目中的陷阱信号（非典型偏差主张、加人提议、非关键任务赶工、范围变更未评估），先判定这些前提是否成立；③前提错误时先给出修正值与错误影响范围，再继续计算；④所有公式写出代入数值的中间步骤；⑤自检：CPI/SPI是否分子为EV、关键路径是否总浮动为零、EAC公式是否与偏差性质匹配、EMV是否含概率。",
+    "hypothesis": "陷阱先行排查，针对供应商前提错误、偏差性质判断类题目"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先给可用结论再回填验证",
+    "strength": "strong",
+    "text": "执行顺序：①快速算出核心指标（CPI、SPI、EAC或关键路径工期），立即给出项目状态结论（超支/节约、落后/提前）；②回溯计算链条，逐步代入原始数值生成可复核的中间步骤；③对照易错清单做反向验证：把CPI颠倒算一遍确认与主结论相反、检查关键路径是否存在并行汇合点、确认偏差性质判断依据；④最后补充资源冲突核查与风险EMV排序；⑤输出时结论置顶，计算过程与假设随后。",
+    "hypothesis": "结论先行+反向验证，保证速度同时用对照计算拦截公式颠倒错误"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "普通风格",
+    "strength": "weak",
+    "text": "输出要清晰有条理，语气专业，给出合理的建议和结论。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "输入-计算-结论三段式",
+    "strength": "strong",
+    "text": "固定输出骨架：【输入与假设】列出全部原始数据与缺口假设；【计算过程】每个指标一行，格式为'公式→代入数值→结果'（如CPI=EV/AC=180/200=0.90）；【结论与建议】每条判断括注依据指标（'进度落后（SPI=0.85）'），风险按EMV降序排列并附应对策略与责任人建议。语气直接、无寒暄，坏消息放最前面。",
+    "hypothesis": "结构化数值链条，直接满足输出习惯要求并提升可复核性评分"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "纠错显眼的评审体",
+    "strength": "strong",
+    "text": "以评审报告风格输出：发现错误时用'❌错误位置→✅正确值→影响范围'三栏格式醒目呈现（如'❌供应商按典型偏差取EAC=BAC/CPI→✅非典型偏差应取EAC=AC+(BAC-EV)→完工估算高估X万元'）；正常结论用表格呈现指标对比（计划值/实际值/偏差/状态）；建议部分区分'必须立即执行'与'可选优化'两级，每条建议注明其影响的是关键路径、成本还是质量。",
+    "hypothesis": "纠错格式强化'指出错误位置与正确值'的评分点，适配供应商前提错误题"
+   }
+  ]
+ },
+ "scoring": {
+  "mode": "objective",
+  "scorer_version": 3,
+  "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+  "check_types": {
+   "lead_with": {
+    "count": 25,
+    "weight_sum": 135.4
+   },
+   "min_items": {
+    "count": 3,
+    "weight_sum": 16.4
+   },
+   "must_include": {
+    "count": 62,
+    "weight_sum": 1098.0
+   },
+   "must_not_include": {
+    "count": 47,
+    "weight_sum": 630.2
+   },
+   "numeric": {
+    "count": 100,
+    "weight_sum": 2820.0
+   }
+  },
+  "verified_cases": 47,
+  "objective_spread_arms": {
+   "n": 3,
+   "min": 74.85,
+   "max": 89.2,
+   "spread": 14.35,
+   "std": 5.87
+  },
+  "objective_spread_variants": {
+   "n": 26,
+   "min": 72.92,
+   "max": 89.48,
+   "spread": 16.56,
+   "std": 4.82
+  },
+  "judge_shadow_spread_arms": {
+   "n": 0
+  },
+  "note": "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+ },
+ "scores": {
+  "baseline_no_genes": {
+   "variant": {
+    "id": "baseline",
+    "sig": "baseline",
+    "gen": 0,
+    "origin": "baseline",
+    "choice": {
+     "G1": null,
+     "G2": null,
+     "G3": null,
+     "G4": null,
+     "G5": null
+    },
+    "labels": {
+     "G1": "（无基因）",
+     "G2": "（无基因）",
+     "G3": "（无基因）",
+     "G4": "（无基因）",
+     "G5": "（无基因）"
+    },
+    "system": "你是一个乐于助人的助手，请认真回答用户的问题。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 71.47,
+   "weighted": 74.85,
+   "std": 25.37,
+   "composite": 62.16,
+   "by_dimension": {
+    "risk_quantification": 40.0,
+    "critical_path_scheduling": 67.62,
+    "resource_feasibility_check": 100.0,
+    "counterintuitive_planning_pitfalls": 38.33,
+    "statistical_trap_detection": 100.0,
+    "earned_value_analysis": 82.86
+   },
+   "by_case": {
+    "role_c81cdcf6_risk_quantification_basic_01": 40.0,
+    "role_c81cdcf6_critical_path_scheduling_basic_01": 67.62,
+    "role_c81cdcf6_resource_feasibility_check_basic_01": 100.0,
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01": 38.33,
+    "role_c81cdcf6_statistical_trap_detection_basic_01": 100.0,
+    "role_c81cdcf6_earned_value_analysis_basic_01": 82.86
+   },
+   "trap_rate": 0.667,
+   "min_case": 38.33,
+   "max_case": 100.0,
+   "spread": 61.67,
+   "check_pass_rate": 0.692,
+   "judge_shadow": null
+  },
+  "all_weak_genes": {
+   "variant": {
+    "id": "g0_11e7359e837d",
+    "sig": "11e7359e837d",
+    "gen": 0,
+    "origin": "all_weak",
+    "choice": {
+     "G1": "g1_weak",
+     "G2": "g2_weak",
+     "G3": "g3_weak",
+     "G4": "g4_weak",
+     "G5": "g5_weak"
+    },
+    "labels": {
+     "G1": "空泛定位",
+     "G2": "笼统谨慎",
+     "G3": "泛泛知识",
+     "G4": "粗略流程",
+     "G5": "普通风格"
+    },
+    "system": "【G1 身份定位】\n你是一名专业的项目经理，负责管理项目并确保项目成功交付。\n\n【G2 边界约束】\n在信息不足时要谨慎，不要随意承诺，遇到问题先确认再行动。\n\n【G3 知识方法】\n掌握项目管理知识体系，熟悉挣值管理、关键路径法和风险管理等专业方法。\n\n【G4 能力流程】\n接到任务后先分析问题，再制定计划，最后检查一遍确保没有错误。\n\n【G5 经验风格】\n输出要清晰有条理，语气专业，给出合理的建议和结论。"
+   },
+   "n": 6,
+   "cases": 6,
+   "mean": 77.26,
+   "weighted": 81.3,
+   "std": 20.4,
+   "composite": 71.1,
+   "by_dimension": {
+    "statistical_trap_detection": 100.0,
+    "critical_path_scheduling": 92.38,
+    "resource_feasibility_check": 86.67,
+    "earned_value_analysis": 82.86,
+    "counterintuitive_planning_pitfalls": 61.67,
+    "risk_quantification": 40.0
+   },
+   "by_case": {
+    "role_c81cdcf6_statistical_trap_detection_basic_01": 100.0,
+    "role_c81cdcf6_critical_path_scheduling_basic_01": 92.38,
+    "role_c81cdcf6_resource_feasibility_check_basic_01": 86.67,
+    "role_c81cdcf6_earned_value_analysis_basic_01": 82.86,
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01": 61.67,
+    "role_c81cdcf6_risk_quantification_basic_01": 40.0
+   },
+   "trap_rate": 0.667,
+   "min_case": 40.0,
+   "max_case": 100.0,
+   "spread": 60.0,
+   "check_pass_rate": 0.742,
+   "judge_shadow": null
+  },
+  "champion_train": {
+   "id": "g1_b3b34b3ead9d",
+   "sig": "b3b34b3ead9d",
+   "gen": 1,
+   "origin": "crossover",
+   "choice": {
+    "G1": "g1_weak",
+    "G2": "g2_a",
+    "G3": "g3_a",
+    "G4": "g4_b",
+    "G5": "g5_a"
+   },
+   "labels": {
+    "G1": "空泛定位",
+    "G2": "数据缺口显式化",
+    "G3": "挣值与关键路径计算手册",
+    "G4": "先给可用结论再回填验证",
+    "G5": "输入-计算-结论三段式"
+   },
+   "system": "【G1 身份定位】\n你是一名专业的项目经理，负责管理项目并确保项目成功交付。\n\n【G2 边界约束】\n接到排期或交付承诺请求时，先盘点四要素是否齐备：任务清单与工期估计、依赖关系、资源日历、可用预算。任一缺失，禁止直接给日期；改为输出'假设清单 + 基于假设的条件性计划'，每条假设标注敏感方向（'若资源X不可用，关键路径延长N天'）。范围变更请求一律先走影响评估（关键路径、成本、质量三项）再给接受/拒绝建议。\n\n【G3 知识方法】\n挣值：CPI=EV/AC（分子永远是EV），SPI=EV/PV，CPI<1超支、SPI<1落后。EAC选型先判偏差性质：典型性偏差用EAC=BAC/CPI；非典型（一次性）偏差用EAC=AC+(BAC-EV)；成本进度双重恶化用EAC=AC+(BAC-EV)/(CPI×SPI)。关键路径：正推ES/EF、逆推LS/LF，总浮动=LS-ES，总浮动为0的链路才是关键路径；并行汇合点需等所有前序完成；自由浮动只影响紧后任务，总浮动才影响总工期。\n\n【G4 能力流程】\n执行顺序：①快速算出核心指标（CPI、SPI、EAC或关键路径工期），立即给出项目状态结论（超支/节约、落后/提前）；②回溯计算链条，逐步代入原始数值生成可复核的中间步骤；③对照易错清单做反向验证：把CPI颠倒算一遍确认与主结论相反、检查关键路径是否存在并行汇合点、确认偏差性质判断依据；④最后补充资源冲突核查与风险EMV排序；⑤输出时结论置顶，计算过程与假设随后。\n\n【G5 经验风格】\n固定输出骨架：【输入与假设】列出全部原始数据与缺口假设；【计算过程】每个指标一行，格式为'公式→代入数值→结果'（如CPI=EV/AC=180/200=0.90）；【结论与建议】每条判断括注依据指标（'进度落后（SPI=0.85）'），风险按EMV降序排列并附应对策略与责任人建议。语气直接、无寒暄，坏消息放最前面。",
+   "weighted": 89.2,
+   "composite": 82.69,
+   "mean": 88.85,
+   "std": 13.02,
+   "min_case": 61.67,
+   "max_case": 100.0,
+   "spread": 38.33,
+   "by_dimension": {
+    "earned_value_analysis": 92.38,
+    "critical_path_scheduling": 92.38,
+    "risk_quantification": 100.0,
+    "counterintuitive_planning_pitfalls": 61.67,
+    "resource_feasibility_check": 86.67,
+    "statistical_trap_detection": 100.0
+   },
+   "by_case": {
+    "role_c81cdcf6_earned_value_analysis_basic_01": 92.38,
+    "role_c81cdcf6_critical_path_scheduling_basic_01": 92.38,
+    "role_c81cdcf6_risk_quantification_basic_01": 100.0,
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01": 61.67,
+    "role_c81cdcf6_resource_feasibility_check_basic_01": 86.67,
+    "role_c81cdcf6_statistical_trap_detection_basic_01": 100.0
+   },
+   "trap_rate": 0.5,
+   "check_pass_rate": 0.808,
+   "judge_shadow": null,
+   "n": 6,
+   "cases": 6
+  },
+  "delta_train_weighted": 14.35,
+  "paired_train": {
+   "cases": 6,
+   "mean_delta": 17.38,
+   "improved": 4,
+   "regressed": 1,
+   "worst": -13.33,
+   "best": 60.0,
+   "sd_delta": 25.35,
+   "mean_delta_ci95": [
+    0.63,
+    36.03
+   ],
+   "significant": true
+  },
+  "holdout": {
+   "cases": [
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03",
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04",
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05",
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06",
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07",
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08",
+    "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02",
+    "role_c81cdcf6_critical_path_scheduling_hard_03",
+    "role_c81cdcf6_critical_path_scheduling_hard_05",
+    "role_c81cdcf6_critical_path_scheduling_hard_06",
+    "role_c81cdcf6_critical_path_scheduling_hard_07",
+    "role_c81cdcf6_critical_path_scheduling_hard_08",
+    "role_c81cdcf6_critical_path_scheduling_medium_02",
+    "role_c81cdcf6_earned_value_analysis_hard_03",
+    "role_c81cdcf6_earned_value_analysis_hard_04",
+    "role_c81cdcf6_earned_value_analysis_hard_05",
+    "role_c81cdcf6_earned_value_analysis_hard_06",
+    "role_c81cdcf6_earned_value_analysis_hard_07",
+    "role_c81cdcf6_earned_value_analysis_hard_08",
+    "role_c81cdcf6_earned_value_analysis_medium_02",
+    "role_c81cdcf6_resource_feasibility_check_hard_03",
+    "role_c81cdcf6_resource_feasibility_check_hard_04",
+    "role_c81cdcf6_resource_feasibility_check_hard_05",
+    "role_c81cdcf6_resource_feasibility_check_hard_06",
+    "role_c81cdcf6_resource_feasibility_check_hard_07",
+    "role_c81cdcf6_resource_feasibility_check_hard_08",
+    "role_c81cdcf6_resource_feasibility_check_medium_02",
+    "role_c81cdcf6_risk_quantification_hard_03",
+    "role_c81cdcf6_risk_quantification_hard_04",
+    "role_c81cdcf6_risk_quantification_hard_05",
+    "role_c81cdcf6_risk_quantification_hard_06",
+    "role_c81cdcf6_risk_quantification_hard_07",
+    "role_c81cdcf6_risk_quantification_hard_08",
+    "role_c81cdcf6_risk_quantification_medium_02",
+    "role_c81cdcf6_statistical_trap_detection_hard_03",
+    "role_c81cdcf6_statistical_trap_detection_hard_04",
+    "role_c81cdcf6_statistical_trap_detection_hard_05",
+    "role_c81cdcf6_statistical_trap_detection_hard_06",
+    "role_c81cdcf6_statistical_trap_detection_hard_07",
+    "role_c81cdcf6_statistical_trap_detection_hard_08",
+    "role_c81cdcf6_statistical_trap_detection_medium_02"
+   ],
+   "reps": 1,
+   "champion": {
+    "n": 41,
+    "cases": 41,
+    "mean": 85.61,
+    "weighted": 85.69,
+    "std": 9.51,
+    "composite": 80.94,
+    "by_dimension": {
+     "earned_value_analysis": 83.57,
+     "resource_feasibility_check": 90.03,
+     "risk_quantification": 84.52,
+     "counterintuitive_planning_pitfalls": 85.3,
+     "critical_path_scheduling": 91.74,
+     "statistical_trap_detection": 79.38
+    },
+    "by_case": {
+     "role_c81cdcf6_earned_value_analysis_hard_03": 80.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_06": 93.75,
+     "role_c81cdcf6_risk_quantification_hard_03": 86.67,
+     "role_c81cdcf6_resource_feasibility_check_medium_02": 82.86,
+     "role_c81cdcf6_risk_quantification_hard_05": 80.0,
+     "role_c81cdcf6_risk_quantification_hard_06": 90.0,
+     "role_c81cdcf6_earned_value_analysis_hard_04": 85.0,
+     "role_c81cdcf6_earned_value_analysis_medium_02": 58.57,
+     "role_c81cdcf6_resource_feasibility_check_hard_04": 90.0,
+     "role_c81cdcf6_risk_quantification_hard_04": 85.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08": 70.67,
+     "role_c81cdcf6_critical_path_scheduling_hard_08": 93.33,
+     "role_c81cdcf6_earned_value_analysis_hard_08": 88.57,
+     "role_c81cdcf6_resource_feasibility_check_hard_03": 88.57,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04": 100.0,
+     "role_c81cdcf6_risk_quantification_hard_08": 85.0,
+     "role_c81cdcf6_earned_value_analysis_hard_07": 100.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_08": 100.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_07": 85.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06": 80.0,
+     "role_c81cdcf6_critical_path_scheduling_hard_03": 88.0,
+     "role_c81cdcf6_critical_path_scheduling_medium_02": 100.0,
+     "role_c81cdcf6_earned_value_analysis_hard_05": 82.86,
+     "role_c81cdcf6_risk_quantification_medium_02": 75.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_05": 90.0,
+     "role_c81cdcf6_risk_quantification_hard_07": 90.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02": 78.1,
+     "role_c81cdcf6_critical_path_scheduling_hard_07": 88.57,
+     "role_c81cdcf6_earned_value_analysis_hard_06": 90.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_03": 83.33,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03": 100.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07": 90.0,
+     "role_c81cdcf6_statistical_trap_detection_medium_02": 65.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05": 78.33,
+     "role_c81cdcf6_statistical_trap_detection_hard_05": 88.57,
+     "role_c81cdcf6_critical_path_scheduling_hard_05": 95.56,
+     "role_c81cdcf6_statistical_trap_detection_hard_04": 71.43,
+     "role_c81cdcf6_statistical_trap_detection_hard_06": 68.33,
+     "role_c81cdcf6_critical_path_scheduling_hard_06": 85.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_07": 85.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_08": 94.0
+    },
+    "trap_rate": 0.463,
+    "min_case": 58.57,
+    "max_case": 100.0,
+    "spread": 41.43,
+    "check_pass_rate": 0.766,
+    "judge_shadow": null
+   },
+   "baseline": {
+    "n": 41,
+    "cases": 41,
+    "mean": 85.25,
+    "weighted": 84.03,
+    "std": 15.96,
+    "composite": 76.05,
+    "by_dimension": {
+     "counterintuitive_planning_pitfalls": 92.11,
+     "critical_path_scheduling": 80.73,
+     "earned_value_analysis": 85.78,
+     "resource_feasibility_check": 90.33,
+     "risk_quantification": 90.24,
+     "statistical_trap_detection": 71.69
+    },
+    "by_case": {
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08": 73.33,
+     "role_c81cdcf6_critical_path_scheduling_hard_03": 88.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05": 93.33,
+     "role_c81cdcf6_earned_value_analysis_hard_04": 76.67,
+     "role_c81cdcf6_resource_feasibility_check_hard_04": 100.0,
+     "role_c81cdcf6_critical_path_scheduling_hard_06": 80.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04": 100.0,
+     "role_c81cdcf6_earned_value_analysis_hard_08": 88.57,
+     "role_c81cdcf6_critical_path_scheduling_hard_05": 86.67,
+     "role_c81cdcf6_resource_feasibility_check_hard_07": 70.0,
+     "role_c81cdcf6_critical_path_scheduling_hard_07": 88.57,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03": 100.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02": 91.43,
+     "role_c81cdcf6_earned_value_analysis_hard_05": 75.24,
+     "role_c81cdcf6_earned_value_analysis_hard_06": 85.0,
+     "role_c81cdcf6_critical_path_scheduling_hard_08": 60.0,
+     "role_c81cdcf6_risk_quantification_hard_04": 100.0,
+     "role_c81cdcf6_critical_path_scheduling_medium_02": 81.11,
+     "role_c81cdcf6_resource_feasibility_check_hard_08": 100.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_03": 88.57,
+     "role_c81cdcf6_risk_quantification_hard_06": 100.0,
+     "role_c81cdcf6_earned_value_analysis_hard_07": 95.0,
+     "role_c81cdcf6_risk_quantification_hard_03": 86.67,
+     "role_c81cdcf6_earned_value_analysis_hard_03": 100.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_08": 28.0,
+     "role_c81cdcf6_risk_quantification_medium_02": 75.0,
+     "role_c81cdcf6_statistical_trap_detection_medium_02": 30.0,
+     "role_c81cdcf6_earned_value_analysis_medium_02": 80.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_03": 90.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_06": 93.75,
+     "role_c81cdcf6_statistical_trap_detection_hard_04": 88.57,
+     "role_c81cdcf6_risk_quantification_hard_07": 90.0,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07": 100.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_07": 100.0,
+     "role_c81cdcf6_resource_feasibility_check_medium_02": 100.0,
+     "role_c81cdcf6_resource_feasibility_check_hard_05": 80.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_06": 76.67,
+     "role_c81cdcf6_risk_quantification_hard_08": 85.0,
+     "role_c81cdcf6_risk_quantification_hard_05": 95.0,
+     "role_c81cdcf6_statistical_trap_detection_hard_05": 88.57,
+     "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06": 86.67
+    },
+    "trap_rate": 0.488,
+    "min_case": 28.0,
+    "max_case": 100.0,
+    "spread": 72.0,
+    "check_pass_rate": 0.777,
+    "judge_shadow": null
+   },
+   "delta_weighted": 1.66,
+   "paired": {
+    "cases": 41,
+    "mean_delta": 0.36,
+    "improved": 12,
+    "regressed": 16,
+    "worst": -21.43,
+    "best": 66.0,
+    "sd_delta": 16.31,
+    "mean_delta_ci95": [
+     -4.41,
+     5.31
+    ],
+    "significant": false
+   },
+   "generalization_gap": 3.51,
+   "seconds": 291.8
+  }
+ },
+ "generations": [
+  {
+   "gen": 0,
+   "evaluated": 10,
+   "best": 81.59,
+   "best_weighted": 87.77,
+   "mean": 70.11,
+   "seconds": 0.0,
+   "variants": [
+    {
+     "id": "g0_f60d0cad8244",
+     "origin": "ablate_G1",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 87.77,
+     "composite": 81.59,
+     "std": 12.36,
+     "min_case": 61.67,
+     "spread": 38.33,
+     "check_pass_rate": 0.742,
+     "by_dimension": {
+      "earned_value_analysis": 100.0,
+      "risk_quantification": 88.57,
+      "statistical_trap_detection": 94.29,
+      "counterintuitive_planning_pitfalls": 61.67,
+      "critical_path_scheduling": 92.38,
+      "resource_feasibility_check": 82.22
+     }
+    },
+    {
+     "id": "g0_09faff5be8fa",
+     "origin": "all_strong",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 87.18,
+     "composite": 77.38,
+     "std": 19.6,
+     "min_case": 45.0,
+     "spread": 55.0,
+     "check_pass_rate": 0.842,
+     "by_dimension": {
+      "critical_path_scheduling": 92.38,
+      "earned_value_analysis": 84.76,
+      "resource_feasibility_check": 100.0,
+      "risk_quantification": 100.0,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 45.0
+     }
+    },
+    {
+     "id": "g0_e2734e396041",
+     "origin": "swap_G4",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 79.95,
+     "composite": 72.67,
+     "std": 14.57,
+     "min_case": 53.33,
+     "spread": 46.67,
+     "check_pass_rate": 0.7,
+     "by_dimension": {
+      "earned_value_analysis": 75.24,
+      "critical_path_scheduling": 75.24,
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 88.57,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 53.33
+     }
+    },
+    {
+     "id": "g0_27c4dd35a29e",
+     "origin": "swap_G3",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "数据误读与反直觉陷阱识别器",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 87.42,
+     "composite": 72.59,
+     "std": 29.66,
+     "min_case": 17.14,
+     "spread": 82.86,
+     "check_pass_rate": 0.783,
+     "by_dimension": {
+      "resource_feasibility_check": 100.0,
+      "critical_path_scheduling": 84.76,
+      "risk_quantification": 17.14,
+      "counterintuitive_planning_pitfalls": 91.67,
+      "earned_value_analysis": 100.0,
+      "statistical_trap_detection": 100.0
+     }
+    },
+    {
+     "id": "g0_a83137f89087",
+     "origin": "ablate_G2",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "笼统谨慎",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 84.55,
+     "composite": 72.02,
+     "std": 25.07,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.783,
+     "by_dimension": {
+      "earned_value_analysis": 100.0,
+      "critical_path_scheduling": 92.38,
+      "statistical_trap_detection": 88.57,
+      "risk_quantification": 28.57,
+      "counterintuitive_planning_pitfalls": 70.0,
+      "resource_feasibility_check": 100.0
+     }
+    },
+    {
+     "id": "g0_f88d90416b69",
+     "origin": "ablate_G4",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "粗略流程",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 80.81,
+     "composite": 67.73,
+     "std": 26.16,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.742,
+     "by_dimension": {
+      "earned_value_analysis": 100.0,
+      "critical_path_scheduling": 84.76,
+      "risk_quantification": 28.57,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 53.33,
+      "resource_feasibility_check": 86.67
+     }
+    },
+    {
+     "id": "g0_80129ac6df70",
+     "origin": "ablate_G5",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "普通风格"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_weak"
+     },
+     "weighted": 75.86,
+     "composite": 65.36,
+     "std": 20.99,
+     "min_case": 42.42,
+     "spread": 57.58,
+     "check_pass_rate": 0.658,
+     "by_dimension": {
+      "earned_value_analysis": 82.86,
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 42.42,
+      "statistical_trap_detection": 100.0,
+      "critical_path_scheduling": 75.24,
+      "counterintuitive_planning_pitfalls": 46.67
+     }
+    },
+    {
+     "id": "g0_b14417161a81",
+     "origin": "swap_G2",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "结论可复核红线",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 76.35,
+     "composite": 65.34,
+     "std": 22.02,
+     "min_case": 28.57,
+     "spread": 63.81,
+     "check_pass_rate": 0.642,
+     "by_dimension": {
+      "critical_path_scheduling": 92.38,
+      "earned_value_analysis": 75.24,
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 28.57,
+      "statistical_trap_detection": 88.57,
+      "counterintuitive_planning_pitfalls": 61.67
+     }
+    },
+    {
+     "id": "g0_ca0958c1447a",
+     "origin": "ablate_G3",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "泛泛知识",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 75.68,
+     "composite": 63.9,
+     "std": 23.56,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.633,
+     "by_dimension": {
+      "counterintuitive_planning_pitfalls": 61.67,
+      "critical_path_scheduling": 67.62,
+      "risk_quantification": 28.57,
+      "resource_feasibility_check": 100.0,
+      "statistical_trap_detection": 82.86,
+      "earned_value_analysis": 92.38
+     }
+    },
+    {
+     "id": "g0_6d7424743725",
+     "origin": "swap_G1",
+     "labels": {
+      "G1": "面向决策者的数据转译者",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_b",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 74.81,
+     "composite": 62.48,
+     "std": 24.66,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.667,
+     "by_dimension": {
+      "earned_value_analysis": 82.86,
+      "critical_path_scheduling": 67.62,
+      "risk_quantification": 28.57,
+      "statistical_trap_detection": 94.29,
+      "counterintuitive_planning_pitfalls": 53.33,
+      "resource_feasibility_check": 100.0
+     }
+    }
+   ]
+  },
+  {
+   "gen": 1,
+   "evaluated": 9,
+   "best": 82.69,
+   "best_weighted": 89.2,
+   "mean": 74.67,
+   "seconds": 176.5,
+   "variants": [
+    {
+     "id": "g1_b3b34b3ead9d",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 89.2,
+     "composite": 82.69,
+     "std": 13.02,
+     "min_case": 61.67,
+     "spread": 38.33,
+     "check_pass_rate": 0.808,
+     "by_dimension": {
+      "earned_value_analysis": 92.38,
+      "critical_path_scheduling": 92.38,
+      "risk_quantification": 100.0,
+      "counterintuitive_planning_pitfalls": 61.67,
+      "resource_feasibility_check": 86.67,
+      "statistical_trap_detection": 100.0
+     }
+    },
+    {
+     "id": "g1_01feaeddca4f",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "笼统谨慎",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 89.48,
+     "composite": 81.19,
+     "std": 16.59,
+     "min_case": 53.33,
+     "spread": 46.67,
+     "check_pass_rate": 0.842,
+     "by_dimension": {
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 100.0,
+      "critical_path_scheduling": 92.38,
+      "statistical_trap_detection": 100.0,
+      "earned_value_analysis": 100.0,
+      "counterintuitive_planning_pitfalls": 53.33
+     }
+    },
+    {
+     "id": "g1_15cda2fae103",
+     "origin": "crossover",
+     "labels": {
+      "G1": "约束优先的交付责任人",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "纠错显眼的评审体"
+     },
+     "choice": {
+      "G1": "g1_a",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_b"
+     },
+     "weighted": 85.49,
+     "composite": 79.54,
+     "std": 11.89,
+     "min_case": 61.67,
+     "spread": 38.33,
+     "check_pass_rate": 0.742,
+     "by_dimension": {
+      "critical_path_scheduling": 92.38,
+      "earned_value_analysis": 82.86,
+      "risk_quantification": 88.57,
+      "resource_feasibility_check": 82.22,
+      "counterintuitive_planning_pitfalls": 61.67,
+      "statistical_trap_detection": 100.0
+     }
+    },
+    {
+     "id": "g1_ab41ca95a53a",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "粗略流程",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_weak",
+      "G5": "g5_a"
+     },
+     "weighted": 85.42,
+     "composite": 77.71,
+     "std": 15.42,
+     "min_case": 53.33,
+     "spread": 46.67,
+     "check_pass_rate": 0.742,
+     "by_dimension": {
+      "earned_value_analysis": 92.38,
+      "critical_path_scheduling": 92.38,
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 74.73,
+      "counterintuitive_planning_pitfalls": 53.33,
+      "statistical_trap_detection": 100.0
+     }
+    },
+    {
+     "id": "g1_f1f02c60dd14",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "普通风格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_weak"
+     },
+     "weighted": 87.8,
+     "composite": 76.92,
+     "std": 21.75,
+     "min_case": 40.0,
+     "spread": 60.0,
+     "check_pass_rate": 0.808,
+     "by_dimension": {
+      "earned_value_analysis": 100.0,
+      "resource_feasibility_check": 100.0,
+      "risk_quantification": 40.0,
+      "critical_path_scheduling": 75.24,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 91.67
+     }
+    },
+    {
+     "id": "g1_6e612f1e044d",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "泛泛知识",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 82.63,
+     "composite": 70.02,
+     "std": 25.23,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.708,
+     "by_dimension": {
+      "earned_value_analysis": 100.0,
+      "resource_feasibility_check": 95.56,
+      "critical_path_scheduling": 92.38,
+      "statistical_trap_detection": 88.57,
+      "risk_quantification": 28.57,
+      "counterintuitive_planning_pitfalls": 61.67
+     }
+    },
+    {
+     "id": "g1_43604c0c3c7b",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "数据误读与反直觉陷阱识别器",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 82.06,
+     "composite": 69.49,
+     "std": 25.14,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.742,
+     "by_dimension": {
+      "earned_value_analysis": 100.0,
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 28.57,
+      "critical_path_scheduling": 84.76,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 61.67
+     }
+    },
+    {
+     "id": "g1_838e5ed59c4a",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "结论可复核红线",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_a"
+     },
+     "weighted": 78.83,
+     "composite": 69.08,
+     "std": 19.51,
+     "min_case": 40.0,
+     "spread": 60.0,
+     "check_pass_rate": 0.717,
+     "by_dimension": {
+      "earned_value_analysis": 67.62,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 70.0,
+      "resource_feasibility_check": 82.22,
+      "critical_path_scheduling": 92.38,
+      "risk_quantification": 40.0
+     }
+    },
+    {
+     "id": "g1_5e19bca10b1d",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先核口径再动手",
+      "G5": "纠错显眼的评审体"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_a",
+      "G5": "g5_b"
+     },
+     "weighted": 77.8,
+     "composite": 65.42,
+     "std": 24.76,
+     "min_case": 38.33,
+     "spread": 61.67,
+     "check_pass_rate": 0.7,
+     "by_dimension": {
+      "earned_value_analysis": 82.86,
+      "risk_quantification": 40.0,
+      "critical_path_scheduling": 92.38,
+      "counterintuitive_planning_pitfalls": 38.33,
+      "resource_feasibility_check": 86.67,
+      "statistical_trap_detection": 100.0
+     }
+    }
+   ]
+  },
+  {
+   "gen": 2,
+   "evaluated": 7,
+   "best": 73.11,
+   "best_weighted": 82.93,
+   "mean": 67.27,
+   "seconds": 152.7,
+   "variants": [
+    {
+     "id": "g2_f23580b185ff",
+     "origin": "crossover",
+     "labels": {
+      "G1": "面向决策者的数据转译者",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_b",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 82.93,
+     "composite": 73.11,
+     "std": 19.64,
+     "min_case": 40.0,
+     "spread": 60.0,
+     "check_pass_rate": 0.783,
+     "by_dimension": {
+      "critical_path_scheduling": 84.76,
+      "statistical_trap_detection": 100.0,
+      "earned_value_analysis": 92.38,
+      "risk_quantification": 40.0,
+      "counterintuitive_planning_pitfalls": 70.0,
+      "resource_feasibility_check": 86.67
+     }
+    },
+    {
+     "id": "g2_a1bfd8787e90",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "笼统谨慎",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_weak",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 82.92,
+     "composite": 70.17,
+     "std": 25.5,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.708,
+     "by_dimension": {
+      "critical_path_scheduling": 92.38,
+      "earned_value_analysis": 100.0,
+      "statistical_trap_detection": 100.0,
+      "resource_feasibility_check": 82.22,
+      "risk_quantification": 28.57,
+      "counterintuitive_planning_pitfalls": 61.67
+     }
+    },
+    {
+     "id": "g2_24506b366873",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "泛泛知识",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_weak",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 80.52,
+     "composite": 67.55,
+     "std": 25.93,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.708,
+     "by_dimension": {
+      "earned_value_analysis": 92.38,
+      "risk_quantification": 28.57,
+      "critical_path_scheduling": 92.38,
+      "resource_feasibility_check": 100.0,
+      "statistical_trap_detection": 88.57,
+      "counterintuitive_planning_pitfalls": 53.33
+     }
+    },
+    {
+     "id": "g2_1c53f802bd97",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "普通风格"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_weak"
+     },
+     "weighted": 76.32,
+     "composite": 66.95,
+     "std": 18.74,
+     "min_case": 38.33,
+     "spread": 61.67,
+     "check_pass_rate": 0.625,
+     "by_dimension": {
+      "earned_value_analysis": 75.24,
+      "critical_path_scheduling": 75.24,
+      "resource_feasibility_check": 86.67,
+      "risk_quantification": 74.73,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 38.33
+     }
+    },
+    {
+     "id": "g2_fc172dcefe1a",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "数据误读与反直觉陷阱识别器",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_b",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 76.73,
+     "composite": 65.33,
+     "std": 22.8,
+     "min_case": 28.57,
+     "spread": 71.43,
+     "check_pass_rate": 0.667,
+     "by_dimension": {
+      "earned_value_analysis": 82.86,
+      "risk_quantification": 28.57,
+      "critical_path_scheduling": 75.24,
+      "resource_feasibility_check": 86.67,
+      "statistical_trap_detection": 100.0,
+      "counterintuitive_planning_pitfalls": 61.67
+     }
+    },
+    {
+     "id": "g2_d4eeaf8ce641",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "结论可复核红线",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "输入-计算-结论三段式"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_b",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_a"
+     },
+     "weighted": 79.49,
+     "composite": 64.95,
+     "std": 29.08,
+     "min_case": 17.14,
+     "spread": 82.86,
+     "check_pass_rate": 0.675,
+     "by_dimension": {
+      "earned_value_analysis": 75.24,
+      "risk_quantification": 17.14,
+      "statistical_trap_detection": 100.0,
+      "critical_path_scheduling": 92.38,
+      "resource_feasibility_check": 100.0,
+      "counterintuitive_planning_pitfalls": 61.67
+     }
+    },
+    {
+     "id": "g2_1ef7b8f7df37",
+     "origin": "crossover",
+     "labels": {
+      "G1": "空泛定位",
+      "G2": "数据缺口显式化",
+      "G3": "挣值与关键路径计算手册",
+      "G4": "先给可用结论再回填验证",
+      "G5": "纠错显眼的评审体"
+     },
+     "choice": {
+      "G1": "g1_weak",
+      "G2": "g2_a",
+      "G3": "g3_a",
+      "G4": "g4_b",
+      "G5": "g5_b"
+     },
+     "weighted": 72.92,
+     "composite": 62.8,
+     "std": 20.25,
+     "min_case": 28.57,
+     "spread": 60.0,
+     "check_pass_rate": 0.6,
+     "by_dimension": {
+      "critical_path_scheduling": 75.24,
+      "earned_value_analysis": 75.24,
+      "risk_quantification": 28.57,
+      "resource_feasibility_check": 86.67,
+      "counterintuitive_planning_pitfalls": 61.67,
+      "statistical_trap_detection": 88.57
+     }
+    }
+   ]
+  }
+ ],
+ "champion_genome": {
+  "system": "【G1 身份定位】\n你是一名专业的项目经理，负责管理项目并确保项目成功交付。\n\n【G2 边界约束】\n接到排期或交付承诺请求时，先盘点四要素是否齐备：任务清单与工期估计、依赖关系、资源日历、可用预算。任一缺失，禁止直接给日期；改为输出'假设清单 + 基于假设的条件性计划'，每条假设标注敏感方向（'若资源X不可用，关键路径延长N天'）。范围变更请求一律先走影响评估（关键路径、成本、质量三项）再给接受/拒绝建议。\n\n【G3 知识方法】\n挣值：CPI=EV/AC（分子永远是EV），SPI=EV/PV，CPI<1超支、SPI<1落后。EAC选型先判偏差性质：典型性偏差用EAC=BAC/CPI；非典型（一次性）偏差用EAC=AC+(BAC-EV)；成本进度双重恶化用EAC=AC+(BAC-EV)/(CPI×SPI)。关键路径：正推ES/EF、逆推LS/LF，总浮动=LS-ES，总浮动为0的链路才是关键路径；并行汇合点需等所有前序完成；自由浮动只影响紧后任务，总浮动才影响总工期。\n\n【G4 能力流程】\n执行顺序：①快速算出核心指标（CPI、SPI、EAC或关键路径工期），立即给出项目状态结论（超支/节约、落后/提前）；②回溯计算链条，逐步代入原始数值生成可复核的中间步骤；③对照易错清单做反向验证：把CPI颠倒算一遍确认与主结论相反、检查关键路径是否存在并行汇合点、确认偏差性质判断依据；④最后补充资源冲突核查与风险EMV排序；⑤输出时结论置顶，计算过程与假设随后。\n\n【G5 经验风格】\n固定输出骨架：【输入与假设】列出全部原始数据与缺口假设；【计算过程】每个指标一行，格式为'公式→代入数值→结果'（如CPI=EV/AC=180/200=0.90）；【结论与建议】每条判断括注依据指标（'进度落后（SPI=0.85）'），风险按EMV降序排列并附应对策略与责任人建议。语气直接、无寒暄，坏消息放最前面。",
+  "choice": {
+   "G1": "g1_weak",
+   "G2": "g2_a",
+   "G3": "g3_a",
+   "G4": "g4_b",
+   "G5": "g5_a"
+  },
+  "labels": {
+   "G1": "空泛定位",
+   "G2": "数据缺口显式化",
+   "G3": "挣值与关键路径计算手册",
+   "G4": "先给可用结论再回填验证",
+   "G5": "输入-计算-结论三段式"
+  }
+ },
+ "caveats": [
+  "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+  "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+  "must_not_include 自 2026-08-11 起区分「主张错误说法」与「引用它并否掉」（同句、词前 40 字内有否定线索才免扣）；此前的 run 未享此修正，其分数含约 2 分/条的误扣噪声，跨日期对比请先跑 tools/rescore.py 对齐口径。",
+  "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。"
+ ]
+}
