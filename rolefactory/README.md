@@ -73,6 +73,14 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 - `holdout_per_dim` 默认 **1**：每维度留几道给 holdout。**这是 holdout 题量的唯一开关** ——
   调 `per_dim` 只会把题都加到 train，holdout 恒等于维度数（约 6 道，见 §10.2）。
   想判定就 `{"per_dim": 10, "holdout_per_dim": 9, "holdout_reps": 1}`（train 6 / holdout 54）。
+- `headroom_ceiling` 默认 **90**（0 = 关闭）：出完题、切分之前先用无基因基线试答，
+  **把基线已接近满分的题扔掉** —— 实测 27% 的 holdout 题留不下 5 分可涨空间，
+  量不出提升还把 Δ 压向负数（[PERF.md](PERF.md) §18）。
+  **必须和出题量一起调**：每维要留 `1 + holdout_per_dim` 道，余量不够时门槛会空转
+  （日志里会打 `⚠ 筛题空转`）。`per_dim=8 / holdout_per_dim=7` 就是**一道都扔不动**的配法；
+  现在默认改成 `per_dim=12 / holdout_per_dim=6`，每维余量 5。
+  代价：每道题多一次基线探针调用 —— 探针用 `rep=-1`，与评分采样**独立**，
+  否则筛题与算分共用一次测量会把 Δ 抬高（winner's curse，§18.6）。
 
 ## 命令行工具
 
@@ -93,6 +101,7 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/power_check.py [--md]` | 判定力核算：现有题量能判出多大效应、判出实测效应要多少题（离线） |
 | `tools/variance_decomp.py <run_id> [--source auto\|run\|reholdout]` | 方差分解：拆开题内噪声与题间差异（离线；需 reps≥2，会自动去 `<run>-reholdout/` 找） |
 | `tools/decomp_table.py [--md]` | 六席处方表：每席该加重复 / 该加题 / 判不了，并给「不出新题只加重复」的配法（离线） |
+| `tools/gate_dryrun.py [--ceiling 90] [--holdout-per-dim N]` | 筛题门槛空跑：拿历史题组算「会扔哪些题、holdout 会不会反而变小」（离线） |
 | `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
 | `tools/headroom.py [--min-gain 5]` | 基线可涨空间：多少题贴天花板量不出提升，以及 Δ 被截断偏了多少（离线） |
 | `tools/case_outliers.py <run_id>` | 留一法：哪道题在撑着结论（**诊断用，不是筛题用**；离线） |

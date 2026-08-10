@@ -377,6 +377,70 @@ async def build_suite(
     return cases
 
 
+def drop_saturated(
+    cases: list[dict[str, Any]],
+    base_scores: dict[str, float],
+    *,
+    ceiling: float = 90.0,
+    max_drop_share: float = 0.5,
+    reserve_per_dim: int = 0,
+) -> tuple[list[dict], list[dict]]:
+    """扔掉**无基因基线已经接近满分**的题：它们量不出提升。
+
+    为什么必须扔：基线 96 分的题，再好的基因也只能多拿 4 分。实测 74 道 holdout 里
+    20 道（27%）留不下 5 分可涨空间，v3 试跑更有 10 道题基线就是满分 100 ——
+    这些题占着额度、贡献 0 分差（PERF.md §18.3）。加题加的是名义题量，判定力只认有效题量。
+
+    还有一层：基线贴天花板时量尺**上下不对称**（最多 +4、却可以 −96），
+    Δ 会被系统性压向负数，于是负号读不出"基因有害"还是"截断偏"（§18.4）。
+
+    两条护栏：
+
+    1. **只看基线，不看冠军**。按基线难度筛题不泄露冠军信息，所以不是事后择优。
+       但 `base_scores` **必须来自与评分无关的独立一次采样** —— 若拿评分用的那次
+       测量来筛题，再用同一次测量算 Δ，就是 winner's curse：基线手气差的题被选进来，
+       冠军臂新采一次自然显得更好，Δ 被凭空抬高。调用方负责保证独立性。
+    2. **每个维度最多扔一半**，且扔的是最容易的那些。分层结构要保住 ——
+       某一维全是简单题时，宁可留下几道钝题，也不能把整个维度扔空。
+    3. **每维至少留 `reserve_per_dim` 道**（调用方传 `1 + holdout_per_dim`）。
+       没有这条护栏时，空跑显示门槛会把 holdout 反向削掉：`split_holdout` 每维只从
+       尾部取 `per_dim` 道、且必须给 train 留 1 道，所以某维只剩 1 道时它贡献 0 道
+       holdout —— 实测 Product 的 holdout 从 5 道掉到 **1 道**、Architect 5→1。
+       那是拿天花板问题换样本量问题，净亏。
+
+    **由此得出一条使用前提**：门槛只在**出题量有余量**时才起作用。每维 2 道题
+    （六席当前配置）时 `reserve` 已吃掉全部，门槛必然空转 —— 这不是 bug，
+    是它在说"先多出题，再谈筛题"。调用方必须把空转记进日志，
+    否则就是又一个"什么都没做也不报错"。
+    """
+    if ceiling >= 100.0:
+        return list(cases), []
+    by_dim: dict[str, list[dict]] = {}
+    for c in cases:
+        by_dim.setdefault(c["dimension_key"], []).append(c)
+
+    keep: list[dict] = []
+    dropped: list[dict] = []
+    for _, group in sorted(by_dim.items()):
+        # 先按基线从难到易；缺分数的当最难（宁可留下，不误杀）
+        ordered = sorted(group, key=lambda c: base_scores.get(c["id"], -1.0))
+        # 两条上限取小：半数上限（保结构）与余量上限（保下游切分的题量）
+        budget = min(
+            int(len(group) * max_drop_share),          # 向下取整：2 题的维度只准扔 1 道
+            max(0, len(group) - max(0, reserve_per_dim)),
+        )
+        cut = 0
+        for c in reversed(ordered):  # 从最容易的开始考虑
+            if cut < budget and base_scores.get(c["id"], -1.0) > ceiling:
+                dropped.append(c)
+                cut += 1
+            else:
+                keep.append(c)
+    keep.sort(key=lambda c: c["id"])
+    dropped.sort(key=lambda c: c["id"])
+    return keep, dropped
+
+
 def split_holdout(
     cases: list[dict[str, Any]], *, per_dim: int = 1
 ) -> tuple[list[dict], list[dict]]:

@@ -696,6 +696,58 @@ v3 试跑 41 题的 Δ=+0.36，一直被当成"效应太小"。逐题看完全�
 
 一句话：**加题和加重复都治不了天花板，只有换题能治。**
 
+### 18.6 换题这一刀已经落地：筛题门槛，以及它的**前提条件比它本身更重要**
+
+「只有换题能治」是结论，落地成 `pipeline` 里的一个新相位 `probe`：出完题、切分之前，
+先用**无基因基线**试答每道题，把基线已接近满分的题扔掉（`roles.drop_saturated`）。
+默认门槛 `headroom_ceiling=90`，传 0 关闭。
+
+这一刀有三个地方不能想当然，逐条记下来。
+
+**（一）筛题的那次测量必须和算分的那次**独立**，否则 Δ 会被凭空抬高。**
+
+缓存键是 `sig|case_id|rep{rep}`（`judge.answer` 的 `salt`），所以探针取 `rep=-1`
+（`pipeline.PROBE_REP`），与评分用的 `rep0..n` 是不同的采样。
+省掉这一步很诱人 —— 直接拿 `rep0` 筛题就免费了，因为 holdout 阶段本来要跑 `rep0`，
+缓存直接命中。但那是 **winner's curse**：基线手气差的题被选进来，
+冠军臂重新采一次自然显得更好，Δ 里混进一截纯回归均值的假涨幅。
+代价是每道题多一次基线调用（本席 72 次），这是"无偏"的价钱，付。
+
+**（二）不加余量护栏，筛题会把 holdout 反向削小 —— 净亏。**
+
+单测覆盖了"不许清空维度""每维最多扔一半"，全过。但拿真实题组空跑
+（`tools/gate_dryrun.py`，0 额度）立刻现形：
+
+| 席位 | 总题 | 扔掉 | holdout 原 → 新 |
+|---|---|---|---|
+| Product | 10 | 4 | 5 → **1** |
+| Architect | 10 | 4 | 5 → **1** |
+| Evals | 12 | 4 | 6 → **2** |
+
+原因在下游：`split_holdout` 每维只从尾部取 `per_dim` 道，**且必须给 train 留 1 道**，
+所以某维被扔到只剩 1 道时，它贡献 0 道 holdout。
+门槛本是为了提高有效题量，结果把名义题量砍到判定力更差 —— 拿天花板问题换样本量问题。
+
+修法是让门槛知道下游要留多少：`reserve_per_dim = 1 + holdout_per_dim`，
+扔的额度取"半数上限"与"余量上限"的**小者**。
+不变量写成了测试 `ReserveTests.test_holdout_never_shrinks`：
+遍历 `per_dim × holdout_per_dim` 组合，筛完的 holdout 题量**一律不许下降**。
+
+**（三）由此得出的前提：门槛只在出题量有余量时才起作用，而原来的配法让它必然空转。**
+
+原 `RUN_PARAMS` 是 `per_dim=8 / holdout_per_dim=7`：每维保留 1 道 train + 7 道 holdout
+= 8 道，恰好等于出题量，**一道都扔不动**。空跑证实：17 道超标、扔 0 道。
+若不管，这就又是一个"配了参数、什么都没做、也不报错"。两处处置：
+
+- 运行时把空转喊出来：超标题数 > 0 而扔掉 = 0 时打 `⚠ 筛题空转`，并指出该调 `per_dim`。
+- 配法改成 `per_dim=12 / holdout_per_dim=6`：每维余量 5，最多扔 5 道最容易的。
+  空跑复核（用 47 题的 v3 试跑代入 `holdout_per_dim=4`）：17 道超标扔 13 道，
+  holdout 24 道不变、6 个维度不变。
+
+代价：出题 72 道（+24）+ 探针 72 次调用。换到的是**有效**题量而非名义题量。
+真跑验证待额度 —— 门槛的逻辑与护栏已被单测和空跑钉住，但"实际扔多少、Δ 怎么动"
+只有真跑能答。
+
 ## 复现
 
 ```bash
@@ -718,6 +770,11 @@ python -m tests.test_power
 python -m tests.test_split
 python -m tests.test_must_not
 python -m tests.test_leak
+python -m tests.test_headroom_gate
+
+# 筛题门槛空跑：拿历史题组算「要是当初开着门槛会扔哪些题」（0 额度）
+python tools/gate_dryrun.py
+python tools/gate_dryrun.py --holdout-per-dim 4   # 出题量有余量时的样子
 
 # 尺子审计与离线重打分（不花额度；需要本机有 results.jsonl）
 python tools/audit_checks.py

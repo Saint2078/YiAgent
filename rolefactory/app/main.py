@@ -156,6 +156,11 @@ async def start_run(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         # 每维留几道给 holdout。默认 1 会把 holdout 题量锁死在维度数（约 6 道），
         # 而那个题量判不出实测效应（PERF.md §10.1）；要判定就往上调，加题比加重复省。
         "holdout_per_dim": int(payload.get("holdout_per_dim") or 1),
+        # 筛题门槛：基线试答高于此分的题扔掉（0 = 关闭）。默认 90。
+        # 实测 74 道 holdout 里 27% 留不下 5 分可涨空间，v3 试跑更有 10 道基线满分 100 ——
+        # 这类题量不出提升，还会把 Δ 压向负数（PERF.md §18）。
+        # 代价：每道题多一次基线调用（独立采样，不能与评分复用，见 pipeline.PROBE_REP）。
+        "headroom_ceiling": float(payload.get("headroom_ceiling", 90)),
         "elite": int(payload.get("elite") or 2),
         "min_gain": float(payload.get("min_gain") or 0.5),
         "patience": int(payload.get("patience") or 1),

@@ -19,7 +19,7 @@ from . import genes, judge, objective, roles, store
 from .config import SETTINGS
 from .llm import Budget, Session
 
-PHASES = ("anchors", "blueprint", "cases", "bank", "baseline", "evolve", "holdout", "done")
+PHASES = ("anchors", "blueprint", "cases", "probe", "bank", "baseline", "evolve", "holdout", "done")
 
 
 # ------------------------------------------------------------------ 聚合
@@ -145,6 +145,9 @@ class Run:
     eval_done: int = 0
     eval_total: int = 0
     eval_failed: int = 0
+    # 被筛题门槛扔掉的题（基线已近满分）。必须落盘：题组里少了题却查不到为什么，
+    # 是下一个「算错了还不报错」。
+    dropped_saturated: list[dict] = field(default_factory=list)
     phase_seconds: dict[str, float] = field(default_factory=dict)
     session: Session | None = None
     task: asyncio.Task | None = None
@@ -195,6 +198,7 @@ class Run:
             "cases_count": len(self.cases),
             "train_ids": self.train_ids,
             "holdout_ids": self.holdout_ids,
+            "dropped_saturated": self.dropped_saturated,
             "bank_summary": {
                 slot: [
                     {"id": a["id"], "label": a["label"], "strength": a["strength"]} for a in self.bank.get(slot, [])
@@ -233,6 +237,46 @@ class Run:
 
 
 # ------------------------------------------------------------------ 评测批
+
+
+PROBE_REP = -1
+"""筛题探针用的重复序号。
+
+`judge.answer` 的缓存键是 `sig|case_id|rep{rep}`，所以 `rep=-1` 与评分用的 `rep0..n`
+是**不同的采样**。这一点是筛题正确性的关键：筛题和算分必须用两次独立测量，
+否则基线手气差的题被选进来、冠军臂新采一次自然显得更好，Δ 被凭空抬高
+（winner's curse）。代价是这批探针调用不能被后续评分复用 —— 无偏的价钱。
+"""
+
+
+async def probe_baseline(
+    run: Run, session: Session, cases: list[dict[str, Any]]
+) -> dict[str, float]:
+    """用无基因基线试答每道题，量「这题还剩多少可涨空间」。
+
+    只跑 1 次、只跑基线：目的不是给分，是判断题目有没有能力显示差异。
+    单点失败不拖垮整批 —— 探不到分的题按「最难」处理（宁可留下，不误杀）。
+    """
+    base_v = genes.baseline_variant()
+    mode = str(run.params.get("scoring_mode") or "judge")
+    out: dict[str, float] = {}
+    lock = asyncio.Lock()
+
+    async def one(c: dict[str, Any]) -> None:
+        try:
+            row = await judge.eval_one(session, base_v, c, rep=PROBE_REP, mode=mode)
+        except Budget:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            run.log(f"筛题探针失败 {c['id']}: {type(exc).__name__}: {exc}")
+            return
+        s = row.get("score")
+        if isinstance(s, (int, float)):
+            async with lock:
+                out[c["id"]] = float(s)
+
+    await asyncio.gather(*(asyncio.create_task(one(c)) for c in cases))
+    return out
 
 
 async def eval_batch(
@@ -371,6 +415,47 @@ async def execute(run: Run, api_key: str) -> None:
                 bank_task.cancel()
             raise RuntimeError("题组为空")
         run.cases = cases
+
+        # 3.5) 筛题：扔掉无基因基线已接近满分的题（它们量不出提升）
+        # 放在切分之前，train 和 holdout 都受益 —— 天花板题在 train 上也没有梯度，
+        # 所有变体都拿一样的分，等于白烧一格搜索。
+        ceiling = float(p.get("headroom_ceiling") or 0)
+        hpd = int(p.get("holdout_per_dim") or 1)
+        probe: dict[str, float] = {}
+        if ceiling > 0:
+            run.phase = "probe"
+            t_probe = time.monotonic()
+            n_before = len(cases)
+            probe = await probe_baseline(run, session, cases)
+            # 每维至少留「1 道 train + holdout_per_dim 道」，否则筛题会把 holdout 反向削掉
+            kept, dropped = roles.drop_saturated(
+                cases, probe, ceiling=ceiling, reserve_per_dim=1 + hpd
+            )
+            run.mark("probe", time.monotonic() - t_probe)
+            if dropped:
+                run.dropped_saturated = [
+                    {"id": c["id"], "dimension": c.get("dimension"),
+                     "baseline": probe.get(c["id"])} for c in dropped
+                ]
+                cases = kept
+                run.cases = cases
+            over = sum(1 for c in probe.values() if c > ceiling)
+            run.log(
+                f"筛题：基线试答 {len(probe)}/{n_before} 道（{time.monotonic() - t_probe:.1f}s）"
+                f"｜超过 {ceiling:g} 分的 {over} 道｜实际扔 {len(dropped)} 道｜留 {len(cases)} 道"
+            )
+            if over and not dropped:
+                # 门槛空转必须喊出来。出题量没余量时它必然什么都不做，
+                # 而"什么都没做也不报错"正是今晚反复修的那一类。
+                run.log(
+                    f"⚠ 筛题空转：有 {over} 道题基线超过 {ceiling:g} 分，但每维需保留 "
+                    f"{1 + hpd} 道（1 train + {hpd} holdout），没有可扔的余量。"
+                    "要让门槛生效，得把 per_dim 出题量调到明显高于 holdout_per_dim+1"
+                    "（PERF.md §18.6）"
+                )
+            if not cases:
+                raise RuntimeError("筛题后题组为空（护栏本应拦住，请检查 drop_saturated）")
+
         train, hold = roles.split_holdout(cases, per_dim=int(p.get("holdout_per_dim") or 1))
         run.train_ids = [c["id"] for c in train]
         run.holdout_ids = [c["id"] for c in hold]
@@ -806,6 +891,9 @@ def write_report(run: Run) -> None:
             "train": run.train_ids,
             "holdout": run.holdout_ids,
             "path": f"case/role/{run.role_id}/testcases.jsonl",
+            # 扔了哪些题、为什么扔。少了题却查不到原因，就是下一个静默错误。
+            "dropped_saturated": run.dropped_saturated,
+            "headroom_ceiling": float(run.params.get("headroom_ceiling") or 0) or None,
         },
         "bank": run.bank,
         "scoring": scoring_summary(run),
@@ -833,6 +921,19 @@ def write_report(run: Run) -> None:
                 "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
                 "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。",
             ]
+            + (
+                [
+                    f"已启用筛题门槛：基线试答 >{float(run.params['headroom_ceiling']):g} 分的题被扔掉"
+                    f"（本次扔 {len(run.dropped_saturated)} 道，明细见 suite.dropped_saturated）。"
+                    "筛题用的是与评分**独立**的一次基线采样（rep=-1），因此不构成事后择优；"
+                    "每维最多扔一半以保住分层。理由见 PERF.md §18。"
+                ]
+                if float(run.params.get("headroom_ceiling") or 0) > 0
+                else [
+                    "未启用筛题门槛：holdout 里可能含基线已近满分的题，这类题量不出提升"
+                    "（实测占 27%），且会把 Δ 压向负数（PERF.md §18）。"
+                ]
+            )
             if str(run.params.get("scoring_mode")) == "objective"
             else [
                 "裁判为同族模型（k3）自评，存在同源偏差；跨模型交叉裁判未做。",
