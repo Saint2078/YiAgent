@@ -37,10 +37,15 @@ def main() -> int:
     ap.add_argument("--ceiling", type=float, default=90.0)
     ap.add_argument("--holdout-per-dim", type=int, default=0,
                     help="0 = 沿用该 run 当初的设置")
+    ap.add_argument("--train-per-dim", type=int, default=0,
+                    help=">0 切到「封顶 train、余量全给 holdout」模式（忽略 holdout-per-dim）")
     args = ap.parse_args()
 
     print(f"门槛：基线 >{args.ceiling:g} 分的题扔掉，每维最多扔一半\n")
-    print("  席位            总题  超标  扔掉  留下  holdout(原→新)  维度数(原→新)")
+    mode = f"封顶 train={args.train_per_dim}/维，余量全给 holdout" if args.train_per_dim > 0 \
+        else f"默认切分（holdout_per_dim={args.holdout_per_dim or '沿用原设置'}）"
+    print(f"  切分模式：{mode}")
+    print("  席位            总题  超标  扔掉  留下  holdout(原→新)  进化评测(原→新)")
     for seat, rid in SEATS:
         d = RUNS / rid
         rep_p, st_p = d / "report.json", d / "state.json"
@@ -66,24 +71,29 @@ def main() -> int:
             continue
 
         hpd = args.holdout_per_dim or int((report.get("params") or {}).get("holdout_per_dim") or 1)
+        tpd = max(0, args.train_per_dim)
+        reserve = (tpd + 1) if tpd > 0 else (1 + hpd)
         keep, dropped = roles.drop_saturated(
-            covered, by_case, ceiling=args.ceiling, reserve_per_dim=1 + hpd
+            covered, by_case, ceiling=args.ceiling, reserve_per_dim=reserve
         )
-        _, hold_old = roles.split_holdout(covered, per_dim=hpd)
-        _, hold_new = roles.split_holdout(keep, per_dim=hpd)
+        tr_old, hold_old = roles.split_holdout(covered, per_dim=hpd, train_per_dim=tpd)
+        tr_new, hold_new = roles.split_holdout(keep, per_dim=hpd, train_per_dim=tpd)
         dims_old = len({c["dimension_key"] for c in covered})
         dims_new = len({c["dimension_key"] for c in keep})
         over = sum(1 for c in covered if by_case[c["id"]] > args.ceiling)
         warn = ""
         if dims_new < dims_old:
             warn = "  ⚠ 维度被削"
-        elif len(hold_new) < len(hold_old):
+        elif tpd == 0 and len(hold_new) < len(hold_old):
+            # 封顶模式下被扔的题本来就从 holdout 里出，缩小是设计而非缺陷；
+            # 默认模式下缩小才是缺陷（余量本该从 train 里出）
             warn = "  ⚠ holdout 反而变少"
         elif over and not dropped:
             warn = f"  空转（{over} 道超标但无余量）"
+        ev_old, ev_new = len(tr_old) * 30, len(tr_new) * 30
         print(f"  {seat:<14} {len(covered):>4}  {over:>4}  {len(dropped):>4}  {len(keep):>4}"
               f"  {len(hold_old):>6} → {len(hold_new):<5}"
-              f"  {dims_old:>6} → {dims_new:<6}{warn}")
+              f"  {ev_old:>6} → {ev_new:<6}{warn}")
 
     print("\n  护栏检查：出现「维度被削」或「holdout 反而变少」都属实现缺陷 ——"
           "\n  门槛的目的是提高有效题量，把 holdout 削小是净亏（空跑第一版正是这样："

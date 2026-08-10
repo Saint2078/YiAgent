@@ -156,6 +156,11 @@ async def start_run(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         # 每维留几道给 holdout。默认 1 会把 holdout 题量锁死在维度数（约 6 道），
         # 而那个题量判不出实测效应（PERF.md §10.1）；要判定就往上调，加题比加重复省。
         "holdout_per_dim": int(payload.get("holdout_per_dim") or 1),
+        # >0 时改为「封顶 train、余量全给 holdout」（此时忽略 holdout_per_dim）。
+        # 默认模式下 train = per_dim − holdout_per_dim，**多出题就等于多 train**，
+        # 而 train 单价是 holdout 的 15 倍（变体数×代数 30 次 vs 臂数×reps 2 次）——
+        # 于是筛题门槛想要余量就得付进化成本。封顶后这个耦合断开（PERF.md §18.7）。
+        "train_per_dim": int(payload.get("train_per_dim") or 0),
         # 筛题门槛：基线试答高于此分的题扔掉（0 = 关闭）。默认 90。
         # 实测 74 道 holdout 里 27% 留不下 5 分可涨空间，v3 试跑更有 10 道基线满分 100 ——
         # 这类题量不出提升，还会把 Δ 压向负数（PERF.md §18）。

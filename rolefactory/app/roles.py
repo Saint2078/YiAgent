@@ -442,25 +442,52 @@ def drop_saturated(
 
 
 def split_holdout(
-    cases: list[dict[str, Any]], *, per_dim: int = 1
+    cases: list[dict[str, Any]], *, per_dim: int = 1, train_per_dim: int = 0
 ) -> tuple[list[dict], list[dict]]:
     """按维度分层切分：每维度最后 `per_dim` 道进 holdout，其余进 train。
+
+    `train_per_dim > 0` 时切换成**封顶 train、余量全给 holdout**：每维只留
+    `train_per_dim` 道给 train，剩下的**全部**进 holdout（此时忽略 `per_dim`）。
+
+    为什么要有这个模式：默认模式把「非 holdout 的题」全给 train，于是
+    train = `per_dim − holdout_per_dim`，**多出题就等于多 train**。而两边单价差 15 倍——
+
+    | 多一道题 | 评测次数 |
+    |---|---|
+    | 进 train | 变体数 × 代数 = 10 × 3 = **30** |
+    | 进 holdout | 臂数 × holdout_reps = 2 × 1 = **2** |
+
+    这个耦合让筛题门槛很贵：门槛要有余量可扔就得多出题，多出的题却涌进 train，
+    于是「一道都没超标」时进化评测从 180 涨到 1080（PERF.md §18.6 第四条）。
+    封顶 train 之后，出题量、可扔额度、holdout 题量三者**都不再牵动进化成本**。
 
     `per_dim` 必须能调，否则 holdout 题量被**维度数**锁死（每维恰好 1 道）：
     把出题量 `per_dim` 从 2 提到 10，train 从 6 涨到 54，而 holdout 还是 6 道。
     而 holdout 题量正是「能不能判定泛化」的瓶颈（见 PERF.md §10.1：
     6 道题时区间半宽下限 1.72 已大于实测效应 1.41，重复多少次都判不了）。
 
-    每维至少留 1 道给 train：train 空了进化就没有可优化的目标。
+    两种模式都**每维至少留 1 道给 train**：train 空了进化就没有可优化的目标。
     """
-    keep = max(1, int(per_dim))
     by_dim: dict[str, list[dict]] = {}
     for c in cases:
         by_dim.setdefault(c["dimension_key"], []).append(c)
     train: list[dict] = []
     hold: list[dict] = []
+    cap = max(0, int(train_per_dim))
+
     for _, group in sorted(by_dim.items()):
         group = sorted(group, key=lambda c: c["id"])
+        if cap > 0:
+            # 封顶模式：train 取前 cap 道，其余**全部**进 holdout
+            take_train = min(cap, len(group))
+            if take_train >= len(group):
+                # 该维题数不够，全给 train（holdout 空着也比 train 空着好）
+                train.extend(group)
+                continue
+            train.extend(group[:take_train])
+            hold.extend(group[take_train:])
+            continue
+        keep = max(1, int(per_dim))
         take = min(keep, len(group) - 1)  # 单题维度 take=0 → 全进 train
         if take > 0:
             train.extend(group[:-take])

@@ -127,6 +127,108 @@ class ReserveTests(unittest.TestCase):
                 )
 
 
+class TrainCapTests(unittest.TestCase):
+    """封顶模式：train 封顶、余量全给 holdout，于是加题不再牵动进化成本。
+
+    默认模式下 train = `per_dim − holdout_per_dim`，多出的题全涌进 train，
+    而 train 单价是 holdout 的 15 倍（30 次 vs 2 次评测）。筛题门槛要余量就得多出题，
+    于是"门槛白配"那条分支反而最贵。封顶把这个耦合断开。
+    """
+
+    def _suite(self, per_dim: int, dims: int = 6) -> list[dict]:
+        return [case(f"d{d}c{i:02d}", f"d{d}") for d in range(dims) for i in range(per_dim)]
+
+    def test_train_size_is_capped_regardless_of_case_count(self):
+        for per_dim in (4, 8, 14, 20):
+            cs = self._suite(per_dim)
+            train, hold = roles.split_holdout(cs, per_dim=99, train_per_dim=1)
+            self.assertEqual(len(train), 6, f"per_dim={per_dim} 时 train 没被封住")
+            self.assertEqual(len(hold), len(cs) - 6, "余量没有全部进 holdout")
+
+    def test_surplus_goes_to_holdout_not_train(self):
+        # 出题从 8 加到 14：holdout 应涨 36 道，train 一道不涨
+        t1, h1 = roles.split_holdout(self._suite(8), per_dim=99, train_per_dim=1)
+        t2, h2 = roles.split_holdout(self._suite(14), per_dim=99, train_per_dim=1)
+        self.assertEqual(len(t1), len(t2), "加题把成本加到 train 上了")
+        self.assertEqual(len(h2) - len(h1), 36)
+
+    def test_default_mode_unchanged(self):
+        """封顶模式是新增分支，不许动默认行为。"""
+        cs = self._suite(8)
+        base = roles.split_holdout(cs, per_dim=7)
+        again = roles.split_holdout(cs, per_dim=7, train_per_dim=0)
+        self.assertEqual([c["id"] for c in base[0]], [c["id"] for c in again[0]])
+        self.assertEqual([c["id"] for c in base[1]], [c["id"] for c in again[1]])
+
+    def test_train_never_empty_when_cases_are_scarce(self):
+        # 某维只有 1 道题：宁可 holdout 空着，也不能让 train 空着
+        cs = [case("a", "d1")]
+        train, hold = roles.split_holdout(cs, per_dim=99, train_per_dim=1)
+        self.assertEqual(len(train), 1)
+        self.assertEqual(hold, [])
+
+    def test_no_case_lost_or_duplicated(self):
+        cs = self._suite(14)
+        train, hold = roles.split_holdout(cs, per_dim=99, train_per_dim=2)
+        ids = [c["id"] for c in train] + [c["id"] for c in hold]
+        self.assertEqual(sorted(ids), sorted(c["id"] for c in cs))
+        self.assertEqual(len(set(ids)), len(cs))
+
+    def test_gate_capacity_no_longer_costs_evolution(self):
+        """把成本算出来：封顶后可扔额度与进化评测**脱钩**。
+
+        这条是整件事的目的，所以直接把两种配法的账并排断言，而不是只测行为。
+        """
+        dims, variants, gens, arms, hreps = 6, 10, 3, 2, 1
+
+        def cost(per_dim: int, hpd: int, tpd: int, dropped_per_dim: int) -> tuple[int, int, int]:
+            cs = self._suite(per_dim, dims)
+            # 模拟筛题：每维扔掉 dropped_per_dim 道
+            drop_ids = {
+                f"d{d}c{i:02d}" for d in range(dims)
+                for i in range(per_dim - dropped_per_dim, per_dim)
+            }
+            kept = [c for c in cs if c["id"] not in drop_ids]
+            train, hold = roles.split_holdout(kept, per_dim=hpd, train_per_dim=tpd)
+            return len(train) * variants * gens, len(hold) * arms * hreps, len(hold)
+
+        # 默认模式：门槛"白配"（一道没扔）时进化成本翻 6 倍
+        ev_worst, _, _ = cost(12, 6, 0, 0)
+        ev_best, _, _ = cost(12, 6, 0, 5)
+        self.assertEqual(ev_worst, 1080)
+        self.assertEqual(ev_best, 180)
+
+        # 封顶模式：扔多少都不影响进化成本
+        for d in (0, 4, 8):
+            ev, _, n_hold = cost(16, 99, 1, d)
+            self.assertEqual(ev, 180, f"扔 {d} 道/维时进化成本变了")
+            # 封顶模式下被扔的题直接从 holdout 里出（余量全归 holdout），
+            # 所以出题量必须够大，扔满之后仍不低于原配法的 42 道 ——
+            # per_dim=14 在扔满时只剩 36 道，是这条断言逼出来的。
+            self.assertGreaterEqual(n_hold, 42, f"扔 {d} 道/维后 holdout 低于原配法的 42 道")
+
+    def test_case_budget_must_cover_max_drop(self):
+        """出题量的下限是算出来的，不是猜的：扔满之后仍要留住目标 holdout 题量。
+
+        需求：`per_dim ≥ 目标holdout/维 + 可扔/维 + train封顶`。
+        取目标 7 道/维（42 道）、train 封顶 1 → per_dim=15 是下限，14 不够。
+        """
+        dims = 6
+        for per_dim, ok in ((14, False), (15, True), (16, True)):
+            cs = self._suite(per_dim, dims)
+            budget = min(per_dim // 2, per_dim - 2)  # reserve = train 1 + holdout 1
+            drop_ids = {
+                f"d{d}c{i:02d}" for d in range(dims)
+                for i in range(per_dim - budget, per_dim)
+            }
+            kept = [c for c in cs if c["id"] not in drop_ids]
+            _, hold = roles.split_holdout(kept, per_dim=99, train_per_dim=1)
+            self.assertEqual(
+                len(hold) >= 42, ok,
+                f"per_dim={per_dim} 扔满后 holdout={len(hold)}，与预期（≥42 应为 {ok}）不符",
+            )
+
+
 class ProbeIndependenceTests(unittest.TestCase):
     """探针必须是**独立采样**，否则筛题与算分共用一次测量 → Δ 被选择偏差抬高。"""
 

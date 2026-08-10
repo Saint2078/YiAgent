@@ -421,15 +421,19 @@ async def execute(run: Run, api_key: str) -> None:
         # 所有变体都拿一样的分，等于白烧一格搜索。
         ceiling = float(p.get("headroom_ceiling") or 0)
         hpd = int(p.get("holdout_per_dim") or 1)
+        tpd = max(0, int(p.get("train_per_dim") or 0))
         probe: dict[str, float] = {}
         if ceiling > 0:
             run.phase = "probe"
             t_probe = time.monotonic()
             n_before = len(cases)
             probe = await probe_baseline(run, session, cases)
-            # 每维至少留「1 道 train + holdout_per_dim 道」，否则筛题会把 holdout 反向削掉
+            # 该留多少取决于下游怎么切：
+            #  · 封顶模式（train_per_dim>0）：train 封顶 + 至少 1 道 holdout
+            #  · 默认模式：1 道 train + holdout_per_dim 道，否则筛题会把 holdout 反向削掉
+            reserve = (tpd + 1) if tpd > 0 else (1 + hpd)
             kept, dropped = roles.drop_saturated(
-                cases, probe, ceiling=ceiling, reserve_per_dim=1 + hpd
+                cases, probe, ceiling=ceiling, reserve_per_dim=reserve
             )
             run.mark("probe", time.monotonic() - t_probe)
             if dropped:
@@ -447,16 +451,20 @@ async def execute(run: Run, api_key: str) -> None:
             if over and not dropped:
                 # 门槛空转必须喊出来。出题量没余量时它必然什么都不做，
                 # 而"什么都没做也不报错"正是今晚反复修的那一类。
+                how = (
+                    f"{reserve} 道（train 封顶 {tpd} + 至少 1 道 holdout）"
+                    if tpd > 0
+                    else f"{reserve} 道（1 train + {hpd} holdout）"
+                )
                 run.log(
-                    f"⚠ 筛题空转：有 {over} 道题基线超过 {ceiling:g} 分，但每维需保留 "
-                    f"{1 + hpd} 道（1 train + {hpd} holdout），没有可扔的余量。"
-                    "要让门槛生效，得把 per_dim 出题量调到明显高于 holdout_per_dim+1"
-                    "（PERF.md §18.6）"
+                    f"⚠ 筛题空转：有 {over} 道题基线超过 {ceiling:g} 分，但每维需保留 {how}，"
+                    "没有可扔的余量。要让门槛生效，把 per_dim 出题量调高"
+                    "（推荐配 train_per_dim 封顶 train，这样加题不牵动进化成本；PERF.md §18.7）"
                 )
             if not cases:
                 raise RuntimeError("筛题后题组为空（护栏本应拦住，请检查 drop_saturated）")
 
-        train, hold = roles.split_holdout(cases, per_dim=int(p.get("holdout_per_dim") or 1))
+        train, hold = roles.split_holdout(cases, per_dim=hpd, train_per_dim=tpd)
         run.train_ids = [c["id"] for c in train]
         run.holdout_ids = [c["id"] for c in hold]
         store.save_suite(run.role_id, cases, run.blueprint)
