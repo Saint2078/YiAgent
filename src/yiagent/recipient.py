@@ -49,6 +49,31 @@ class GeneSource:
     provenance: dict[str, Any] = field(default_factory=dict)
 
 
+_REPO_MARKERS = ("pyproject.toml", ".git")
+
+
+def provenance_path(path: Path) -> str:
+    """来源路径的**可移植**写法：仓库内的记 ``repo:相对路径``，否则记绝对路径。
+
+    为什么不直接记绝对路径：装配产物宣称「可 JSON 落盘审计、可复现」，
+    而绝对路径把机器信息烧进产物 —— 同一个 bank 在容器里装配得 ``/repo/demo/...``、
+    在 Windows 上装配得 ``X:\\...\\demo\\...``，逐字节复现当场失效。
+    仓库相对路径既保住可复现，又不丢位置信息。分隔符统一成 ``/``，跨平台一致。
+    """
+    p = Path(path)
+    try:
+        p = p.resolve()
+    except OSError:
+        return str(path)
+    for parent in (p, *p.parents):
+        if any((parent / marker).exists() for marker in _REPO_MARKERS):
+            try:
+                return "repo:" + p.relative_to(parent).as_posix()
+            except ValueError:  # pragma: no cover 上面已保证 parent 是祖先
+                break
+    return str(p)
+
+
 def _read_source(source: dict[str, Any] | str | Path | None) -> tuple[Any, str | None]:
     """读入来源 JSON；文件错误转成可读 AssemblyBlocked。"""
     if source is None:
@@ -59,7 +84,7 @@ def _read_source(source: dict[str, Any] | str | Path | None) -> tuple[Any, str |
     if not path.is_file():
         raise AssemblyBlocked([f"基因来源文件不存在: {path}"])
     try:
-        return json.loads(path.read_text(encoding="utf-8")), str(path)
+        return json.loads(path.read_text(encoding="utf-8")), provenance_path(path)
     except (ValueError, UnicodeDecodeError) as exc:
         raise AssemblyBlocked([f"基因来源不是合法 JSON: {path} ({exc})"]) from exc
 

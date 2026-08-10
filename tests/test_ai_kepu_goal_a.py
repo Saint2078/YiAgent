@@ -22,7 +22,7 @@ import generate  # noqa: E402
 import judge  # noqa: E402
 import preflight  # noqa: E402
 from case_library import LIBRARY  # noqa: E402
-from testset import load_manifest, resolve_cases  # noqa: E402
+from testset import MANIFEST_DIR, load_manifest, resolve_cases  # noqa: E402
 
 MANIFEST_ID = "0803c197a73c"
 SEED_PATH = REPO / "factory" / "fixtures" / "seed" / "ai_kepu_seed.json"
@@ -54,7 +54,19 @@ def _load_seed() -> dict:
 
 # ---- A3A：manifest 可加载 + preflight 无 errors ----
 
+# manifest 落在 factory/save/（被 .gitignore 排除的运行时产物），新克隆的仓里没有。
+# 缺数据是「跑不了」不是「跑挂了」：给 skip 并说清怎么补，别让新克隆看到两条红。
+_MANIFEST_PATH = MANIFEST_DIR / f"{MANIFEST_ID}.json"
+needs_manifest = pytest.mark.skipif(
+    not _MANIFEST_PATH.is_file(),
+    reason=(
+        f"缺本地 manifest {_MANIFEST_PATH}（factory/save/ 未入库）；"
+        "在 factory 控制台生成同 id 的题集清单后本用例自动生效"
+    ),
+)
 
+
+@needs_manifest
 def test_manifest_loads_and_composition(kepu_cases):
     m = load_manifest(MANIFEST_ID)
     assert m["schema"] == "yiagent.factory.testset"
@@ -78,6 +90,7 @@ def test_manifest_loads_and_composition(kepu_cases):
         assert case.get("messages") and case["messages"][0]["role"] == "system"
 
 
+@needs_manifest
 def test_manifest_preflight_no_errors(kepu_cases, monkeypatch, tmp_path):
     monkeypatch.setattr(preflight, "CACHE_DIR", tmp_path / "eval_cache")
     rep = preflight.run_preflight(manifest_id=MANIFEST_ID, api_key="x" * 12)

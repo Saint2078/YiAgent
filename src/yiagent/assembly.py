@@ -260,7 +260,8 @@ def assemble_vector(
 
     skill_tools = skill_openai_tools(sk)
     meta = b.get("meta") or {}
-    return {
+    provenance = meta.get("provenance")
+    pack: dict[str, Any] = {
         "kind": PACK_KIND,
         "pack_version": PACK_VERSION,
         "markers": {
@@ -290,6 +291,25 @@ def assemble_vector(
             "precedence": "G2 > Runtime > AGENTS.md",
         },
     }
+    # 基因库自带血统（如 rolefactory 实跑导出的 bank）就随载体带走：
+    # 一份 holdout「判不了」的基因，装出来的实体必须自己说得清这件事，
+    # 不能跟已验证的载体长得一样。没有血统的 bank 不凭空造这个键——
+    # 否则既有演示载体的字节会变，逐字节复现的测试会挂。
+    if isinstance(provenance, dict) and provenance:
+        pack["markers"]["provenance"] = provenance
+    return pack
+
+
+def generalizes(pack: dict[str, Any]) -> bool | None:
+    """载体所载基因是否**已证明**优于无基因基线。
+
+    `True` 已证明 / `False` 已证伪 / `None` 判不了或没有血统。
+    注意 `None` 与 `False` 都不许对外宣称更强，别把 `None` 当成好消息。
+    """
+    pr = (pack.get("markers") or {}).get("provenance") or {}
+    v = pr.get("verdict") or {}
+    g = v.get("generalizes")
+    return g if isinstance(g, bool) else None
 
 
 def marker_line(pack: dict[str, Any]) -> str:
@@ -300,11 +320,17 @@ def marker_line(pack: dict[str, Any]) -> str:
     )
     skills = ",".join(str(x.get("id")) for x in m.get("skills") or []) or "-"
     validation = m.get("validation") or {}
-    return (
+    line = (
         f"[expression-vector] gene_hash={m.get('gene_hash')} variant={m.get('variant_id')}"
         f" slots={slots} skills={skills}"
         f" status={validation.get('status')} assembled_at={m.get('assembled_at')}"
     )
+    # 有血统就把泛化判定挂在同一行：运行时日志里一眼看出这份基因能不能宣称更强
+    pr = m.get("provenance") or {}
+    if pr:
+        label = (pr.get("verdict") or {}).get("label") or "未鉴定"
+        line += f" generalizes={generalizes(pack)} verdict={label}"
+    return line
 
 
 __all__ = [
@@ -316,6 +342,7 @@ __all__ = [
     "allele_version",
     "assemble_vector",
     "gene_hash_of",
+    "generalizes",
     "hash_format_ok",
     "marker_line",
     "validate_genome",

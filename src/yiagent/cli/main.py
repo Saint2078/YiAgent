@@ -203,6 +203,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="output dir (default: ~/.yiagent/assembled/)",
     )
+    asm.add_argument(
+        "--require-generalization",
+        action="store_true",
+        help="门禁：基因未在 holdout 上证明优于无基因基线则拒装（生产投放用）",
+    )
 
     smk = sub.add_parser(
         "smoke",
@@ -508,7 +513,7 @@ def _cmd_hof(args: argparse.Namespace) -> int:
 def _cmd_assemble(args: argparse.Namespace) -> int:
     home = apply_runtime_env()
     from yiagent.agent import DEFAULT_HOST
-    from yiagent.assembly import AssemblyBlocked, marker_line
+    from yiagent.assembly import AssemblyBlocked, generalizes, marker_line
     from yiagent.recipient import import_genome, save_vector
 
     try:
@@ -521,8 +526,26 @@ def _cmd_assemble(args: argparse.Namespace) -> int:
     except AssemblyBlocked as e:
         print(f"yiagent: assemble blocked: {e}", file=sys.stderr)
         return 2
+
+    provenance = (pack.get("markers") or {}).get("provenance") or {}
+    proven = generalizes(pack)
+    # 硬门禁只在显式要求时生效：泛化判定回答的是「这套基因比无基因强吗」，
+    # 不是「这个 Agent 能不能用」。默认拒装会让链路今天交不出任何实体；
+    # 但要往生产里放，就该要求它证明过。
+    if getattr(args, "require_generalization", False) and proven is not True:
+        label = (provenance.get("verdict") or {}).get("label") or "无血统，未鉴定"
+        print(f"yiagent: assemble blocked by gate: 泛化未证明（{label}）", file=sys.stderr)
+        if provenance.get("verdict", {}).get("reason"):
+            print(f"  {provenance['verdict']['reason']}", file=sys.stderr)
+        print("  去掉 --require-generalization 可装配，但不得对外宣称更强", file=sys.stderr)
+        return 3
+
     path = save_vector(pack, args.out, home=home)
     print(marker_line(pack))
+    # 盖章：没证明过就把这句话打在脸上，别让人以为装出来就是更强的
+    if provenance:
+        print(f"  血统: run={provenance.get('run_id')} 判定={(provenance.get('verdict') or {}).get('label')}")
+        print(f"  可宣称: {provenance.get('claim')}")
     print(f"saved: {path}")
     return 0
 

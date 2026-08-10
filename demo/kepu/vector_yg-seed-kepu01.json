@@ -143,7 +143,7 @@
     },
     "source": {
       "kind": "bank",
-      "path": "/repo/demo/kepu/bank.json"
+      "path": "repo:demo/kepu/bank.json"
     }
   },
   "runtime": {
