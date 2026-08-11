@@ -21,6 +21,15 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "hooks"
 
+# 管道上 stdout 编码是 gbk，`✓`/`✗` 会抛 UnicodeEncodeError。
+# 这不是排版问题：本脚本因此**整个崩掉**，于是凭证扫描钩子一直没装上 ——
+# 一个编码错误静默停用了一道安全控制，而 `--check` 本该发现的正是这件事。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except Exception:  # noqa: BLE001
+        pass
+
 
 def git_dir(start: Path) -> Path | None:
     r = subprocess.run(

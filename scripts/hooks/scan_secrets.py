@@ -75,6 +75,15 @@ ENV_READ = re.compile(r"(?i)(os\.environ|getenv|process\.env|System\.getenv|\$en
 # 选后者。
 ALLOWLIST = re.compile(r"(?i)(allowlist[\s-]secret|pragma:\s*allowlist)")
 
+# 钩子在 git 里跑，stdout/stderr 是管道（编码 gbk）：`✗` 与中文会抛 UnicodeEncodeError。
+# 崩掉时 git 会因非零退出码拦住提交（方向上safe），但人看到的是 traceback 而不是
+# "哪一行有凭证" —— 而看不懂的告警最终会被 --no-verify 绕过。
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except Exception:  # noqa: BLE001
+        pass
+
 SKIP_SUFFIX = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip", ".gz",
     ".sqlite", ".db", ".woff", ".woff2", ".ttf", ".mp4", ".mp3", ".whl",

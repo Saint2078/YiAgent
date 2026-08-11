@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -24,6 +25,37 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
 
 import heartbeat  # noqa: E402
+
+_SANDBOX: tempfile.TemporaryDirectory | None = None
+_REAL_PATHS: tuple[Path, Path] | None = None
+
+
+def setUpModule() -> None:
+    """把心跳与锁**整模块**改道到临时目录。
+
+    这条是被一次真实污染逼出来的：`BeatTests` 只改道了 `BEAT_PATH`，
+    但 `beat()` 内部还会 `refresh_lock()` 写 **真实的** `LOCK_PATH` ——
+    于是跑一次测试就把生产锁刷成了"刚刚 / waiting_quota"。
+    锁的失效期是 1 小时，那把孤儿锁会在**下一个额度窗口整段时间**拦住合法守护：
+    额度回来了却没有人干活，正是心跳当初要消灭的那种失效。
+
+    所以不靠"每个类记得改道"，在模块级一次性隔离 —— 忘了也不会漏到生产文件上。
+    """
+    global _SANDBOX, _REAL_PATHS
+    _SANDBOX = tempfile.TemporaryDirectory(prefix="hb_test_")
+    _REAL_PATHS = (heartbeat.BEAT_PATH, heartbeat.LOCK_PATH)
+    base = Path(_SANDBOX.name)
+    heartbeat.BEAT_PATH = base / "watch_heartbeat.json"
+    heartbeat.LOCK_PATH = base / "watch.lock"
+
+
+def tearDownModule() -> None:
+    global _SANDBOX, _REAL_PATHS
+    if _REAL_PATHS:
+        heartbeat.BEAT_PATH, heartbeat.LOCK_PATH = _REAL_PATHS
+    if _SANDBOX:
+        _SANDBOX.cleanup()
+    _SANDBOX = _REAL_PATHS = None
 
 
 class BeatTests(unittest.TestCase):
@@ -130,13 +162,24 @@ class SingletonTests(unittest.TestCase):
         self.assertIn("取得守护锁", why)
 
     def test_second_instance_is_refused(self):
-        """用别的 pid 写一把新鲜锁，本进程必须被拒。"""
-        self.tmp.write_text(json.dumps({
-            "pid": 999999, "ts": time.time(), "state": "waiting_quota",
-        }), encoding="utf-8")
-        ok, why = heartbeat.acquire_singleton()
-        self.assertFalse(ok, "第二个实例没被拦住 —— 会和第一个抢同一份额度")
-        self.assertIn("999999", why)
+        """持锁者**活着**时，第二个实例必须被拒。
+
+        原来这条用编造的 pid（999999）+ 新鲜时间戳。加入 PID 存活判定之后
+        那个前提失效了：编造的 pid 会被确证已死并接管 —— 这正是想要的行为
+        （孤儿锁真的拦过合法守护一小时）。所以这条改用**真的活着**的子进程当持锁者，
+        才是它本来要表达的意思。
+        """
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        try:
+            self.tmp.write_text(json.dumps({
+                "pid": proc.pid, "ts": time.time(), "state": "waiting_quota",
+            }), encoding="utf-8")
+            ok, why = heartbeat.acquire_singleton()
+            self.assertFalse(ok, "第二个实例没被拦住 —— 会和第一个抢同一份额度")
+            self.assertIn(str(proc.pid), why)
+        finally:
+            proc.kill()
+            proc.wait(timeout=10)
 
     def test_stale_lock_is_taken_over(self):
         """进程被强杀时锁不会自己消失。只看"文件在不在"会永久锁死。"""
@@ -203,6 +246,80 @@ class AsciiReportTests(unittest.TestCase):
         self.assertRegex(r.stdout or "", r"verdict\s*:\s*(ALIVE|DEAD|NEVER-RAN|FINISHED-OK|TERMINAL-)")
 
 
+class PidLivenessTests(unittest.TestCase):
+    """孤儿锁必须能被接管，但**只在确证已死时**。"""
+
+    def setUp(self):
+        self.orig = heartbeat.LOCK_PATH
+        self.tmp = Path(tempfile.mkdtemp(prefix="hb_pid_")) / "watch.lock"
+        heartbeat.LOCK_PATH = self.tmp
+
+    def tearDown(self):
+        heartbeat.LOCK_PATH = self.orig
+        if self.tmp.is_file():
+            self.tmp.unlink()
+        self.tmp.parent.rmdir()
+
+    def test_self_pid_is_alive(self):
+        self.assertIs(heartbeat.pid_alive(os.getpid()), True)
+
+    def test_absurd_pid_is_dead(self):
+        """一个几乎不可能存在的 PID 必须判死，否则接管逻辑永不触发。"""
+        self.assertIs(heartbeat.pid_alive(999999), False)
+
+    def test_zero_and_negative_are_dead(self):
+        for pid in (0, -1):
+            self.assertIs(heartbeat.pid_alive(pid), False)
+
+    def test_orphan_lock_is_taken_over_even_when_fresh(self):
+        """**这条就是那次事故**：时间戳很新，但持锁进程已经不在了。"""
+        self.tmp.write_text(json.dumps({
+            "pid": 999999, "ts": time.time(), "state": "waiting_quota",
+        }), encoding="utf-8")
+        ok, why = heartbeat.acquire_singleton()
+        self.assertTrue(ok, f"孤儿锁没被接管，守护会被拦住一小时：{why}")
+
+    def test_live_holder_still_blocks(self):
+        """确证活着的持锁者仍必须拦住第二个实例 —— 接管不能变成"总能抢到"。
+
+        用一个**真的活着**的子进程当持锁者，比编造 PID 更接近真实场景。
+        """
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+        try:
+            self.tmp.write_text(json.dumps({
+                "pid": proc.pid, "ts": time.time(), "state": "waiting_quota",
+            }), encoding="utf-8")
+            ok, why = heartbeat.acquire_singleton()
+            self.assertFalse(ok, "活着的守护没能拦住第二个实例")
+            self.assertIn(str(proc.pid), why)
+        finally:
+            proc.kill()
+            proc.wait(timeout=10)
+
+
+class NoProductionPollutionTests(unittest.TestCase):
+    """测试**不许**碰生产的心跳/锁文件。
+
+    由来：`beat()` 内部会 `refresh_lock()`，而 BeatTests 只改道了 BEAT_PATH，
+    于是跑一次测试就把生产锁刷成"刚刚 / waiting_quota"，
+    足以在下一个额度窗口整段时间里拦住合法守护。
+    """
+
+    def test_module_paths_are_sandboxed(self):
+        for p in (heartbeat.BEAT_PATH, heartbeat.LOCK_PATH):
+            self.assertNotIn(
+                str(ROOT / "data"), str(p),
+                f"测试正在写生产路径 {p} —— 会污染真实守护状态",
+            )
+
+    def test_beat_does_not_touch_real_lock(self):
+        real_lock = ROOT / "data" / "watch.lock"
+        before = real_lock.read_bytes() if real_lock.is_file() else None
+        heartbeat.beat("test_state", probes=1)
+        after = real_lock.read_bytes() if real_lock.is_file() else None
+        self.assertEqual(before, after, "beat() 改动了生产锁文件")
+
+
 class DirectInvocationLockTests(unittest.TestCase):
     """锁必须盖住**直接调 run_reholdout.py** 这条路。
 
@@ -225,14 +342,17 @@ class DirectInvocationLockTests(unittest.TestCase):
             else:
                 p.unlink(missing_ok=True)
 
-    def _hold_lock(self):
+    def _hold_lock(self, pid: int):
+        """持锁者必须是**真活着**的进程：加入 PID 存活判定后，编造的 pid 会被接管。"""
         self.lock.parent.mkdir(parents=True, exist_ok=True)
         self.lock.write_text(json.dumps({
-            "pid": 999999, "ts": time.time(), "state": "waiting_quota",
+            "pid": pid, "ts": time.time(), "state": "waiting_quota",
         }), encoding="utf-8")
 
     def test_direct_wait_quota_is_refused_when_lock_held(self):
-        self._hold_lock()
+        holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        self.addCleanup(lambda: (holder.kill(), holder.wait(timeout=10)))
+        self._hold_lock(holder.pid)
         env = {k: v for k, v in os.environ.items() if k != "YIAGENT_WATCH_LOCK_HELD"}
         r = subprocess.run(
             [sys.executable, str(ROOT / "tools" / "run_reholdout.py"), "dummy-run",

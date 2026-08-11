@@ -215,6 +215,13 @@ def main() -> int:
     #    所以"加题"这条路值得先在一席上验通 —— 至于加到 60 道够不够，跑完才知道。
     ap.add_argument("--gate-pilot", default="PM",
                     help="复核跑完后，用新配法起一次新 run 验证筛题门槛；no = 不跑")
+    # 跳过复核这条路是**为了不重复烧已经买到的答案**。
+    #
+    # Evals 的 reps=8 复核已经跑完（Δ配对=0.20，CI95 含 0，判不了），
+    # 而方差分解证明**再加重复也压不到能判出**（重复下限 2.33 > |Δ|=0.20）。
+    # 所以重跑它就是花 96 次评测买同一个"判不了" —— 额度本就稀缺，不值。
+    ap.add_argument("--skip-reholdout", action="store_true",
+                    help="不跑 PLAN 里的复核，直接进门槛试跑（复核已完成时用）")
     args = ap.parse_args()
 
     # 单例保护：两个守护同时等同一份额度，恢复时会对同一个 run 各发一次 reholdout，
@@ -224,8 +231,13 @@ def main() -> int:
     if not ok:
         return 3
 
-    log(f"排队：{'、'.join(f'{s} reps={r}（{e}次）' for s, r, e in PLAN)}")
-    for seat, reps, evals in PLAN:
+    plan = [] if args.skip_reholdout else PLAN
+    if args.skip_reholdout:
+        log("跳过复核（--skip-reholdout）：Evals 的 reps=8 复核已完成且判不了，"
+            "而重复下限 2.33 > |Δ|=0.20 —— 再跑一遍是花 96 次评测买同一个答案")
+    else:
+        log(f"排队：{'、'.join(f'{s} reps={r}（{e}次）' for s, r, e in plan)}")
+    for seat, reps, evals in plan:
         run_id = seat_run(seat)
         if not run_id:
             log(f"{seat}: 没有落盘基因组，跳过")

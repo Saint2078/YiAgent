@@ -83,6 +83,58 @@ def force_utf8_output() -> None:
             pass
 
 
+def pid_alive(pid: int) -> bool | None:
+    """那个 PID 还在吗。**True/False/None(判不了)** —— 判不了必须能表达出来。
+
+    为什么不能只看时间戳：锁被一次**测试运行**刷成了"6 分钟前、waiting_quota"，
+    而真实守护早已退出。锁的失效期是 1 小时，于是这把孤儿锁会在
+    **下一个额度窗口整段时间里**拦住合法守护 —— 额度回来了却没有人干活，
+    正是心跳机制当初要消灭的那种失效。
+
+    方向上刻意不对称：只有**确证已死**才返回 False。
+    误判"死"会放进第二个守护（正是锁要防的事），比误判"活"贵得多 ——
+    后者最多让人手动清一次锁。
+    """
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            k32 = ctypes.windll.kernel32
+            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            STILL_ACTIVE = 259
+            ERROR_ACCESS_DENIED = 5
+            ERROR_INVALID_PARAMETER = 87
+
+            h = k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+            if not h:
+                err = ctypes.get_last_error() or k32.GetLastError()
+                if err == ERROR_INVALID_PARAMETER:
+                    return False  # 没有这个 PID
+                if err == ERROR_ACCESS_DENIED:
+                    return True   # 存在但没权限查 → 当作活着
+                return None
+            try:
+                code = ctypes.c_ulong()
+                if not k32.GetExitCodeProcess(h, ctypes.byref(code)):
+                    return None
+                return code.value == STILL_ACTIVE
+            finally:
+                k32.CloseHandle(h)
+        except Exception:  # noqa: BLE001
+            return None
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def acquire_singleton(*, stale_after: float = 3600.0) -> tuple[bool, str]:
     """确保**只有一个守护在跑**。返回 (拿到锁, 说明)。
 
@@ -107,9 +159,16 @@ def acquire_singleton(*, stale_after: float = 3600.0) -> tuple[bool, str]:
             except Exception:  # noqa: BLE001
                 old = {}
             age = now - float(old.get("ts") or 0)
-            if age < stale_after and int(old.get("pid") or 0) != os.getpid():
+            old_pid = int(old.get("pid") or 0)
+            # 时间戳新鲜**不代表持锁的进程还活着**：孤儿锁真出现过一次
+            # （一次测试运行把锁刷成了"6 分钟前 / waiting_quota"，而守护早退了）。
+            # 只在**确证已死**时接管；判不了就按活着处理，宁可让人手动清一次锁。
+            alive = pid_alive(old_pid) if old_pid and old_pid != os.getpid() else None
+            if alive is False:
+                pass  # 持锁进程确证已死 → 落到下面接管
+            elif age < stale_after and old_pid != os.getpid():
                 return False, (
-                    f"已有守护在跑（PID {old.get('pid')}，锁 {age / 60:.1f} 分钟前刷新，"
+                    f"已有守护在跑（PID {old_pid}，锁 {age / 60:.1f} 分钟前刷新，"
                     f"状态 {old.get('state')}）。本实例退出，避免两个守护抢同一份额度 —— "
                     "两个同时发 reholdout 会把两批 reps 追加进同一个明细文件且不报错。"
                 )
