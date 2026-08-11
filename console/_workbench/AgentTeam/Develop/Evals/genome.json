@@ -63,86 +63,86 @@
         "role_b2267ae0_trap_identification_in_evaluation_design_medium_02"
       ],
       "champion": {
-        "n": 18,
+        "n": 48,
         "cases": 6,
-        "mean": 96.49,
-        "weighted": 96.51,
-        "std": 3.01,
-        "composite": 95.01,
+        "mean": 94.71,
+        "weighted": 95.3,
+        "std": 3.34,
+        "composite": 93.63,
         "by_dimension": {
-          "closed_form_answer_grading_and_format_compliance": 93.7,
-          "gaming_and_overfitting_to_benchmark_resistance": 100.0,
-          "long_horizon_task_decomposition_and_threshold_calibration": 93.33,
+          "closed_form_answer_grading_and_format_compliance": 90.97,
+          "gaming_and_overfitting_to_benchmark_resistance": 91.74,
+          "long_horizon_task_decomposition_and_threshold_calibration": 94.16,
           "metric_correctness_and_statistical_rigor": 100.0,
           "test_oracle_and_regression_awareness": 98.33,
-          "trap_identification_in_evaluation_design": 93.55
+          "trap_identification_in_evaluation_design": 93.04
         },
         "by_case": {
-          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 93.7,
-          "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 100.0,
-          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 93.33,
+          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 90.97,
+          "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 91.74,
+          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 94.16,
           "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 100.0,
           "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 98.33,
-          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 93.55
+          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 93.04
         },
-        "trap_rate": 0.833,
-        "min_case": 93.33,
+        "trap_rate": 0.812,
+        "min_case": 90.97,
         "max_case": 100.0,
-        "spread": 6.67,
-        "check_pass_rate": 0.896,
+        "spread": 9.03,
+        "check_pass_rate": 0.874,
         "judge_shadow": null
       },
       "baseline": {
-        "n": 18,
+        "n": 48,
         "cases": 6,
-        "mean": 94.77,
-        "weighted": 94.87,
-        "std": 2.35,
-        "composite": 93.7,
+        "mean": 94.51,
+        "weighted": 94.41,
+        "std": 3.41,
+        "composite": 92.7,
         "by_dimension": {
-          "closed_form_answer_grading_and_format_compliance": 95.56,
-          "gaming_and_overfitting_to_benchmark_resistance": 95.15,
-          "long_horizon_task_decomposition_and_threshold_calibration": 95.55,
-          "metric_correctness_and_statistical_rigor": 98.15,
-          "test_oracle_and_regression_awareness": 93.89,
-          "trap_identification_in_evaluation_design": 90.33
+          "closed_form_answer_grading_and_format_compliance": 95.0,
+          "gaming_and_overfitting_to_benchmark_resistance": 98.18,
+          "long_horizon_task_decomposition_and_threshold_calibration": 93.75,
+          "metric_correctness_and_statistical_rigor": 98.47,
+          "test_oracle_and_regression_awareness": 93.33,
+          "trap_identification_in_evaluation_design": 88.33
         },
         "by_case": {
-          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 95.56,
-          "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 95.15,
-          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 95.55,
-          "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 98.15,
-          "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 93.89,
-          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 90.33
+          "role_b2267ae0_closed_form_answer_grading_and_format_compliance_medium_02": 95.0,
+          "role_b2267ae0_gaming_and_overfitting_to_benchmark_resistance_medium_02": 98.18,
+          "role_b2267ae0_long_horizon_task_decomposition_and_threshold_calibration_medium_02": 93.75,
+          "role_b2267ae0_metric_correctness_and_statistical_rigor_medium_02": 98.47,
+          "role_b2267ae0_test_oracle_and_regression_awareness_medium_02": 93.33,
+          "role_b2267ae0_trap_identification_in_evaluation_design_medium_02": 88.33
         },
-        "trap_rate": 0.722,
-        "min_case": 90.33,
-        "max_case": 98.15,
-        "spread": 7.82,
-        "check_pass_rate": 0.847,
+        "trap_rate": 0.771,
+        "min_case": 88.33,
+        "max_case": 98.47,
+        "spread": 10.14,
+        "check_pass_rate": 0.857,
         "judge_shadow": null
       },
-      "delta_weighted": 1.64,
+      "delta_weighted": 0.89,
       "paired": {
         "cases": 6,
-        "mean_delta": 1.71,
-        "improved": 4,
+        "mean_delta": 0.2,
+        "improved": 3,
         "regressed": 2,
-        "worst": -2.22,
-        "best": 4.85,
-        "sd_delta": 3.09,
+        "worst": -6.44,
+        "best": 5.0,
+        "sd_delta": 4.63,
         "mean_delta_ci95": [
-          -0.58,
-          3.83
+          -3.17,
+          3.56
         ],
         "significant": false
       },
       "generalization_gap": -1.04,
       "seconds": 108.2,
-      "reps": 3
+      "reps": 8
     },
     "holdout_source": "reholdout",
-    "built_at": "2026-08-10T21:34:58.390622+00:00",
+    "built_at": "2026-08-11T02:10:44.687670+00:00",
     "params": {
       "model": "k3",
       "scoring_mode": "objective",
@@ -164,7 +164,7 @@
     "verdict": {
       "generalizes": null,
       "label": "判不了（区间跨 0）",
-      "reason": "配对Δ均值=+1.71 95%CI[-0.58, +3.83]（n=6 题 × 3 次）：换一组题就可能翻符号，需加题量或重复次数"
+      "reason": "配对Δ均值=+0.2 95%CI[-3.17, +3.56]（n=6 题 × 8 次）：换一组题就可能翻符号，需加题量或重复次数"
     }
   }
 }
