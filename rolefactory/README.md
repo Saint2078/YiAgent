@@ -117,6 +117,7 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/plan_n.py` | 用去偏后的 sd 反算需要多少道 holdout，检查当前配法够不够（离线） |
 | `tools/need_n_ci.py [--boot 4000]` | 给「保本题量」做 bootstrap 区间（离线；结论：**六席区间跨 186×–1925×，上面两行的点估计无分辨力**，见 §19） |
 | `tools/numeric_share_sweep.py [--gameability]` | 扫 numeric 权重份额 → Δ / sd / 所需题量（离线；副产物：**numeric 在 holdout 上不区分两臂**，§19） |
+| `tools/lexical_slack.py [--thresh 0.8]` | 用盘上回答离线重打分，放宽 `must_include` 字面匹配看判定是否变好（离线；结论：**没有任何阈值让它变好，放宽的极限是 Δ→0**，见 §20） |
 | `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
 | `tools/headroom.py [--min-gain 5]` | 基线可涨空间：多少题贴天花板量不出提升，以及 Δ 被截断偏了多少（离线） |
 | `tools/case_outliers.py <run_id>` | 留一法：哪道题在撑着结论（**诊断用，不是筛题用**；离线） |
