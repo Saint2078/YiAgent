@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -121,6 +122,21 @@ def main() -> int:
                     help="额度封顶时每 10 分钟探一次，恢复后再跑")
     ap.add_argument("--probe-every", type=int, default=600, help="探额度间隔秒")
     args = ap.parse_args()
+
+    # 单例保护也要盖住**直接调本脚本**这条路。
+    #
+    # 这个缺口是真出过事的：锁最初只加在 `queue_decisive.py` 上，而 07:32 / 07:58 / 08:06
+    # 我曾三次直接起 `run_reholdout.py --wait-quota`，它们**全都活着在等额度**
+    # （我以为killed了，其实杀进程时只匹配了 queue_decisive）。
+    # 额度一恢复，四个进程会对同一个 run 各发一次 reps=15 复核：
+    # 烧四倍额度，而且四批明细追加进同一个文件、**不报错**。
+    #
+    # 只在 --wait-quota 时上锁：不等额度的一次性复核是人手动发的，不该被拦。
+    if args.wait_quota and not os.environ.get("YIAGENT_WATCH_LOCK_HELD"):
+        ok, why = heartbeat.acquire_singleton()
+        log(why)
+        if not ok:
+            return 3
 
     if args.wait_quota and not wait_for_quota(args.probe_every):
         return 2

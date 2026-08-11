@@ -10,11 +10,14 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
 import unittest
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -153,6 +156,78 @@ class SingletonTests(unittest.TestCase):
         self.tmp.write_text(json.dumps({"pid": 999999, "ts": time.time()}), encoding="utf-8")
         heartbeat.release_lock()
         self.assertTrue(self.tmp.is_file(), "释放锁时删掉了别的进程的锁")
+
+
+class DirectInvocationLockTests(unittest.TestCase):
+    """锁必须盖住**直接调 run_reholdout.py** 这条路。
+
+    这个缺口出过事：锁最初只加在 queue_decisive 上，而我曾三次直接起
+    `run_reholdout.py --wait-quota`，它们全都活着在等额度（杀进程时只匹配了
+    queue_decisive，所以没杀到）。额度一恢复，四个进程会对同一个 run 各发一次
+    reps=15 复核 —— 烧四倍额度，四批明细追加进同一文件且不报错。
+    """
+
+    def setUp(self):
+        self.lock = ROOT / "data" / "watch.lock"
+        self.backup = self.lock.read_bytes() if self.lock.is_file() else None
+        self.beat = ROOT / "data" / "watch_heartbeat.json"
+        self.beat_backup = self.beat.read_bytes() if self.beat.is_file() else None
+
+    def tearDown(self):
+        for p, b in ((self.lock, self.backup), (self.beat, self.beat_backup)):
+            if b is not None:
+                p.write_bytes(b)
+            else:
+                p.unlink(missing_ok=True)
+
+    def _hold_lock(self):
+        self.lock.parent.mkdir(parents=True, exist_ok=True)
+        self.lock.write_text(json.dumps({
+            "pid": 999999, "ts": time.time(), "state": "waiting_quota",
+        }), encoding="utf-8")
+
+    def test_direct_wait_quota_is_refused_when_lock_held(self):
+        self._hold_lock()
+        env = {k: v for k, v in os.environ.items() if k != "YIAGENT_WATCH_LOCK_HELD"}
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "run_reholdout.py"), "dummy-run",
+             "--reps", "3", "--wait-quota", "--probe-every", "600"],
+            cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8",
+            errors="replace", env=env, timeout=60,
+        )
+        self.assertEqual(r.returncode, 3, f"直接起第二个没被拦住：{r.stdout}")
+        self.assertIn("已有守护在跑", r.stdout)
+
+    def test_queue_passes_lock_held_marker_to_child(self):
+        """父进程持锁时必须告诉子进程，否则子进程会把父进程的锁当成"别人的"而拒绝启动。
+
+        直接断言传给子进程的 env，而不是读源码措辞。
+        """
+        sys.path.insert(0, str(ROOT / "tools"))
+        import queue_decisive as qd
+
+        captured: dict[str, Any] = {}
+
+        class FakeCompleted:
+            returncode = 0
+
+        def fake_run(cmd, **kw):  # noqa: ANN001
+            if any("run_reholdout" in str(c) for c in cmd):
+                captured["env"] = kw.get("env") or {}
+            return FakeCompleted()
+
+        with patch.object(qd.subprocess, "run", side_effect=fake_run), \
+                patch.object(qd, "PLAN", [("Evals", 3, 18)]), \
+                patch.object(qd.heartbeat, "acquire_singleton", return_value=(True, "ok")), \
+                patch.object(qd, "gate_pilot", return_value=0), \
+                patch.object(sys, "argv", ["queue_decisive.py", "--gate-pilot", "no"]):
+            try:
+                qd.main()
+            except SystemExit:
+                pass
+
+        self.assertIn("env", captured, "没有把 run_reholdout 起起来（或 PLAN 被跳过）")
+        self.assertEqual(captured["env"].get("YIAGENT_WATCH_LOCK_HELD"), "1")
 
 
 class HealthVerdictTests(unittest.TestCase):

@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -170,11 +171,13 @@ def main() -> int:
             log(f"{seat}: 没有落盘基因组，跳过")
             continue
         log(f"=== {seat} run={run_id} reps={reps}（约 {evals} 次评测）===")
+        # 告诉子进程"锁已经由父进程持有了"，否则它会看到一把新鲜锁并拒绝启动
+        child_env = dict(os.environ, YIAGENT_WATCH_LOCK_HELD="1")
         rc = subprocess.run(
             [sys.executable, str(HERE / "run_reholdout.py"), run_id,
              "--reps", str(reps), "--seat", seat,
              "--wait-quota", "--probe-every", str(args.probe_every)],
-            cwd=str(ROOT),
+            cwd=str(ROOT), env=child_env,
         ).returncode
         if rc == 2:
             # 额度中途又断（探针通过不代表跑得完一轮）。停在这里，别把后面那席也烧成半截。
