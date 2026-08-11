@@ -48,6 +48,7 @@ import os
 import subprocess
 import sys
 import time
+from typing import Any
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -71,8 +72,34 @@ SERVER_REPS_CAP = 8
 PLAN = [("Evals", SERVER_REPS_CAP, 6 * 2 * SERVER_REPS_CAP)]
 
 
+# 日志不该有能力弄死任务：管道上 stdout 编码是 gbk，一个 `⚠` 就能抛 UnicodeEncodeError。
+# 实测崩过一次，且崩在门槛四条检查都跑完之后，把已经拿到的结论一起带走了。
+heartbeat.force_utf8_output()
+
+
 def log(msg: str) -> None:
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
+    try:
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
+    except UnicodeEncodeError:
+        # reconfigure 没生效的兜底（例如 stdout 被换成了不支持 reconfigure 的对象）
+        safe = msg.encode("ascii", "replace").decode("ascii")
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {safe}", flush=True)
+
+
+def load_report(run_id: str) -> dict[str, Any]:
+    """从盘上读 report.json。
+
+    给中断的试跑用：run 崩在 baseline 之后，`wait_run` 抛异常，但门槛与切分
+    早在 probe/bank 相位就落盘了。这条路让"已经拿到的结论"不跟着异常一起丢掉。
+    """
+    p = ROOT / "data" / "runs" / run_id / "report.json"
+    if not p.is_file():
+        return {}
+    try:
+        out = json.loads(p.read_text(encoding="utf-8"))
+        return out if isinstance(out, dict) else {}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def seat_run(seat: str) -> str | None:
@@ -113,15 +140,31 @@ def gate_pilot(seat: str, probe_every: int) -> int:
         heartbeat.beat("pilot_waiting_quota", seat=seat, probes=n_probe)
         time.sleep(probe_every)
 
+    rid = None
+    report: dict[str, Any] = {}
+    aborted_note = ""
     try:
         # 一次完整 run 要跑很久，期间持续心跳
         with heartbeat.keep_beating("pilot_running", seat=seat):
             rid = bd.start_run(meta["factory_role"])
             report = bd.wait_run(rid)
     except Exception as exc:  # noqa: BLE001
-        log(f"试跑失败 {type(exc).__name__}: {exc}")
-        heartbeat.beat("pilot_failed", seat=seat, note=f"{type(exc).__name__}: {exc}")
-        return 1
+        aborted_note = f"{type(exc).__name__}: {exc}"
+        log(f"试跑中断 {aborted_note}")
+        # **别就这么走了**：门槛与切分在 probe/bank 相位就已完成并落盘，
+        # 而本次试跑要验的**恰恰只是它们**。后面 baseline/evolve 因额度断掉，
+        # 不影响这四条检查的可判性。
+        #
+        # 实测被咬过：额度在 baseline 35/72 处耗尽，这里直接 return 1，
+        # 于是「门槛扔了 29 道、holdout 91 道、train 封在 6 道」这个**已经拿到的结论**
+        # 被一并丢掉，日志只剩一行"试跑失败"。等下一次额度再跑一遍要 10 分钟以上，
+        # 而答案早就在盘上。
+        report = load_report(rid) if rid else {}
+        if not (report.get("suite") or {}).get("holdout"):
+            log("    盘上也没有切分结果 —— 这次确实什么都没验到")
+            heartbeat.beat("pilot_failed", seat=seat, note=aborted_note)
+            return 1
+        log(f"    但门槛与切分已落盘，下面四条检查仍然可判（数据取自 {rid}/report.json）")
 
     suite = report.get("suite") or {}
     dropped = suite.get("dropped_saturated") or []
@@ -150,6 +193,14 @@ def gate_pilot(seat: str, probe_every: int) -> int:
         shown = "、".join(f"{d.get('id')}({d.get('baseline')})" for d in dropped[:6])
         log(f"    被扔的题（基线分）：{shown}")
     log(f"    注意：此 run **未采纳**，不影响任何席位的落盘基因组。run_id={rid}")
+    if aborted_note:
+        # 检查过了不等于试跑成功。**两件事必须分开说**，否则"四条 ok"会被读成
+        # "整条流水线验通了"，而实际上 baseline 之后一步都没跑。
+        log(f"    ⚠ 但这次 run 本身是**中断的**（{aborted_note}）：")
+        log("      已验：出题 → 门槛筛题 → 切分（含成本封顶）")
+        log("      未验：baseline / 进化 / holdout —— 这些要等额度")
+        heartbeat.beat("pilot_partial", seat=seat, run_id=rid, note=aborted_note)
+        return 0 if all(ok for _, ok in checks) else 1
     return 0 if all(ok for _, ok in checks) else 1
 
 

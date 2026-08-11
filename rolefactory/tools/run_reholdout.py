@@ -33,8 +33,16 @@ sys.path.insert(0, str(HERE))
 import heartbeat  # noqa: E402
 
 
+# 同上：管道上是 gbk，`⚠` 会崩；且中文按 gbk 出去会被 UTF-8 读者读成 `?`。
+heartbeat.force_utf8_output()
+
+
 def log(msg: str) -> None:
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    try:
+        print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+    except UnicodeEncodeError:
+        print(f"[{time.strftime('%H:%M:%S')}] "
+              f"{msg.encode('ascii', 'replace').decode('ascii')}", flush=True)
 
 
 def post(path: str, body: dict[str, Any], timeout: int) -> tuple[int, Any]:

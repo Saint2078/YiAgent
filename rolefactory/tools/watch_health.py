@@ -25,6 +25,10 @@ sys.path.insert(0, str(HERE))
 
 import heartbeat  # noqa: E402
 
+# 管道上 stdout 是 gbk：中文会被 UTF-8 读者读成 `?`（我就这样把 4.5 读成了 14.5），
+# `✓`/`✗` 更是直接抛。钉成 UTF-8 之后 --ascii 的输出才真的是干净 ASCII。
+heartbeat.force_utf8_output()
+
 
 def console_can_show_chinese() -> bool:
     """这个终端能否如实显示中文 —— 不能就别用中文报状态。
@@ -51,6 +55,20 @@ def console_can_show_chinese() -> bool:
         return False
 
 
+def ascii_safe(v: object) -> str:
+    """把任意值压成**纯 ASCII**，且不丢信息。
+
+    `--ascii` 的保证必须覆盖**数据**，不只是标签 —— 单测就是这么抓到的：
+    心跳里的 `note` 字段带中文（"队列正常结束…"），照原样打出去，
+    于是"ASCII 模式"根本不是 ASCII。
+
+    用 backslashreplace 而不是 `?`：`?` 会把不同的字压成同一个符号，
+    正是"把糊掉的输出当事实"那个坑（我据此把 4.5 读成过 14.5）。
+    `\\u961f` 难看，但**不可能被误读成别的东西**，也还能还原。
+    """
+    return str(v).encode("ascii", "backslashreplace").decode("ascii")
+
+
 def report_ascii(row: dict, age: float, limit: float, state: str) -> int:
     """纯 ASCII 状态块：宁可难看，也不能被误读。"""
     alive = age <= limit
@@ -59,13 +77,13 @@ def report_ascii(row: dict, age: float, limit: float, state: str) -> int:
                else f"TERMINAL-{state.upper()}" if terminal
                else "ALIVE" if alive else "DEAD")
     print(f"verdict    : {verdict}")
-    print(f"state      : {state}   pid: {row.get('pid')}")
-    print(f"last_beat  : {row.get('iso')}   age_min: {age / 60:.1f}"
+    print(f"state      : {ascii_safe(state)}   pid: {row.get('pid')}")
+    print(f"last_beat  : {ascii_safe(row.get('iso'))}   age_min: {age / 60:.1f}"
           f"   dead_if_over_min: {limit / 60:.1f}")
-    print(f"started    : {row.get('started_iso')}")
+    print(f"started    : {ascii_safe(row.get('started_iso'))}")
     for k in ("probes", "waited_min", "seat", "run_id", "reps", "note"):
         if row.get(k) is not None:
-            print(f"{k:<11}: {row[k]}")
+            print(f"{k:<11}: {ascii_safe(row[k])}")
     if verdict == "DEAD":
         print("action     : restart -> python tools/queue_decisive.py --probe-every 600")
     return 0 if verdict in ("ALIVE", "FINISHED-OK") else 1

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 import time
 from pathlib import Path
@@ -57,6 +58,29 @@ def beat(state: str, **extra: Any) -> None:
 
 
 LOCK_PATH = HERE.parent / "data" / "watch.lock"
+
+
+def force_utf8_output() -> None:
+    """把本进程的 stdout/stderr 钉成 UTF-8，**并且永不因编码抛异常**。
+
+    实测（`sys.executable -c` 走管道）：管道上的 stdout 编码是 **gbk**，
+    errors=surrogateescape。这带来两个各自独立的坑：
+
+    1. **崩**：`⚠`（U+26A0）在 gbk 里编不出来 → `UnicodeEncodeError`。
+       真崩过一次，而且崩在门槛四条检查都跑完之后 ——
+       「这次 run 是中断的、哪些相位没验到」那段话没打出来，
+       进程带异常退出，看起来像抢救逻辑自己失败了。**仪表把任务弄死了。**
+    2. **糊**：中文能进 gbk，但读的人按 UTF-8 解 → 整段变 `?`。
+       这正是我把「心跳 4.5 分钟前」读成 14.5 分钟的那个坑的同源版本。
+
+    只设 errors="replace" 只治第 1 条，第 2 条照旧。所以**连编码一起钉成 UTF-8**：
+    符号不再崩，中文按 UTF-8 出去，日志文件与 `chcp 65001` 的终端都能如实读。
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def acquire_singleton(*, stale_after: float = 3600.0) -> tuple[bool, str]:

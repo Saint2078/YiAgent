@@ -177,6 +177,22 @@ class AsciiReportTests(unittest.TestCase):
         bad = [c for c in out if ord(c) > 127]
         self.assertEqual(bad, [], f"ASCII 模式里混进了非 ASCII 字符：{bad[:10]}")
 
+    def test_ascii_mode_covers_data_not_just_labels(self):
+        """带中文的**数据字段**也必须被压成 ASCII，且不能压成 `?`。
+
+        这条是被真实数据抓到的：心跳里 `note` = "队列正常结束…"，
+        照原样打出去让"ASCII 模式"名不副实。压成 `?` 同样不行 ——
+        不同的字变成同一个符号，正是"糊掉的输出被当事实"那个坑。
+        """
+        import importlib
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        wh = importlib.import_module("watch_health")
+        got = wh.ascii_safe("队列正常结束，无待办")
+        self.assertTrue(got.isascii(), f"没压成 ASCII：{got}")
+        self.assertNotIn("?", got, "压成了 `?` —— 不同的字被压成同一个符号，会被误读")
+        self.assertIn("\\u", got, "应当用可还原的转义，而不是丢弃")
+
     def test_ascii_report_states_the_verdict_explicitly(self):
         """判定必须是一个**可 grep 的词**，而不是要人从数字里推断。"""
         r = subprocess.run(
