@@ -111,10 +111,18 @@ def gate_pilot(seat: str, probe_every: int) -> int:
     log(f"试跑 {rid} 完成：题 {suite.get('count')} 道｜扔 {len(dropped)} 道"
         f"｜train {n_train} / holdout {n_hold}｜进化评测约 {ev} 次")
     # 三条预期逐条对账，不合就明说（这次是验证，不是产出）
+    # 预期区间跟着配法算，别写死数字（配法从 16 改到 21 之后 42–90 就已经是旧账）
+    dims = 6
+    per_dim = int(p.get("per_dim") or 0)
+    hold_max = per_dim * dims - int(p.get("train_per_dim") or 1) * dims
+    hold_min = dims * -(-per_dim // 2) - dims  # 6·⌈per_dim/2⌉ − 6
+    break_even = 55  # tools/alloc.py 反算：PM 需 55 道、Evals 53 道
     checks = [
         ("门槛真的扔题了", len(dropped) > 0),
-        ("holdout 落在 42–90", 42 <= n_hold <= 90),
+        (f"holdout 落在 {hold_min}–{hold_max}", hold_min <= n_hold <= hold_max),
         ("train 被封住（进化 ≈180 次）", ev <= 240),
+        # 这一条才是试跑真正要买的东西：题量过了保本线，这次才可能判得出
+        (f"holdout ≥ 保本题量 {break_even}", n_hold >= break_even),
     ]
     for name, ok in checks:
         log(f"    [{'ok ' if ok else 'FAIL'}] {name}")
@@ -128,7 +136,13 @@ def gate_pilot(seat: str, probe_every: int) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="等额度后跑高重复复核")
     ap.add_argument("--probe-every", type=int, default=600)
-    ap.add_argument("--gate-pilot", default="Evals",
+    # 试跑席位改成 PM（原为 Evals），理由是 `tools/alloc.py` 的反算（PERF.md §18.10）：
+    #  · Evals 的判定**已经由这次 reps=15 复核买到**（半宽 1.31 < |Δ| 1.71），
+    #    再用新配法起一次新 run 只是把同一个结论买第二遍。
+    #  · PM 是唯一另一个够得着的席位（保本 55 道），而且**只能靠加题** ——
+    #    它的重复地板 1.72 已高于效应量 1.41，复核多少次都判不出。
+    #  · 所以同一笔额度放在 PM 上：既验门槛，又有机会拿到本项目第一个"已证泛化"。
+    ap.add_argument("--gate-pilot", default="PM",
                     help="复核跑完后，用新配法起一次新 run 验证筛题门槛；no = 不跑")
     args = ap.parse_args()
 

@@ -7,13 +7,22 @@
 """
 from __future__ import annotations
 
+import math
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
 from app import roles  # noqa: E402
+
+BREAK_EVEN_HOLDOUT = 55
+"""reps=1 下判得出所需的最少 holdout 题量，由 `tools/alloc.py` 反算。
+
+两个够得着的席位：Evals 53 道、PM 55 道 —— 取大的那个。
+其余四席需 96 至 >400 道，当前额度内够不着（PERF.md §18.10）。
+"""
 
 
 def case(cid: str, dim: str = "d1") -> dict:
@@ -199,22 +208,36 @@ class TrainCapTests(unittest.TestCase):
         self.assertEqual(ev_best, 180)
 
         # 封顶模式：扔多少都不影响进化成本
-        for d in (0, 4, 8):
-            ev, _, n_hold = cost(16, 99, 1, d)
+        # per_dim 取**上线的那个值**，不在测试里另抄一份 —— 抄了就会像上一版那样，
+        # 配法从 16 改到 21 之后这里还在测 16，测试报的是一个已经不存在的配法。
+        import build_devteam
+
+        live_per_dim = int(build_devteam.RUN_PARAMS["per_dim"])
+        for d in (0, live_per_dim // 4, live_per_dim // 2):
+            ev, _, n_hold = cost(live_per_dim, 99, 1, d)
             self.assertEqual(ev, 180, f"扔 {d} 道/维时进化成本变了")
             # 封顶模式下被扔的题直接从 holdout 里出（余量全归 holdout），
-            # 所以出题量必须够大，扔满之后仍不低于原配法的 42 道 ——
-            # per_dim=14 在扔满时只剩 36 道，是这条断言逼出来的。
-            self.assertGreaterEqual(n_hold, 42, f"扔 {d} 道/维后 holdout 低于原配法的 42 道")
+            # 所以出题量必须够大，扔满之后仍不低于**保本题量** ——
+            # 见下一条：这个目标不是拍的，是 alloc.py 反算出来的。
+            self.assertGreaterEqual(
+                n_hold, BREAK_EVEN_HOLDOUT, f"扔 {d} 道/维后 holdout 低于保本题量"
+            )
 
     def test_case_budget_must_cover_max_drop(self):
-        """出题量的下限是算出来的，不是猜的：扔满之后仍要留住目标 holdout 题量。
+        """出题量的下限是**算**出来的，不是猜的：扔满之后仍要留住保本题量。
 
-        需求：`per_dim ≥ 目标holdout/维 + 可扔/维 + train封顶`。
-        取目标 7 道/维（42 道）、train 封顶 1 → per_dim=15 是下限，14 不够。
+        保本题量 = reps=1 下判得出所需的最少 holdout 题数 = (1.96·sd/Δ)²，
+        由 `tools/alloc.py` 从方差分解反算。当前两个够得着的席位：
+        Evals 需 53 道、PM 需 **55 道**（PM 还只能靠加题 —— 它的重复地板
+        1.72 已高于效应量 1.41，复核多少次都判不出）。取 55 作目标。
+
+        封顶模式下 holdout 下限 = 6·⌈per_dim/2⌉ − 6，于是：
+        per_dim=16 → 42 道（**不够**，这是原来的配法）；per_dim=21 → 60 道（够）。
+        低于保本题量的配法会烧掉整整一次 run 才换来一句"判不了"，
+        比多出 30 道题贵得多。
         """
         dims = 6
-        for per_dim, ok in ((14, False), (15, True), (16, True)):
+        for per_dim, ok in ((16, False), (20, False), (21, True)):
             cs = self._suite(per_dim, dims)
             budget = min(per_dim // 2, per_dim - 2)  # reserve = train 1 + holdout 1
             drop_ids = {
@@ -224,9 +247,24 @@ class TrainCapTests(unittest.TestCase):
             kept = [c for c in cs if c["id"] not in drop_ids]
             _, hold = roles.split_holdout(kept, per_dim=99, train_per_dim=1)
             self.assertEqual(
-                len(hold) >= 42, ok,
-                f"per_dim={per_dim} 扔满后 holdout={len(hold)}，与预期（≥42 应为 {ok}）不符",
+                len(hold) >= BREAK_EVEN_HOLDOUT, ok,
+                f"per_dim={per_dim} 扔满后 holdout={len(hold)}，"
+                f"与预期（≥{BREAK_EVEN_HOLDOUT} 应为 {ok}）不符",
             )
+
+    def test_live_config_clears_break_even(self):
+        """**上线的配法**必须过保本线 —— 否则改了常量、测试还全绿，就是又一个静默错误。"""
+        import build_devteam
+
+        p = build_devteam.RUN_PARAMS
+        self.assertGreater(p.get("train_per_dim", 0), 0, "未启用封顶切分")
+        per_dim = int(p["per_dim"])
+        floor_hold = 6 * math.ceil(per_dim / 2) - 6
+        self.assertGreaterEqual(
+            floor_hold, BREAK_EVEN_HOLDOUT,
+            f"上线配法 per_dim={per_dim} 扔满后只剩 {floor_hold} 道，"
+            f"低于保本题量 {BREAK_EVEN_HOLDOUT}（alloc.py 反算）",
+        )
 
 
 class ProbeIndependenceTests(unittest.TestCase):

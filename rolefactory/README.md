@@ -113,6 +113,8 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/gate_dryrun.py [--ceiling 90] [--holdout-per-dim N] [--train-per-dim N]` | 筛题门槛空跑：拿历史题组算「会扔哪些题、holdout 会不会反而变小、进化成本动不动」（离线） |
 | `tools/ceiling_sweep.py [--md]` | 扫门槛 100→70，看扔掉天花板题后区间是变窄还是变宽（离线；结论：**变宽**，见 §18.9） |
 | `tools/ceiling_mech.py [--ceiling 90]` | 分辨天花板题是「稀释到 0」还是「系统性拖拽」，并检查逐席方向是否一致（离线） |
+| `tools/alloc.py [--budget 180]` | 固定额度下「加题 vs 加重复」的约束最优化 + 逐席**保本题量** + 重复地板告警（离线；§18.10） |
+| `tools/plan_n.py` | 用去偏后的 sd 反算需要多少道 holdout，检查当前配法够不够（离线） |
 | `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
 | `tools/headroom.py [--min-gain 5]` | 基线可涨空间：多少题贴天花板量不出提升，以及 Δ 被截断偏了多少（离线） |
 | `tools/case_outliers.py <run_id>` | 留一法：哪道题在撑着结论（**诊断用，不是筛题用**；离线） |
