@@ -1,0 +1,814 @@
+{
+ "run_id": "20260811-021053-22f4c1",
+ "role": "项目经理",
+ "role_id": "role_c81cdcf6",
+ "status": "aborted",
+ "params": {
+  "model": "k3",
+  "scoring_mode": "objective",
+  "judge_shadow": false,
+  "per_dim": 21,
+  "generations": 3,
+  "variants_per_gen": 10,
+  "reps": 1,
+  "holdout_reps": 1,
+  "holdout_per_dim": 10,
+  "train_per_dim": 1,
+  "headroom_ceiling": 90.0,
+  "elite": 2,
+  "min_gain": 0.5,
+  "patience": 1,
+  "seed": 20260810,
+  "concurrency": 32,
+  "budget_tokens": 2500000,
+  "budget_seconds": 2400.0,
+  "anchor_limit": 5
+ },
+ "created_at": 1786414253.5151823,
+ "wall_seconds": 628.0,
+ "performance": {
+  "llm": {
+   "calls": 312,
+   "api_calls": 202,
+   "cache_hits": 110,
+   "cache_hit_rate": 0.3526,
+   "retries": 14,
+   "errors": 0,
+   "prompt_tokens": 248518,
+   "completion_tokens": 778363,
+   "total_tokens": 1026881,
+   "api_seconds_sum": 13254.0,
+   "queue_seconds_sum": 15077.8,
+   "inflight_peak": 32,
+   "hedges": 0,
+   "hedge_wins": 0,
+   "latency_p50": 62.46,
+   "latency_p90": 97.45,
+   "latency_p99": 126.67,
+   "latency_max": 131.06,
+   "by_purpose": {
+    "answer": {
+     "calls": 158,
+     "cache_hits": 3,
+     "tokens": 370735,
+     "seconds": 9493.9
+    },
+    "bank": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3349,
+     "seconds": 60.5
+    },
+    "blueprint": {
+     "calls": 1,
+     "cache_hits": 1,
+     "tokens": 1780,
+     "seconds": 0.0
+    },
+    "blueprint:repair": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 2162,
+     "seconds": 22.9
+    },
+    "case_objective": {
+     "calls": 150,
+     "cache_hits": 106,
+     "tokens": 645444,
+     "seconds": 3631.2
+    },
+    "case_objective:repair": {
+     "calls": 1,
+     "cache_hits": 0,
+     "tokens": 3411,
+     "seconds": 45.6
+    }
+   }
+  },
+  "evals": {
+   "done": 32,
+   "failed": 0,
+   "total": 72
+  },
+  "probes": {
+   "done": 126,
+   "failed": 0
+  },
+  "api_calls_per_second": 0.32,
+  "evals_per_minute": 15.1,
+  "tokens_per_eval": 6499,
+  "phase_seconds": {
+   "blueprint": 22.9,
+   "probe": 288.7,
+   "cases": 527.9,
+   "bank": 527.3
+  },
+  "parallel": {
+   "concurrency_cap": 32,
+   "effective_parallel": 21.11,
+   "utilization_vs_cap": 0.66,
+   "inflight_peak": 32,
+   "api_seconds_sum": 13254.0,
+   "queue_seconds_sum": 15077.8,
+   "queue_share": 0.532,
+   "serial_seconds_equivalent": 13254.0,
+   "speedup_vs_serial": 21.11,
+   "hedges": 0,
+   "hedge_wins": 0,
+   "latency": {
+    "p50": 62.46,
+    "p90": 97.45,
+    "p99": 126.67,
+    "max": 131.06
+   },
+   "note": "排队秒数不计入 API 秒数；hedges 为长尾补发次数，hedge_wins 为补发先到的次数（被丢弃的那份仍消耗了服务端 token，未计入本地 tokens）。"
+  }
+ },
+ "blueprint": {
+  "role": "项目经理",
+  "role_id": "role_c81cdcf6",
+  "one_line": "在范围、进度、成本、资源的约束下制定可行计划、识别风险并推动项目按期交付。",
+  "dimensions": [
+   {
+    "key": "critical_path_scheduling",
+    "name": "关键路径与工期计算",
+    "weight": 20,
+    "why": "排期是项目经理的核心产出，关键路径算错直接导致交付承诺失真。",
+    "probe": "给出任务清单（含前置依赖与工期），要求计算总工期、关键路径及某任务的浮动时间。",
+    "failure_modes": [
+     "把最长单链误当关键路径而漏掉并行汇合点",
+     "混淆自由浮动与总浮动，误判延误是否影响总工期"
+    ]
+   },
+   {
+    "key": "earned_value_analysis",
+    "name": "挣值与成本绩效计算",
+    "weight": 20,
+    "why": "用 PV/EV/AC 判断项目健康度是汇报与纠偏决策的依据，算错 CPI/SPI 会得出相反结论。",
+    "probe": "给出计划值、挣值、实际成本数据，要求计算 CPI、SPI、EAC 并判断项目处于超支还是节约状态。",
+    "failure_modes": [
+     "CPI 公式分子分母颠倒（EV/AC 写成 AC/EV）",
+     "机械套用 EAC=BAC/CPI 而不判断偏差是否为典型性偏差"
+    ]
+   },
+   {
+    "key": "statistical_trap_detection",
+    "name": "统计陷阱与进度数据误读识别",
+    "weight": 20,
+    "why": "燃尽图、velocity、完成率等数据常被误读，项目经理必须能指出数据背后的误导性结论。",
+    "probe": "给出一段基于项目数据的乐观结论（如“前两周完成 40%，故将提前交付”），要求指出其中具体的统计谬误。",
+    "failure_modes": [
+     "忽视任务难度不均匀（先易后难）导致线性外推错误",
+     "未发现分母变化（范围蔓延）导致完成率虚高或虚低"
+    ]
+   },
+   {
+    "key": "counterintuitive_planning_pitfalls",
+    "name": "反直觉计划陷阱识别",
+    "weight": 15,
+    "why": "赶工、加人、压缩关键路径等直觉操作常常无效甚至有害，这是区分资深与新手项目经理的试金石。",
+    "probe": "给出“进度落后，拟增加人手/对所有任务赶工”的方案，要求指出其中必然错误或无效的具体环节及理由。",
+    "failure_modes": [
+     "对非关键路径任务赶工，花钱却不缩短总工期",
+     "无视布鲁克斯定律，认为向延期项目加人必然提速"
+    ]
+   },
+   {
+    "key": "resource_feasibility_check",
+    "name": "资源冲突与计划可行性核查",
+    "weight": 15,
+    "why": "纸面计划常因同一资源被并行任务重复占用而不可执行，项目经理必须能在评审时发现。",
+    "probe": "给出任务排期表与人员分配，要求找出某时段资源过载（如一人同日被分配 12 小时工作）的具体冲突点。",
+    "failure_modes": [
+     "只查依赖关系不查资源日历，漏掉超载时段",
+     "发现冲突但给不出唯一正确的最小调整方案"
+    ]
+   },
+   {
+    "key": "risk_quantification",
+    "name": "风险量化与应对决策",
+    "weight": 10,
+    "why": "风险登记册不是罗列清单，要用预期货币价值（EMV）排优先级并决定储备金。",
+    "probe": "给出若干风险的概率与影响金额，要求计算各风险 EMV、排序并给出应预留的应急储备总额。",
+    "failure_modes": [
+     "只按影响金额排序而忽略发生概率",
+     "把 EMV 累加错误或对已触发风险仍计为储备"
+    ]
+   }
+  ],
+  "hard_constraints": [
+   "不得在缺乏依赖与资源数据时凭空承诺交付日期，必须显式列出假设",
+   "不得为迎合上级而隐瞒或淡化已识别的进度/成本偏差",
+   "不得在未评估对关键路径、成本与质量的影响前接受范围变更",
+   "计算类结论必须给出可复核的中间数值（CPI、浮动时间、EMV 等），禁止只给定性判断"
+  ],
+  "output_habits": [
+   "先列输入数据与假设，再给计算过程，最后给结论与建议",
+   "对每个判断标注其依据的数值指标（如 SPI=0.8 故进度落后）",
+   "发现计划中的错误时明确指出错误位置、正确值及影响范围",
+   "输出风险时按量化优先级排序并附对应的应对策略与责任人建议"
+  ]
+ },
+ "anchors": [
+  {
+   "id": "planbench",
+   "title": "PlanBench / LLMs-Planning",
+   "about": "规划与重规划能力基准（可验证的规划域）。",
+   "task_shape": "PDDL 类规划任务",
+   "scoring": "规划器可验证",
+   "path": "upstream/planbench/",
+   "pulled": true,
+   "runnable_here": false,
+   "blocked_by": "需要规划验证器",
+   "match": 1
+  }
+ ],
+ "suite": {
+  "count": 97,
+  "train": [
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01",
+   "role_c81cdcf6_critical_path_scheduling_basic_01",
+   "role_c81cdcf6_earned_value_analysis_hard_03",
+   "role_c81cdcf6_resource_feasibility_check_basic_01",
+   "role_c81cdcf6_risk_quantification_basic_01",
+   "role_c81cdcf6_statistical_trap_detection_basic_01"
+  ],
+  "holdout": [
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_09",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_11",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_12",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_13",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_14",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_15",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_16",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_17",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_18",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_19",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_20",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_21",
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02",
+   "role_c81cdcf6_critical_path_scheduling_hard_03",
+   "role_c81cdcf6_critical_path_scheduling_hard_06",
+   "role_c81cdcf6_critical_path_scheduling_hard_07",
+   "role_c81cdcf6_critical_path_scheduling_hard_09",
+   "role_c81cdcf6_critical_path_scheduling_hard_12",
+   "role_c81cdcf6_critical_path_scheduling_hard_13",
+   "role_c81cdcf6_critical_path_scheduling_hard_14",
+   "role_c81cdcf6_critical_path_scheduling_hard_15",
+   "role_c81cdcf6_critical_path_scheduling_hard_17",
+   "role_c81cdcf6_critical_path_scheduling_hard_18",
+   "role_c81cdcf6_critical_path_scheduling_hard_19",
+   "role_c81cdcf6_critical_path_scheduling_medium_02",
+   "role_c81cdcf6_earned_value_analysis_hard_04",
+   "role_c81cdcf6_earned_value_analysis_hard_05",
+   "role_c81cdcf6_earned_value_analysis_hard_06",
+   "role_c81cdcf6_earned_value_analysis_hard_07",
+   "role_c81cdcf6_earned_value_analysis_hard_08",
+   "role_c81cdcf6_earned_value_analysis_hard_09",
+   "role_c81cdcf6_earned_value_analysis_hard_10",
+   "role_c81cdcf6_earned_value_analysis_hard_11",
+   "role_c81cdcf6_earned_value_analysis_hard_12",
+   "role_c81cdcf6_earned_value_analysis_hard_13",
+   "role_c81cdcf6_earned_value_analysis_hard_14",
+   "role_c81cdcf6_earned_value_analysis_hard_15",
+   "role_c81cdcf6_earned_value_analysis_hard_16",
+   "role_c81cdcf6_earned_value_analysis_hard_17",
+   "role_c81cdcf6_earned_value_analysis_hard_18",
+   "role_c81cdcf6_earned_value_analysis_hard_19",
+   "role_c81cdcf6_earned_value_analysis_hard_20",
+   "role_c81cdcf6_earned_value_analysis_hard_21",
+   "role_c81cdcf6_earned_value_analysis_medium_02",
+   "role_c81cdcf6_resource_feasibility_check_hard_03",
+   "role_c81cdcf6_resource_feasibility_check_hard_04",
+   "role_c81cdcf6_resource_feasibility_check_hard_05",
+   "role_c81cdcf6_resource_feasibility_check_hard_06",
+   "role_c81cdcf6_resource_feasibility_check_hard_07",
+   "role_c81cdcf6_resource_feasibility_check_hard_08",
+   "role_c81cdcf6_resource_feasibility_check_hard_09",
+   "role_c81cdcf6_resource_feasibility_check_hard_10",
+   "role_c81cdcf6_resource_feasibility_check_hard_12",
+   "role_c81cdcf6_resource_feasibility_check_hard_16",
+   "role_c81cdcf6_risk_quantification_hard_03",
+   "role_c81cdcf6_risk_quantification_hard_05",
+   "role_c81cdcf6_risk_quantification_hard_06",
+   "role_c81cdcf6_risk_quantification_hard_08",
+   "role_c81cdcf6_risk_quantification_hard_09",
+   "role_c81cdcf6_risk_quantification_hard_10",
+   "role_c81cdcf6_risk_quantification_hard_12",
+   "role_c81cdcf6_risk_quantification_hard_13",
+   "role_c81cdcf6_risk_quantification_hard_14",
+   "role_c81cdcf6_risk_quantification_hard_15",
+   "role_c81cdcf6_risk_quantification_hard_16",
+   "role_c81cdcf6_risk_quantification_hard_17",
+   "role_c81cdcf6_risk_quantification_hard_18",
+   "role_c81cdcf6_risk_quantification_hard_19",
+   "role_c81cdcf6_risk_quantification_hard_20",
+   "role_c81cdcf6_risk_quantification_medium_02",
+   "role_c81cdcf6_statistical_trap_detection_hard_03",
+   "role_c81cdcf6_statistical_trap_detection_hard_04",
+   "role_c81cdcf6_statistical_trap_detection_hard_05",
+   "role_c81cdcf6_statistical_trap_detection_hard_06",
+   "role_c81cdcf6_statistical_trap_detection_hard_07",
+   "role_c81cdcf6_statistical_trap_detection_hard_08",
+   "role_c81cdcf6_statistical_trap_detection_hard_09",
+   "role_c81cdcf6_statistical_trap_detection_hard_10",
+   "role_c81cdcf6_statistical_trap_detection_hard_11",
+   "role_c81cdcf6_statistical_trap_detection_hard_12",
+   "role_c81cdcf6_statistical_trap_detection_hard_13",
+   "role_c81cdcf6_statistical_trap_detection_hard_15",
+   "role_c81cdcf6_statistical_trap_detection_hard_16",
+   "role_c81cdcf6_statistical_trap_detection_hard_17",
+   "role_c81cdcf6_statistical_trap_detection_hard_19",
+   "role_c81cdcf6_statistical_trap_detection_hard_20",
+   "role_c81cdcf6_statistical_trap_detection_hard_21"
+  ],
+  "path": "case/role/role_c81cdcf6/testcases.jsonl",
+  "dropped_saturated": [
+   {
+    "id": "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03",
+    "dimension": "反直觉计划陷阱识别",
+    "baseline": 92.38
+   },
+   {
+    "id": "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04",
+    "dimension": "反直觉计划陷阱识别",
+    "baseline": 91.67
+   },
+   {
+    "id": "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_10",
+    "dimension": "反直觉计划陷阱识别",
+    "baseline": 91.67
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_04",
+    "dimension": "关键路径与工期计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_05",
+    "dimension": "关键路径与工期计算",
+    "baseline": 94.29
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_08",
+    "dimension": "关键路径与工期计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_10",
+    "dimension": "关键路径与工期计算",
+    "baseline": 94.29
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_11",
+    "dimension": "关键路径与工期计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_16",
+    "dimension": "关键路径与工期计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_20",
+    "dimension": "关键路径与工期计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_critical_path_scheduling_hard_21",
+    "dimension": "关键路径与工期计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_earned_value_analysis_basic_01",
+    "dimension": "挣值与成本绩效计算",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_11",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_13",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_14",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_15",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_17",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_18",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_19",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_20",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_hard_21",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_resource_feasibility_check_medium_02",
+    "dimension": "资源冲突与计划可行性核查",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_risk_quantification_hard_04",
+    "dimension": "风险量化与应对决策",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_risk_quantification_hard_07",
+    "dimension": "风险量化与应对决策",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_risk_quantification_hard_11",
+    "dimension": "风险量化与应对决策",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_risk_quantification_hard_21",
+    "dimension": "风险量化与应对决策",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_statistical_trap_detection_hard_14",
+    "dimension": "统计陷阱与进度数据误读识别",
+    "baseline": 100.0
+   },
+   {
+    "id": "role_c81cdcf6_statistical_trap_detection_hard_18",
+    "dimension": "统计陷阱与进度数据误读识别",
+    "baseline": 92.38
+   },
+   {
+    "id": "role_c81cdcf6_statistical_trap_detection_medium_02",
+    "dimension": "统计陷阱与进度数据误读识别",
+    "baseline": 100.0
+   }
+  ],
+  "headroom_ceiling": 90.0,
+  "probe_baseline": {
+   "role_c81cdcf6_critical_path_scheduling_basic_01": 84.76,
+   "role_c81cdcf6_critical_path_scheduling_hard_11": 100.0,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_08": 86.67,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_14": 72.5,
+   "role_c81cdcf6_critical_path_scheduling_hard_03": 88.57,
+   "role_c81cdcf6_critical_path_scheduling_hard_04": 100.0,
+   "role_c81cdcf6_critical_path_scheduling_hard_05": 94.29,
+   "role_c81cdcf6_critical_path_scheduling_hard_12": 88.57,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_17": 77.14,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_medium_02": 88.57,
+   "role_c81cdcf6_critical_path_scheduling_hard_06": 88.57,
+   "role_c81cdcf6_critical_path_scheduling_hard_10": 94.29,
+   "role_c81cdcf6_critical_path_scheduling_hard_09": 82.86,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_07": 67.5,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_16": 85.0,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_20": 84.76,
+   "role_c81cdcf6_critical_path_scheduling_hard_21": 100.0,
+   "role_c81cdcf6_critical_path_scheduling_hard_08": 100.0,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_basic_01": 86.67,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_09": 83.33,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_13": 88.57,
+   "role_c81cdcf6_critical_path_scheduling_hard_13": 82.86,
+   "role_c81cdcf6_critical_path_scheduling_hard_17": 88.57,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_11": 86.67,
+   "role_c81cdcf6_critical_path_scheduling_hard_18": 82.86,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_15": 74.29,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_21": 86.67,
+   "role_c81cdcf6_earned_value_analysis_hard_04": 76.67,
+   "role_c81cdcf6_earned_value_analysis_basic_01": 100.0,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_06": 84.76,
+   "role_c81cdcf6_earned_value_analysis_hard_03": 76.67,
+   "role_c81cdcf6_critical_path_scheduling_hard_15": 88.57,
+   "role_c81cdcf6_earned_value_analysis_hard_05": 76.67,
+   "role_c81cdcf6_earned_value_analysis_hard_06": 76.67,
+   "role_c81cdcf6_earned_value_analysis_hard_07": 76.67,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_03": 92.38,
+   "role_c81cdcf6_earned_value_analysis_hard_08": 76.67,
+   "role_c81cdcf6_earned_value_analysis_hard_09": 76.67,
+   "role_c81cdcf6_critical_path_scheduling_hard_14": 82.86,
+   "role_c81cdcf6_critical_path_scheduling_hard_19": 82.86,
+   "role_c81cdcf6_critical_path_scheduling_hard_20": 100.0,
+   "role_c81cdcf6_earned_value_analysis_hard_13": 76.67,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_05": 56.03,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_18": 84.76,
+   "role_c81cdcf6_earned_value_analysis_hard_14": 76.67,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_10": 91.67,
+   "role_c81cdcf6_earned_value_analysis_hard_16": 76.67,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_12": 60.0,
+   "role_c81cdcf6_earned_value_analysis_hard_10": 76.67,
+   "role_c81cdcf6_earned_value_analysis_hard_17": 76.67,
+   "role_c81cdcf6_earned_value_analysis_hard_18": 85.0,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_04": 91.67,
+   "role_c81cdcf6_earned_value_analysis_hard_20": 76.67,
+   "role_c81cdcf6_earned_value_analysis_hard_11": 76.67,
+   "role_c81cdcf6_resource_feasibility_check_hard_03": 93.33,
+   "role_c81cdcf6_earned_value_analysis_hard_15": 76.67,
+   "role_c81cdcf6_resource_feasibility_check_hard_05": 100.0,
+   "role_c81cdcf6_earned_value_analysis_hard_19": 76.67,
+   "role_c81cdcf6_risk_quantification_hard_04": 100.0,
+   "role_c81cdcf6_earned_value_analysis_hard_21": 76.67,
+   "role_c81cdcf6_earned_value_analysis_medium_02": 80.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_04": 93.33,
+   "role_c81cdcf6_resource_feasibility_check_hard_11": 100.0,
+   "role_c81cdcf6_risk_quantification_basic_01": 28.57,
+   "role_c81cdcf6_resource_feasibility_check_hard_08": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_14": 100.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_15": 100.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_20": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_08": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_12": 93.33,
+   "role_c81cdcf6_resource_feasibility_check_hard_19": 100.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_07": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_07": 100.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_21": 100.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_10": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_medium_02": 100.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_06": 93.33,
+   "role_c81cdcf6_risk_quantification_hard_06": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_09": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_03": 85.0,
+   "role_c81cdcf6_risk_quantification_hard_16": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_basic_01": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_12": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_16": 93.33,
+   "role_c81cdcf6_risk_quantification_hard_20": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_13": 100.0,
+   "role_c81cdcf6_risk_quantification_medium_02": 75.0,
+   "role_c81cdcf6_risk_quantification_hard_10": 85.0,
+   "role_c81cdcf6_statistical_trap_detection_basic_01": 77.78,
+   "role_c81cdcf6_risk_quantification_hard_19": 85.0,
+   "role_c81cdcf6_risk_quantification_hard_13": 85.0,
+   "role_c81cdcf6_risk_quantification_hard_14": 85.0,
+   "role_c81cdcf6_risk_quantification_hard_21": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_09": 85.0,
+   "role_c81cdcf6_risk_quantification_hard_17": 85.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_10": 90.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_12": 87.5,
+   "role_c81cdcf6_statistical_trap_detection_hard_16": 77.5,
+   "role_c81cdcf6_risk_quantification_hard_15": 85.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_14": 100.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_19": 84.76,
+   "role_c81cdcf6_risk_quantification_hard_11": 100.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_20": 84.76,
+   "role_c81cdcf6_statistical_trap_detection_hard_05": 77.14,
+   "role_c81cdcf6_statistical_trap_detection_hard_04": 90.0,
+   "role_c81cdcf6_counterintuitive_planning_pitfalls_hard_19": 85.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_18": 92.38,
+   "role_c81cdcf6_statistical_trap_detection_hard_21": 85.0,
+   "role_c81cdcf6_earned_value_analysis_hard_12": 76.67,
+   "role_c81cdcf6_statistical_trap_detection_hard_11": 90.0,
+   "role_c81cdcf6_critical_path_scheduling_hard_16": 100.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_03": 85.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_13": 82.86,
+   "role_c81cdcf6_statistical_trap_detection_hard_06": 86.67,
+   "role_c81cdcf6_statistical_trap_detection_hard_07": 72.5,
+   "role_c81cdcf6_statistical_trap_detection_hard_09": 85.0,
+   "role_c81cdcf6_critical_path_scheduling_hard_07": 82.86,
+   "role_c81cdcf6_statistical_trap_detection_hard_15": 32.38,
+   "role_c81cdcf6_statistical_trap_detection_hard_17": 82.86,
+   "role_c81cdcf6_resource_feasibility_check_hard_18": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_05": 85.0,
+   "role_c81cdcf6_statistical_trap_detection_hard_08": 73.33,
+   "role_c81cdcf6_statistical_trap_detection_medium_02": 100.0,
+   "role_c81cdcf6_risk_quantification_hard_18": 85.0,
+   "role_c81cdcf6_resource_feasibility_check_hard_17": 100.0,
+   "role_c81cdcf6_critical_path_scheduling_medium_02": 84.44
+  }
+ },
+ "bank": {
+  "G1": [
+   {
+    "id": "g1_weak",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "空泛定位",
+    "strength": "weak",
+    "text": "你是一名专业的项目经理，负责项目管理工作，确保项目顺利完成。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g1_a",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "交付守门人",
+    "strength": "strong",
+    "text": "你是项目经理，首要职责是在范围、进度、成本、资源四重约束下给出**可执行、可复核**的计划并推动按期交付。你的服务对象是项目的真实健康度而非任何一方的期望：对上级如实暴露偏差，对团队拦截不可行的承诺。所有排期与成本结论必须以数值为依据，凡缺依赖或资源数据时，宁可给出'假设清单+条件性结论'，也不凭空给交付日期。",
+    "hypothesis": "强化硬边界遵守，减少凭空承诺与迎合性偏差"
+   },
+   {
+    "id": "g1_b",
+    "slot": "G1",
+    "slot_name": "身份定位",
+    "label": "量化决策顾问",
+    "strength": "strong",
+    "text": "你是以数据驱动决策的项目经理。你的优先级排序：①结论可被复核（每个判断附 CPI/SPI/浮动/EMV 等中间值）>②计划可被执行（过资源日历核查）>③汇报让人舒服。你的身份不是'进度汇报员'而是'计划正确性的第一责任人'：当直觉操作（加人、赶工）与计算结论冲突时，以计算为准，并向干系人解释为什么直觉方案无效。",
+    "hypothesis": "提升反直觉陷阱识别与量化结论占比"
+   }
+  ],
+  "G2": [
+   {
+    "id": "g2_weak",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "泛泛谨慎",
+    "strength": "weak",
+    "text": "在信息不足时要谨慎回答，不要做出不合理的承诺，注意项目风险。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g2_a",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "缺数据先列假设",
+    "strength": "strong",
+    "text": "信息不足时的固定动作：收到排期/成本类问题先盘点输入是否齐全——任务清单、前置依赖、工期估计、资源日历、BAC 五要素缺一即触发'假设模式'：显式列出每个假设（如'假设任务间均为 FS 依赖、无资源约束'），再给出条件性结论，结尾注明'若实际依赖/资源与假设不符，结论需重算'。禁止在缺依赖数据时给出单一确定交付日。",
+    "hypothesis": "补齐假设显式化，降低幻觉式承诺"
+   },
+   {
+    "id": "g2_b",
+    "slot": "G2",
+    "slot_name": "边界约束",
+    "label": "变更与偏差闸门",
+    "strength": "strong",
+    "text": "三条不可逾越的闸门：①任何范围变更，先评估对关键路径、成本、质量三者的影响并量化（工期+几天、成本+多少、是否引入新关键路径），评估完成前不得接受；②发现进度/成本偏差（SPI<1 或 CPI<1）时必须在输出中如实呈现，禁止用'整体可控'等措辞淡化；③计算类结论禁止只给定性判断，CPI=EV/AC、总浮动=LS-ES、EMV=概率×影响，公式与中间数必须可见。",
+    "hypothesis": "约束迎合倾向，强制可复核中间值输出"
+   }
+  ],
+  "G3": [
+   {
+    "id": "g3_weak",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "常识罗列",
+    "strength": "weak",
+    "text": "掌握关键路径法、挣值管理、风险管理等项目管理知识，熟悉燃尽图和敏捷方法。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g3_a",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "CPM+EVM计算口径",
+    "strength": "strong",
+    "text": "关键路径计算口径：正推取 ES=max(前置EF)、EF=ES+工期；逆推 LF=min(后继LS)、LS=LF-工期；总浮动=LS-ES，自由浮动=min(后继ES)-EF；关键路径是总浮动为0的链，**不是任务最多或单链最长的路径**——并行汇合点处须两条链都算，取真正制约工期的链。挣值口径：CPI=EV/AC、SPI=EV/PV（分子永远是EV）；EAC 先判偏差性质：典型性偏差用 BAC/CPI，非典型用 AC+(BAC-EV)，工期+成本双重偏差用 AC+(BAC-EV)/(CPI×SPI)。",
+    "hypothesis": "直接纠正CPI颠倒、自由/总浮动混淆、汇合点漏算三类易错"
+   },
+   {
+    "id": "g3_b",
+    "slot": "G3",
+    "slot_name": "知识方法",
+    "label": "数据陷阱+反直觉手册",
+    "strength": "strong",
+    "text": "进度数据误读检查清单：①velocity/完成率线性外推前，先查任务难度是否均匀（先易后难会高估后期速度）；②完成率变化先查分母——范围蔓延会让分子分母同涨，完成率虚高；③燃尽图走平先区分'停滞'与'范围新增'。反直觉操作判定表：赶工只压关键路径上的任务，对非关键任务赶工=纯浪费；向延期项目加人触发布鲁克斯定律（沟通与培训成本使短期更慢），结论必须先给负面提示再给替代方案（拆分任务、并行化、砍范围）。",
+    "hypothesis": "提升统计陷阱识别与反直觉计划题得分"
+   }
+  ],
+  "G4": [
+   {
+    "id": "g4_weak",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "通用流程",
+    "strength": "weak",
+    "text": "接到任务后先分析问题，然后制定计划，最后检查一遍再输出。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g4_a",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先对齐口径再动手",
+    "strength": "strong",
+    "text": "执行步骤：①输入盘点——列出题目给定的任务、依赖、工期、资源、成本数据，缺口写入'假设'区；②选口径——排期题先声明用 CPM 正推/逆推，成本题先声明 PV/EV/AC 定义；③逐步计算并保留中间值（每个任务的 ES/EF/LS/LF、每个指标的分子分母）；④交叉自检——关键路径长度=总工期？浮动时间非负？CPI×BAC 与 EAC 量级合理？⑤输出：假设→计算表→结论→建议，结论逐条标注依据指标。",
+    "hypothesis": "提高计算题过程完整性与可复核性"
+   },
+   {
+    "id": "g4_b",
+    "slot": "G4",
+    "slot_name": "能力流程",
+    "label": "先给结论再反向验证",
+    "strength": "strong",
+    "text": "执行步骤：①先快速给出初步答案（关键路径候选、CPI/SPI 初值）；②用陷阱清单反向攻击自己的答案——是否存在并行汇合点被漏算？浮动用的是总浮动还是自由浮动口径？CPI 分子分母有没有颠倒？EAC 公式是否匹配偏差类型？资源是否在并行任务间被重复占用？③每发现一个疑点就修正并在输出中写明'修正位置+正确值+影响范围'；④最后按'结论→依据数值→风险与建议'输出，风险按 EMV 降序排列并附应对策略。",
+    "hypothesis": "通过自检清单直接命中各类易错点"
+   }
+  ],
+  "G5": [
+   {
+    "id": "g5_weak",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "礼貌笼统",
+    "strength": "weak",
+    "text": "输出要结构清晰、语气专业，给出合理的结论和建议。",
+    "hypothesis": ""
+   },
+   {
+    "id": "g5_a",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "三段式数值锚定",
+    "strength": "strong",
+    "text": "固定输出结构：【输入与假设】→【计算过程】（表格化呈现各任务 ES/EF/LS/LF 或 PV/EV/AC 及推导）→【结论与建议】。语气：陈述事实、不带情绪。每个判断句必须挂数值锚点，格式为'结论+（指标=数值，故…）'，如'项目进度落后（SPI=0.8，EV<PV）'、'任务C可延误3天不影响工期（总浮动=3天）'。禁止出现'应该''大概''整体可控'之类无锚点措辞。",
+    "hypothesis": "提升输出格式合规与数值标注密度"
+   },
+   {
+    "id": "g5_b",
+    "slot": "G5",
+    "slot_name": "经验风格",
+    "label": "纠错显式化+风险排序",
+    "strength": "strong",
+    "text": "输出风格：当题目计划或给定数据存在错误时，用固定纠错句式：'错误位于X；正确值为Y（计算：…）；影响范围为Z（总工期+/-N天/成本+/-N元）'。风险输出一律按 EMV=概率×影响 降序列表，每项附：应对策略（规避/转移/减轻/接受）+建议责任人角色+是否计入储备金（已触发风险不计入储备）。结尾给一句'下一步行动'，只含可立即执行的事项，不写空泛号召。",
+    "hypothesis": "强化纠错表达与风险量化决策题表现"
+   }
+  ]
+ },
+ "scoring": {
+  "mode": "objective",
+  "scorer_version": 3,
+  "how": "客观：每题自带可程序校验的断言（数值/必含/禁含/回问/条数/结论先行），纯 Python 打分，同一回答任何时候复算同分；LLM 只负责出题与作答，不参与判分。",
+  "check_types": {
+   "lead_with": {
+    "count": 42,
+    "weight_sum": 230.0
+   },
+   "min_items": {
+    "count": 2,
+    "weight_sum": 10.7
+   },
+   "must_include": {
+    "count": 127,
+    "weight_sum": 2294.9
+   },
+   "must_not_include": {
+    "count": 97,
+    "weight_sum": 1344.4
+   },
+   "numeric": {
+    "count": 219,
+    "weight_sum": 5820.0
+   }
+  },
+  "verified_cases": 97,
+  "objective_spread_arms": {
+   "n": 0
+  },
+  "objective_spread_variants": {
+   "n": 0
+  },
+  "judge_shadow_spread_arms": {
+   "n": 0
+  },
+  "note": "objective_spread_* 与 judge_shadow_spread_* 放在一起看：跨度越大说明该口径越能拉开差距。"
+ },
+ "scores": {
+  "baseline_no_genes": {},
+  "all_weak_genes": {},
+  "champion_train": {},
+  "delta_train_weighted": null,
+  "paired_train": {},
+  "holdout": {}
+ },
+ "generations": [],
+ "champion_genome": {
+  "system": null,
+  "choice": null,
+  "labels": null
+ },
+ "caveats": [
+  "打分为程序化断言，可复算；但题目与标准答案由 LLM 生成，已用 computation 重算自校，仍可能存在设计偏差。",
+  "断言里的关键词匹配可被堆词部分蒙到；用 numeric（权重≥35）与 must_not_include 压制，不能完全排除。",
+  "must_not_include 自 2026-08-11 起区分「主张错误说法」与「引用它并否掉」（同句、词前 40 字内有否定线索才免扣）；此前的 run 未享此修正，其分数含约 2 分/条的误扣噪声，跨日期对比请先跑 tools/rescore.py 对齐口径。",
+  "benchmark 仅作题型/口径锚点，非原题实跑（DABstep/DABench 需数据文件与代码沙箱）。",
+  "样本量小（题数×重复数），分差需配合 paired 明细与 std 一起读，不做显著性声明。",
+  "已启用筛题门槛：基线试答 >90 分的题被扔掉（本次扔 29 道，明细见 suite.dropped_saturated）。筛题用的是与评分**独立**的一次基线采样（rep=-1），因此不构成事后择优；每维最多扔一半以保住分层。理由见 PERF.md §18。"
+ ]
+}
