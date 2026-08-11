@@ -26,13 +26,70 @@ sys.path.insert(0, str(HERE))
 import heartbeat  # noqa: E402
 
 
+def console_can_show_chinese() -> bool:
+    """这个终端能否如实显示中文 —— 不能就别用中文报状态。
+
+    这条不是排版讲究，是**正确性**问题：实测「心跳 4.5 分钟前」被渲染成
+    `心�?4.5 分钟前`，我把糊掉的那个字读成了数字，于是把 4.5 分钟误判成 14.5 分钟，
+    凭空怀疑守护漏了一个探针周期。同一个坑之前更贵 —— `Get-Process` 的空输出
+    被读成"进程已死"，于是又起了一个守护，后来发现三个旧守护一直活着，
+    差点四发同一个复核。**糊掉的输出会被当成关于系统状态的事实**。
+
+    但要如实说清这个自动检测的**局限**（否则它自己就是一个虚假的保证）：
+    它只能发现「Python 这一端就编码不了中文」。而真正咬人的那次不是这种 ——
+    Python 直接写终端时中文是好的，是**管道下游的 PowerShell**（`| Select-Object`）
+    重新编码时弄糊的，那时 `sys.stdout.encoding` 完全正常，本函数返回 True。
+
+    所以操作纪律优先于自动检测：**任何要过 PowerShell 管道的调用都显式加 `--ascii`**。
+    自动检测只兜住"控制台本身是 GBK/cp437"那一类。
+    """
+    enc = getattr(sys.stdout, "encoding", None) or ""
+    try:
+        "守护心跳".encode(enc)
+        return True
+    except (LookupError, UnicodeEncodeError, TypeError):
+        return False
+
+
+def report_ascii(row: dict, age: float, limit: float, state: str) -> int:
+    """纯 ASCII 状态块：宁可难看，也不能被误读。"""
+    alive = age <= limit
+    terminal = state in ("finished", "aborted_quota", "aborted_error", "pilot_failed")
+    verdict = ("FINISHED-OK" if state == "finished"
+               else f"TERMINAL-{state.upper()}" if terminal
+               else "ALIVE" if alive else "DEAD")
+    print(f"verdict    : {verdict}")
+    print(f"state      : {state}   pid: {row.get('pid')}")
+    print(f"last_beat  : {row.get('iso')}   age_min: {age / 60:.1f}"
+          f"   dead_if_over_min: {limit / 60:.1f}")
+    print(f"started    : {row.get('started_iso')}")
+    for k in ("probes", "waited_min", "seat", "run_id", "reps", "note"):
+        if row.get(k) is not None:
+            print(f"{k:<11}: {row[k]}")
+    if verdict == "DEAD":
+        print("action     : restart -> python tools/queue_decisive.py --probe-every 600")
+    return 0 if verdict in ("ALIVE", "FINISHED-OK") else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="检查守护心跳")
     ap.add_argument("--every", type=int, default=600, help="守护的探针周期（秒）")
     ap.add_argument("--quiet", action="store_true", help="只在异常时输出")
+    ap.add_argument("--ascii", action="store_true",
+                    help="强制纯 ASCII 输出（中文会被终端编码吃掉时用；不给也会自动检测）")
     args = ap.parse_args()
 
+    use_ascii = args.ascii or not console_can_show_chinese()
+
     row = heartbeat.read()
+    if not row and use_ascii:
+        print("verdict    : NEVER-RAN")
+        print(f"detail     : no heartbeat file at {heartbeat.BEAT_PATH}")
+        print("action     : treat as 'nobody is working'; start the watcher")
+        return 1
+    if row and use_ascii:
+        return report_ascii(row, heartbeat.age_seconds() or 0.0,
+                            args.every * 2.5, str(row.get("state") or ""))
     if not row:
         print(f"✗ 守护**从没写过心跳**：{heartbeat.BEAT_PATH} 不存在。")
         print("  可能是守护没启动，或跑的是没接心跳的旧版本 —— 两种都要当作「没人干活」处理。")

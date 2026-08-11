@@ -158,6 +158,35 @@ class SingletonTests(unittest.TestCase):
         self.assertTrue(self.tmp.is_file(), "释放锁时删掉了别的进程的锁")
 
 
+class AsciiReportTests(unittest.TestCase):
+    """`--ascii` 必须真的**一个非 ASCII 字符都不含**。
+
+    由来：中文状态行过 PowerShell 管道被重新编码弄糊，「心跳 4.5 分钟前」渲染成
+    `心�?4.5 分钟前`，糊掉的字被我读成数字 → 4.5 分钟误判成 14.5 分钟。
+    只要报告里还剩一个中文字，同样的误读就还能发生，所以这条按**字节**断言。
+    """
+
+    def test_ascii_report_has_no_wide_chars(self):
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "watch_health.py"), "--ascii"],
+            cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=60,
+        )
+        out = r.stdout or ""
+        self.assertTrue(out.strip(), "没有输出")
+        bad = [c for c in out if ord(c) > 127]
+        self.assertEqual(bad, [], f"ASCII 模式里混进了非 ASCII 字符：{bad[:10]}")
+
+    def test_ascii_report_states_the_verdict_explicitly(self):
+        """判定必须是一个**可 grep 的词**，而不是要人从数字里推断。"""
+        r = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "watch_health.py"), "--ascii"],
+            cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8",
+            errors="replace", timeout=60,
+        )
+        self.assertRegex(r.stdout or "", r"verdict\s*:\s*(ALIVE|DEAD|NEVER-RAN|FINISHED-OK|TERMINAL-)")
+
+
 class DirectInvocationLockTests(unittest.TestCase):
     """锁必须盖住**直接调 run_reholdout.py** 这条路。
 
