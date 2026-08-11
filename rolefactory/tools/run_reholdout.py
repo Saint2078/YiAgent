@@ -162,9 +162,20 @@ def main() -> int:
         log(f"复核失败 status={status} 用时 {dt:.0f}s：{str(body)[:300]}")
         return 1
 
+    # 对账：**要的 reps 和拿到的 reps 必须一致**，不一致要喊出来。
+    #
+    # 实测被咬过：队列按决策发 reps=15，服务端上限 8 静默截断，
+    # 这里照旧打「复核完成」，盘上却是每格 8 次。下游方差分解拿 8 当输入算得毫无破绽，
+    # 只有回头点逐条明细才发现。所以宁可多一行噪声，也不要一个安静的错数。
+    got_reps = body.get("reps")
+    if isinstance(got_reps, int) and got_reps != args.reps:
+        log(f"⚠ **reps 不是你要的那个**：请求 {args.reps}，服务端实际按 {got_reps} 跑"
+            f"{'（' + str(body.get('reps_clamp_note')) + '）' if body.get('reps_clamp_note') else ''}")
+        log("  下游一切按实际值算 —— 但你的决策依据是请求值，两者不同就该重新想一遍值不值。")
+
     p = body.get("paired") or {}
     log(
-        f"复核完成（{dt:.0f}s）：Δ(加权)={body.get('delta_weighted')} · "
+        f"复核完成（{dt:.0f}s）：reps={got_reps} · Δ(加权)={body.get('delta_weighted')} · "
         f"Δ(配对)={p.get('mean_delta')} CI95={p.get('mean_delta_ci95')} "
         f"sd={p.get('sd_delta')} n={p.get('cases')} significant={p.get('significant')}"
         "  ← 区间属于配对 Δ"

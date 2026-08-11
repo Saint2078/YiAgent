@@ -346,9 +346,25 @@ async def post_reholdout(run_id: str, payload: dict[str, Any] = Body(default={})
     原报告不动，结果落 `reholdout.json`。用途：旧 run 的 holdout 只跑了 1 次，
     Δ 的符号不稳定；重跑一次约 90s，比重跑整条流水线（约 10 分钟）便宜得多。
     """
-    reps = max(1, min(8, int(payload.get("reps") or 3)))
+    # 上限 8 是成本护栏（reps × 题数 × 2 臂），保留；但**必须把截断说出来**。
+    #
+    # 由来：队列按决策发了 reps=15，这里静默截成 8，客户端从头到尾没看出来 ——
+    # 它日志写「复核开始 reps=15」、跑完写「复核完成」，而盘上是 8。
+    # 一个"按你说的做了"的回复配上一个不是你要的数，正是最难查的那类错：
+    # 后续那张方差分解表拿 8 当输入算得毫无破绽，只有回头点逐条明细才发现。
+    #
+    # 所以回复里带上 reps_requested / reps_clamped，让调用方能自己对账。
+    reps_requested = int(payload.get("reps") or 3)
+    reps = max(1, min(8, reps_requested))
     try:
-        return await pipeline.reholdout(run_id, _key(payload.get("api_key")), reps=reps)
+        out = await pipeline.reholdout(run_id, _key(payload.get("api_key")), reps=reps)
+        if isinstance(out, dict) and reps != reps_requested:
+            out["reps_requested"] = reps_requested
+            out["reps_clamped"] = True
+            out["reps_clamp_note"] = (
+                f"请求 reps={reps_requested}，服务端上限 8，实际按 reps={reps} 跑"
+            )
+        return out
     except Budget as exc:
         # 额度耗尽 / Key 失效：说清楚是外部原因，别让调用方以为是这次 run 的数据有问题
         raise HTTPException(503, f"上游不可用，未写复核结果：{exc}") from exc

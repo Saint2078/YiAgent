@@ -56,10 +56,19 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import heartbeat  # noqa: E402
 
+# 服务端 `POST /api/run/{id}/reholdout` 把 reps 截到 8（成本护栏）。
+# 排计划时就按这个上限算，否则**日志里的评测数是假的**：
+# 实测按 reps=15 排、日志写「约 180 次」，服务端静默截成 8，盘上只有 96 次。
+SERVER_REPS_CAP = 8
+
 # (席位, reps, 预计评测数)
 # Dev 曾在这张表里（reps=28、336 次），后被拿掉：它的 Δ 是负的，而尺子本身偏负，
 # 判出来也分不清是基因有害还是截断偏 —— 花 336 次买一个不能用的结论。
-PLAN = [("Evals", 15, 180)]
+#
+# reps 写 8 而不是 15：**不是妥协，是因为超过上限的部分本来也没用** ——
+# 方差分解显示 Evals 的"重复下限"（1.96·σ_h/√n = 2.33）已经高于 |Δ|=0.2，
+# 也就是 reps 加到无穷都压不到能判出的程度，能压的只有题量。
+PLAN = [("Evals", SERVER_REPS_CAP, 6 * 2 * SERVER_REPS_CAP)]
 
 
 def log(msg: str) -> None:
