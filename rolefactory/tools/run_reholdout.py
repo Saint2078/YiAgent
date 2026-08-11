@@ -28,6 +28,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 BASE = "http://127.0.0.1:8790"
 
+sys.path.insert(0, str(HERE))
+import heartbeat  # noqa: E402
+
 
 def log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
@@ -89,6 +92,7 @@ def wait_for_quota(every: int) -> bool:
                            text=True, encoding="utf-8", errors="replace")
         if r.returncode == 0:
             log(f"额度可用（探了 {n + 1} 次）：{(r.stdout or '').strip()[:80]}")
+            heartbeat.beat("quota_up", probes=n + 1, waited_min=n * every // 60)
             return True
         if n % 6 == 0:  # 每小时报一次，别把日志刷满
             waited = n * every // 60
@@ -96,6 +100,13 @@ def wait_for_quota(every: int) -> bool:
                 f"额度仍封顶（已等 {waited} 分钟）：{(r.stdout or '').strip()[:60]}"
                 if waited else f"额度封顶，开始等：{(r.stdout or '').strip()[:60]}"
             )
+        # 心跳每轮都写（不跟着日志的每小时节流）：它要回答的是"守护还活着吗"，
+        # 而不是"发生了什么"。日志稀疏没关系，心跳稀疏就会把活的判成死的。
+        #
+        # `waited_min` 用 n（**已完成的等待轮数**）而不是 n+1：写这条心跳时第 n+1 次
+        # sleep 还没发生。第一版写成 n+1，于是刚启动就报"已等 10 分钟" ——
+        # 和之前修过的那条日志是同一个错，仪表上尤其不该有这种数。
+        heartbeat.beat("waiting_quota", probes=n + 1, waited_min=n * every // 60)
         n += 1
         time.sleep(every)
 
@@ -120,7 +131,11 @@ def main() -> int:
 
     log(f"复核开始 run={args.run_id} reps={args.reps}")
     t0 = time.monotonic()
-    status, body = post(f"/api/run/{args.run_id}/reholdout", {"reps": args.reps}, 7200)
+    # 这一发 HTTP 可以跑一个多小时；期间必须继续心跳，否则检查器会把干活的判成死的
+    with heartbeat.keep_beating(
+        "reholdout_running", run_id=args.run_id, reps=args.reps, seat=args.seat
+    ):
+        status, body = post(f"/api/run/{args.run_id}/reholdout", {"reps": args.reps}, 7200)
     dt = time.monotonic() - t0
 
     if status == 503:

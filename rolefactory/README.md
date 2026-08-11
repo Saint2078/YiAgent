@@ -115,6 +115,8 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/ceiling_mech.py [--ceiling 90]` | 分辨天花板题是「稀释到 0」还是「系统性拖拽」，并检查逐席方向是否一致（离线） |
 | `tools/alloc.py [--budget 180]` | 固定额度下「加题 vs 加重复」的约束最优化 + 逐席**保本题量** + 重复地板告警（离线；§18.10） |
 | `tools/plan_n.py` | 用去偏后的 sd 反算需要多少道 holdout，检查当前配法够不够（离线） |
+| `tools/need_n_ci.py [--boot 4000]` | 给「保本题量」做 bootstrap 区间（离线；结论：**六席区间跨 186×–1925×，上面两行的点估计无分辨力**，见 §19） |
+| `tools/numeric_share_sweep.py [--gameability]` | 扫 numeric 权重份额 → Δ / sd / 所需题量（离线；副产物：**numeric 在 holdout 上不区分两臂**，§19） |
 | `tools/probe_reps.py` | 扫一遍哪些 run 存了逐次分数、能不能做分解（离线） |
 | `tools/headroom.py [--min-gain 5]` | 基线可涨空间：多少题贴天花板量不出提升，以及 Δ 被截断偏了多少（离线） |
 | `tools/case_outliers.py <run_id>` | 留一法：哪道题在撑着结论（**诊断用，不是筛题用**；离线） |
@@ -124,7 +126,8 @@ Key 从 `../secrets/kimi.key` 以只读方式挂进 `/run/secrets/kimi.key`（�
 | `tools/numeric_spread.py` | numeric 的 60% 权重摊在几条断言上（离线） |
 | `tools/recheck_plan.py` | 天花板题会不会把"只加重复就够"的处方算歪（离线） |
 | `tools/run_reholdout.py <run_id> [--reps 3] [--seat PM] [--wait-quota]` | 单独重跑某 run 的 holdout（**要额度**），跑完打方差分解；给 `--seat` 就顺带传导到下游四处 |
-| `tools/queue_decisive.py` | 等额度，按「最便宜的可判席位」顺序跑高重复复核（顺序由 `decomp_table` 算出） |
+| `tools/queue_decisive.py` | 等额度，按「最便宜的可判席位」顺序跑高重复复核（顺序由 `decomp_table` 算出）。**单实例**：pid+时间戳锁，第二个实例拒绝启动（两个守护会对同一 run 各发一次复核，把两批 reps 追加进同一明细文件且不报错） |
+| `tools/watch_health.py [--every 600]` | 守护还活着吗：按**心跳新鲜度**判定，不看进程表（进程表在本机查受管作业查不到，会把活的判成死的）。区分"跑完了 / 死了 / 没额度停了" |
 | `tools/holdout_table.py [--md]` | 六席 holdout 判定汇总（两个 Δ 分列 + 区间归属，有复核就用复核；离线） |
 | `tools/quota_probe.py` | 一次请求探上游额度是否可用（用服务端密钥，退出码 0=可用） |
 | `tools/watch_quota_reholdout.py [--pilot 席位]` | 额度封顶时等待；恢复即补齐 holdout 复核，可再跑一次**只跑不采纳**的 v3 试跑 |

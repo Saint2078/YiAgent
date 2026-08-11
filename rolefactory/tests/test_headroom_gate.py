@@ -18,10 +18,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 from app import roles  # noqa: E402
 
 BREAK_EVEN_HOLDOUT = 55
-"""reps=1 下判得出所需的最少 holdout 题量，由 `tools/alloc.py` 反算。
+"""holdout 题量下限。**这个数的理由已经降级过一次，别再把它当"算出来的保本线"。**
 
-两个够得着的席位：Evals 53 道、PM 55 道 —— 取大的那个。
-其余四席需 96 至 >400 道，当前额度内够不着（PERF.md §18.10）。
+原本的说法是：由 `tools/alloc.py` 反算，Evals 需 53 道、PM 需 55 道，
+其余四席 96 至 >400 道"够不着"。后来 `tools/need_n_ci.py` 给这个量做了 bootstrap，
+发现它的 90% 区间跨 186× 到 1925×（Architect 2–2571 道，DevOps 3–5867 道）——
+因为 n = (1.96·sd/Δ)²，而 sd 和 Δ 都来自 **5–6 道题**，且 Δ 本身符号都未定。
+拿一个判不出符号的数当分母再平方，得到的"55"没有分辨力。
+
+所以 55 现在只是一个**务实下限**：现有 5–6 道确定判不出任何东西，
+就把题量加到额度允许的上限附近。它约束配法不要退回小题量，
+但**不代表**"到了 55 道就判得出"。见 PERF.md §18.11。
 """
 
 
@@ -224,12 +231,11 @@ class TrainCapTests(unittest.TestCase):
             )
 
     def test_case_budget_must_cover_max_drop(self):
-        """出题量的下限是**算**出来的，不是猜的：扔满之后仍要留住保本题量。
+        """出题量要够：扔满之后仍不低于下限 55 道。
 
-        保本题量 = reps=1 下判得出所需的最少 holdout 题数 = (1.96·sd/Δ)²，
-        由 `tools/alloc.py` 从方差分解反算。当前两个够得着的席位：
-        Evals 需 53 道、PM 需 **55 道**（PM 还只能靠加题 —— 它的重复地板
-        1.72 已高于效应量 1.41，复核多少次都判不出）。取 55 作目标。
+        注意这里的 55 **不是**"算出来的保本线"（原先我是这么写的）。
+        `need_n_ci.py` 证明那个反算值的 90% 区间跨三个数量级，没有分辨力。
+        55 现在是务实下限：现有 5–6 道确定判不出，就加到额度允许的上限附近。
 
         封顶模式下 holdout 下限 = 6·⌈per_dim/2⌉ − 6，于是：
         per_dim=16 → 42 道（**不够**，这是原来的配法）；per_dim=21 → 60 道（够）。
@@ -253,7 +259,7 @@ class TrainCapTests(unittest.TestCase):
             )
 
     def test_live_config_clears_break_even(self):
-        """**上线的配法**必须过保本线 —— 否则改了常量、测试还全绿，就是又一个静默错误。"""
+        """**上线的配法**必须过题量下限 —— 否则改了常量、测试还全绿，就是又一个静默错误。"""
         import build_devteam
 
         p = build_devteam.RUN_PARAMS
@@ -263,7 +269,7 @@ class TrainCapTests(unittest.TestCase):
         self.assertGreaterEqual(
             floor_hold, BREAK_EVEN_HOLDOUT,
             f"上线配法 per_dim={per_dim} 扔满后只剩 {floor_hold} 道，"
-            f"低于保本题量 {BREAK_EVEN_HOLDOUT}（alloc.py 反算）",
+            f"低于务实下限 {BREAK_EVEN_HOLDOUT}",
         )
 
 

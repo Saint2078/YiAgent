@@ -52,6 +52,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 
+sys.path.insert(0, str(HERE))
+import heartbeat  # noqa: E402
+
 # (席位, reps, 预计评测数)
 # Dev 曾在这张表里（reps=28、336 次），后被拿掉：它的 Δ 是负的，而尺子本身偏负，
 # 判出来也分不清是基因有害还是截断偏 —— 花 336 次买一个不能用的结论。
@@ -84,6 +87,7 @@ def gate_pilot(seat: str, probe_every: int) -> int:
         f"headroom_ceiling={p.get('headroom_ceiling')}")
 
     # 等额度：先探一次，没额度就等（起 run 比复核贵，别在没额度时白起）
+    n_probe = 0
     while True:
         try:
             probe = subprocess.run(
@@ -95,13 +99,18 @@ def gate_pilot(seat: str, probe_every: int) -> int:
             log(f"    等额度…（{(probe.stdout or '').strip()[:60]}）")
         except Exception as exc:  # noqa: BLE001
             log(f"    额度探测异常 {type(exc).__name__}: {exc}")
+        n_probe += 1
+        heartbeat.beat("pilot_waiting_quota", seat=seat, probes=n_probe)
         time.sleep(probe_every)
 
     try:
-        rid = bd.start_run(meta["factory_role"])
-        report = bd.wait_run(rid)
+        # 一次完整 run 要跑很久，期间持续心跳
+        with heartbeat.keep_beating("pilot_running", seat=seat):
+            rid = bd.start_run(meta["factory_role"])
+            report = bd.wait_run(rid)
     except Exception as exc:  # noqa: BLE001
         log(f"试跑失败 {type(exc).__name__}: {exc}")
+        heartbeat.beat("pilot_failed", seat=seat, note=f"{type(exc).__name__}: {exc}")
         return 1
 
     suite = report.get("suite") or {}
@@ -116,13 +125,14 @@ def gate_pilot(seat: str, probe_every: int) -> int:
     per_dim = int(p.get("per_dim") or 0)
     hold_max = per_dim * dims - int(p.get("train_per_dim") or 1) * dims
     hold_min = dims * -(-per_dim // 2) - dims  # 6·⌈per_dim/2⌉ − 6
-    break_even = 55  # tools/alloc.py 反算：PM 需 55 道、Evals 53 道
+    # 55 是**务实下限**，不是"算出来的保本线"：那个反算值的 90% 区间跨三个数量级
+    # （`need_n_ci.py`，PERF.md §18.11），没有分辨力。这里只保证题量不退回小样本。
+    floor_cases = 55
     checks = [
         ("门槛真的扔题了", len(dropped) > 0),
         (f"holdout 落在 {hold_min}–{hold_max}", hold_min <= n_hold <= hold_max),
         ("train 被封住（进化 ≈180 次）", ev <= 240),
-        # 这一条才是试跑真正要买的东西：题量过了保本线，这次才可能判得出
-        (f"holdout ≥ 保本题量 {break_even}", n_hold >= break_even),
+        (f"holdout ≥ 题量下限 {floor_cases}", n_hold >= floor_cases),
     ]
     for name, ok in checks:
         log(f"    [{'ok ' if ok else 'FAIL'}] {name}")
@@ -136,15 +146,22 @@ def gate_pilot(seat: str, probe_every: int) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="等额度后跑高重复复核")
     ap.add_argument("--probe-every", type=int, default=600)
-    # 试跑席位改成 PM（原为 Evals），理由是 `tools/alloc.py` 的反算（PERF.md §18.10）：
-    #  · Evals 的判定**已经由这次 reps=15 复核买到**（半宽 1.31 < |Δ| 1.71），
-    #    再用新配法起一次新 run 只是把同一个结论买第二遍。
-    #  · PM 是唯一另一个够得着的席位（保本 55 道），而且**只能靠加题** ——
-    #    它的重复地板 1.72 已高于效应量 1.41，复核多少次都判不出。
-    #  · 所以同一笔额度放在 PM 上：既验门槛，又有机会拿到本项目第一个"已证泛化"。
+    # 试跑席位选 PM（原为 Evals）。**理由已经换过一次**，记清楚免得又拿旧理由办事：
+    #  · 原理由（作废）："alloc.py 反算出 PM 是唯一另一个够得着的席位（55 道）"。
+    #    `need_n_ci.py` 证明那个反算值 90% 区间跨 186×–1925×，撑不起"够得着/够不着"。
+    #  · 现理由（站得住）：① Evals 的判定已由 reps=15 复核买到，不必再买第二遍；
+    #    ② PM 有 reps=3 明细可供事后对照；③ 现有 5–6 道题**确定**判不出任何东西，
+    #    所以"加题"这条路值得先在一席上验通 —— 至于加到 60 道够不够，跑完才知道。
     ap.add_argument("--gate-pilot", default="PM",
                     help="复核跑完后，用新配法起一次新 run 验证筛题门槛；no = 不跑")
     args = ap.parse_args()
+
+    # 单例保护：两个守护同时等同一份额度，恢复时会对同一个 run 各发一次 reholdout，
+    # 两批 reps 追加进同一个明细文件且不报错。实测发生过一次（见日志 F39）。
+    ok, why = heartbeat.acquire_singleton()
+    log(why)
+    if not ok:
+        return 3
 
     log(f"排队：{'、'.join(f'{s} reps={r}（{e}次）' for s, r, e in PLAN)}")
     for seat, reps, evals in PLAN:
@@ -162,9 +179,11 @@ def main() -> int:
         if rc == 2:
             # 额度中途又断（探针通过不代表跑得完一轮）。停在这里，别把后面那席也烧成半截。
             log(f"{seat}: 额度中途耗尽，队列中止（后面的席位没动）")
+            heartbeat.beat("aborted_quota", seat=seat, note="额度中途耗尽，需人工重启")
             return 2
         if rc != 0:
             log(f"{seat}: 失败 rc={rc}，队列中止")
+            heartbeat.beat("aborted_error", seat=seat, note=f"rc={rc}")
             return rc
         log(f"{seat}: 完成并已传导到下游")
         # 复核换了数，处方表跟着变 —— 打一次给日志留痕
@@ -173,6 +192,9 @@ def main() -> int:
     if str(args.gate_pilot).lower() not in ("no", "none", "0", ""):
         gate_pilot(args.gate_pilot, args.probe_every)
     log("=== 队列结束 ===")
+    # 正常收尾也要留痕：否则"心跳停了"分不清是**跑完了**还是**死了**
+    heartbeat.beat("finished", note="队列正常结束，无待办")
+    heartbeat.release_lock()
     return 0
 
 

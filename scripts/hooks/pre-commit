@@ -1,0 +1,18 @@
+#!/bin/sh
+# 提交前扫凭证。安装：python scripts/install_hooks.py
+#
+# 钩子放在版本库里（scripts/hooks/）而不是只放 .git/hooks/：
+# 后者不随 clone 走，换台机器就静默失效 —— 而"安全检查静默失效"是最糟的一种失效。
+#
+# 找不到 python 时**放行并提示**，不拦提交：
+# 钩子坏掉不该让人无法工作，但必须让人知道检查没跑。
+set -e
+
+for PY in python python3 py; do
+  if command -v "$PY" >/dev/null 2>&1; then
+    exec "$PY" scripts/hooks/scan_secrets.py --staged
+  fi
+done
+
+echo "⚠ pre-commit：找不到 python，**凭证扫描没有执行**（本次提交未被检查）" >&2
+exit 0
